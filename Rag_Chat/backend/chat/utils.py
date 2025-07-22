@@ -11,8 +11,7 @@ import json
 from django.utils.timezone import now
 
 # Set API key directly for OpenAI
-API_KEY = "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"
-
+# API_KEY = ""
 logger = logging.getLogger(__name__)
 
 class MetaDataManager:
