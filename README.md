@@ -1,82 +1,70 @@
-Triple Chat – Internal RAG Q&A (fact-based)
-Palantir Deployment Strategist 제출용으로 정리한 메인 README입니다. 과장 없이, 실제 구현 범위만 기술합니다.
+Triple Chat – Internal RAG Q&A (Fact-Only Overview)  
+팔란티어 제출을 염두에 둔 메인 요약입니다. 과장 없이 현재 동작하는 것만 적었습니다.
 
-1. 목적
-- 내부 질의응답을 세션 단위로 추적하고, 검색·응답 로그를 남기는 실험형 RAG 파이프라인 검증
-- LLM 벤더 락인 완화를 위해 Provider 추상화로 Gemini·Qwen 교차 테스트
-- 금지어/리뷰 등 거버넌스 확장을 염두에 둔 데이터 경로와 로그 구조 확보
+1) Purpose / 목적  
+- EN: Track Q&A per session, log retrieved context and responses, and try vendor-flexible RAG.  
+- KR: 세션 단위 질문·검색·응답을 남기고, LLM 공급자를 갈아끼우며 RAG 파이프라인을 검증.
 
-2. 문제 정의
-- “누가 무엇을 물었고 어떤 데이터로 답했는가”를 재현 가능하게 할 것
-- 모델·임베딩 교체를 코드 수정 없이 시도할 수 있을 것
-- PoC 단계이므로 인증·RBAC·필터링 미구현임을 명시
+2) Problem Statement / 문제 정의  
+- EN: Reproducibility of “who asked what and with which data,” and quick model/embedding swap without code changes.  
+- KR: “누가 무엇을 어떤 데이터로 답했는가”를 재현 가능하게 하고, 코드 수정 없이 모델/임베딩을 교체할 수 있어야 함. (현재 인증·RBAC·필터는 미구현)
 
-3. 아키텍처 (현재 동작 기준)
-- 프런트엔드: Streamlit 단일 페이지 (Redis Pub/Sub 반영)
-- 백엔드: Django REST Framework
-- 비동기: Celery (로그·벡터 빌드 분리)
-- 세션/캐시: Redis
-- 벡터 스토어: FAISS/Chroma
-- 모델: Gemini(기본), Qwen(OpenAI 호환 엔드포인트로 실험)
+3) Architecture (today) / 아키텍처  
+- Frontend: Streamlit (Redis Pub/Sub)  
+- Backend: Django REST Framework  
+- Async: Celery (logging, vector build)  
+- Session/Cache: Redis  
+- Vector Store: FAISS/Chroma  
+- Models: Gemini (default), Qwen (OpenAI-compatible endpoint; experimental)
 
-처리 흐름 요약
-1) 사용자 질문 수신 → 2) 벡터 검색 → 3) LLM 생성 → 4) 질문·컨텍스트·응답 로그 적재
+Flow / 처리 흐름  
+1. Ask in Streamlit → 2. Vector search → 3. LLM generation → 4. Log question/context/answer.
 
-4. 데이터 모델 (요약)
-- User(user_id, created_datetime, expired_datetime)
-- Chat(question_id, user_id, question_text, response_text, created_datetime, data_id)
-- SearchLog(search_log_id, question_id, data_id, searching_time)
-- RagData(data_id, data_text, image_urls)
+4) Data Model (summary)  
+User(user_id, created_datetime, expired_datetime)  
+Chat(question_id, user_id, question_text, response_text, created_datetime, data_id)  
+SearchLog(search_log_id, question_id, data_id, searching_time)  
+RagData(data_id, data_text, image_urls)  
+추적: 질문 → 사용된 컨텍스트 → 응답을 테이블로 재구성 가능.
 
-추적 가능성: 질문 → 사용된 컨텍스트 → 최종 응답 경로를 테이블로 재구성 가능.
+5) Key Choices / 설계 근거  
+- Django: API 스키마·로그 일관 관리.  
+- Redis: 세션·Pub/Sub.  
+- Celery: UI와 분리된 로깅/벡터 작업.  
+- Provider abstraction: `chat/providers/manager.py` selects embedding/reasoning/generation via env vars; Gemini 기본, Qwen 실험.
 
-5. 핵심 설계 선택
-- Django: API 스키마와 로그 저장을 안정적으로 관리
-- Redis: 세션 상태 + Pub/Sub 이벤트
-- Celery: UI와 분리된 로깅·백그라운드 작업
-- Provider 추상화: `chat/providers/manager.py`가 임베딩/추론/생성 모델을 환경 변수로 선택. 기본 Gemini, Qwen은 실험용.
+6) Implemented / 구현됨  
+- Session-based RAG chat (Streamlit + Django)  
+- Vector search (FAISS/Chroma) + context injection  
+- Chat/SearchLog persistence  
+- Gemini↔Qwen combos via env  
+- Local one-shot run script (`run_local_fixed.sh`) and Docker Compose
 
-6. 현재 구현된 기능
-- 세션 기반 RAG 챗봇 (Streamlit UI + Django API)
-- 벡터 검색(FAISS/Chroma) + 컨텍스트 주입
-- 질문/검색결과/응답 로그 저장
-- Gemini/Qwen 모델 조합 전환(환경 변수 기반)
-- 로컬 올인원 실행 스크립트(`run_local_fixed.sh`)와 Docker Compose
+7) Not Yet / 미구현·한계  
+- No auth/RBAC/forbidden-terms  
+- Single-node; no HA/auto-scale  
+- Minimal streaming/concurrency  
+- No health checks/APM/dashboard
 
-7. 미구현·한계
-- 금지어 필터, RBAC, 정식 인증 없음
-- 단일 노드 구성(HA/오토스케일 미구현)
-- UI 스트리밍·동시성 최소 수준
-- 헬스체크·APM·모니터링 대시보드 없음
-
-8. 실행 방법
-스크립트 (로컬 올인원)
+8) How to Run / 실행  
+Script:  
 ```
 chmod +x Rag_Chat/run_local_fixed.sh
 cd Rag_Chat && ./run_local_fixed.sh
 ```
-Redis(도커), Django, Celery(worker/beat), Streamlit을 순차 기동. GOOGLE_API_KEY 없으면 LLM 호출이 제한됨.
+Docker Compose: `cd Rag_Chat && docker-compose up --build`  
+Manual: Redis → `backend` migrate/runserver → `frontend` streamlit → `celery -A triple_chat_pjt worker`
+Note: GOOGLE_API_KEY 없으면 LLM 호출 제한.
 
-Docker Compose
-```
-cd Rag_Chat && docker-compose up --build
-```
+9) Logs & Governance / 로그·거버넌스  
+- Chat, SearchLog capture question → context → answer chain.  
+- Session state in Redis; DB expired_datetime 정합성은 개선 필요.  
+- Provider 선택: env 기반(세션별 토글은 실험 단계).
 
-수동 실행 요약
-1) Redis 컨테이너 실행  
-2) `backend`: `python manage.py migrate && python manage.py runserver`  
-3) `frontend`: `streamlit run app.py`  
-4) `celery -A triple_chat_pjt worker --loglevel=info`
-
-9. 로그·거버넌스 포인트
-- Chat, SearchLog 테이블로 질문-컨텍스트-응답 경로 기록
-- 세션 상태는 Redis에 저장; DB 만료 시각과 정합성 개선이 향후 과제
-- Provider 선택은 환경 변수 기반(세션별 토글 API는 실험 단계)
-
-10. 문서 맵
-- `Rag_Chat/backend/docs/provider_architecture.md` — Provider 추상화 구조
-- `Rag_Chat/backend/docs/provider_refactor_overview.md` — 리팩터 기록
-- `Rag_Chat/backend/docs/provider_release_notes.md` — 변경 이력
-- `Rag_Chat/frontend/frontnedREADME.md` — Streamlit UI 요약
-- `Rag_Chat/run_local_script_fixes.md` — 실행 스크립트 수정 내역
-- `Rag_Chat/프로젝트현황.md` — 현재 이슈/다음 작업
+10) Doc Map  
+- `Rag_Chat/backend/docs/provider_architecture.md` (구조)  
+- `Rag_Chat/backend/docs/provider_refactor_overview.md` (리팩터 기록)  
+- `Rag_Chat/backend/docs/provider_release_notes.md` (변경 이력)  
+- `Rag_Chat/frontend/frontnedREADME.md` (프런트 요약)  
+- `Rag_Chat/run_local_script_fixes.md` (실행 스크립트 수정)  
+- `Rag_Chat/프로젝트현황.md` (상태/다음 액션)
