@@ -103,3 +103,36 @@ def fetch_user_id(old_user_id):
         logger.error(f"Error processing response: {e}")
         st.error("Error processing server response. Please try again.")
         return None
+
+
+def get_provider_selection(user_id: str):
+    """Fetch the current provider selection for the given user"""
+    try:
+        response = requests.get(
+            f"{API_BASE_URL}/providers/",
+            params={"user_id": user_id},
+            timeout=5,
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logger.error(f"Failed to get provider selection: {e}")
+        st.sidebar.error("Failed to load provider configuration.")
+        return None
+
+
+def set_provider_combo(user_id: str, provider_combo: str):
+    """Apply a provider combo for the session/user"""
+    try:
+        response = requests.post(
+            f"{API_BASE_URL}/providers/",
+            json={"user_id": user_id, "provider_combo": provider_combo},
+            headers={"Content-Type": "application/json"},
+            timeout=5,
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logger.error(f"Failed to set provider combo: {e}")
+        st.sidebar.error("Failed to update provider settings.")
+        return None

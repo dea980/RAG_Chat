@@ -7,7 +7,7 @@ import logging
 import os
 import time
 from datetime import datetime, timedelta
-from api import fetch_user_id
+from api import fetch_user_id, get_provider_selection, set_provider_combo
 from typing import Optional, Dict, Any
 
 # Configure logging
@@ -260,6 +260,18 @@ def update_session_activity() -> bool:
     logger.error(f"Failed to update session after {MAX_RETRIES} attempts")
     return False
 
+
+def determine_provider_combo(selection: Dict[str, Any]) -> str:
+    reasoning = selection.get("reasoning_provider")
+    generation = selection.get("generation_provider")
+    if reasoning == "gemini" and generation == "gemini":
+        return "gemini_only"
+    if reasoning == "qwen" and generation == "gemini":
+        return "qwen_reasoning_gemini_generation"
+    if reasoning == "qwen" and generation == "qwen":
+        return "qwen_only"
+    return "custom"
+
 def send_chat_request(prompt):
     """Send chat request to backend API"""
     try:
@@ -314,8 +326,20 @@ if not st.session_state.user_id:
             st.session_state.user_id = user_id
             st.session_state.last_activity = time.time()
             logger.info(f"Initialized new user session: {user_id}")
+            info = get_provider_selection(user_id)
+            if info:
+                selection = info.get("selection", {})
+                st.session_state.provider_combo = determine_provider_combo(selection)
+                st.session_state.provider_selection = selection
     except Exception as e:
         logger.error(f"Failed to initialize user session: {e}")
+
+if st.session_state.user_id and "provider_combo" not in st.session_state:
+    info = get_provider_selection(st.session_state.user_id)
+    if info:
+        selection = info.get("selection", {})
+        st.session_state.provider_combo = determine_provider_combo(selection)
+        st.session_state.provider_selection = selection
 
 # Start Redis listener in background
 thread = threading.Thread(target=listen_to_redis, daemon=True)
@@ -403,6 +427,38 @@ if st.sidebar.button("Load Phone Data"):
             st.sidebar.success("Phone data loaded successfully!")
         else:
             st.sidebar.error("Failed to load phone data. Please try again.")
+
+provider_options = {
+    "Gemini Only": "gemini_only",
+    "Qwen Reasoning + Gemini Generation": "qwen_reasoning_gemini_generation",
+    "Qwen Only": "qwen_only",
+    "Custom (manual)": "custom",
+}
+
+if st.session_state.user_id:
+    current_combo = st.session_state.get("provider_combo", "gemini_only")
+    labels = list(provider_options.keys())
+    default_label = next((label for label, value in provider_options.items() if value == current_combo), "Custom (manual)")
+    selected_label = st.sidebar.selectbox(
+        "Provider Preset",
+        labels,
+        index=labels.index(default_label) if default_label in labels else len(labels) - 1,
+        key="provider_selectbox",
+    )
+    selected_combo = provider_options[selected_label]
+
+    if selected_combo != "custom" and selected_combo != st.session_state.get("provider_combo"):
+        result = set_provider_combo(st.session_state.user_id, selected_combo)
+        if result:
+            st.session_state.provider_combo = selected_combo
+            st.session_state.provider_selection = result.get("selection", {})
+            st.sidebar.success(f"Provider updated to {selected_label}")
+
+    if "provider_selection" in st.session_state:
+        st.sidebar.caption("Current Providers")
+        st.sidebar.json(st.session_state.provider_selection)
+else:
+    st.sidebar.info("Provider controls available after session starts.")
 
 # Check for session timeout
 check_session_timeout()

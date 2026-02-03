@@ -2,7 +2,7 @@
 
 ## 시스템 아키텍처 개요
 
-Triple Chat은 삼성 갤럭시 S25에 대한 전문 지식을 제공하는 AI 챗봇 시스템입니다. LangChain, OpenAI, ChromaDB를 활용한 RAG(Retrieval Augmented Generation) 아키텍처를 기반으로 구축되었습니다.
+Triple Chat은 삼성 갤럭시 S25에 대한 전문 지식을 제공하는 AI 챗봇 시스템입니다. LangChain, Google Gemini, ChromaDB를 활용한 RAG(Retrieval Augmented Generation) 아키텍처를 기반으로 구축되었습니다.
 
 ## 시스템 워크플로우 다이어그램
 
@@ -29,14 +29,14 @@ graph TB
     end
 
     subgraph "외부 서비스"
-        OpenAI[OpenAI API]
+        Gemini[Google Gemini API]
     end
 
     UI --> |HTTP| API
     SessionMgr --> |세션 관리| Redis
     API --> |벡터 검색| ChromaDB
     API --> |메타데이터| SQLite
-    RAG --> |임베딩/채팅| OpenAI
+    RAG --> |임베딩/채팅| Gemini
     VectorOps --> ChromaDB
 ```
 
@@ -50,7 +50,7 @@ sequenceDiagram
     participant R as Redis
     participant I as Static Images
     participant C as ChromaDB
-    participant O as OpenAI
+    participant O as Google Gemini
 
     U->>S: 질문 입력
     S->>D: POST /api/v1/triple/chat/
@@ -105,16 +105,16 @@ graph LR
 - SQLite: 메타데이터 및 로그
 
 ### 4. 외부 서비스
-- OpenAI API
-  - text-embedding-ada-002: 텍스트 임베딩
-  - gpt-3.5-turbo-1106: 채팅 응답 생성
+- Google Gemini API
+  - models/text-embedding-004: 텍스트 임베딩
+  - gemini-1.5-pro: 채팅 응답 생성
 
 ## 주요 기능 구현
 
 ### 1. RAG 구현
 ```python
 def get_rag_context(question: str) -> Dict[str, Any]:
-    embeddings = OpenAIEmbeddings()
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
     vector_store = Chroma(
         persist_directory=settings.VECTOR_STORE_PATH,
         embedding_function=embeddings
@@ -178,7 +178,7 @@ logger = logging.getLogger(__name__)
 ```
 
 ### 2. 에러 처리
-- OpenAI API 오류 처리
+- Gemini API 오류 처리
 - 세션 만료 처리
 - 데이터베이스 연결 오류 처리
 

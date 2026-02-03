@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
 from django.test import TestCase
-from django.conf import settings
 
 from ..utils import RAGUtils
 from langchain.schema import Document
@@ -12,24 +11,18 @@ class RAGUtilsTestCase(TestCase):
     Test case for the RAGUtils utility class
     """
     
-    @patch('backend.chat.utils.OpenAIEmbeddings')
-    @patch('backend.chat.utils.Chroma')
-    def test_get_vector_store(self, mock_chroma, mock_embeddings):
+    @patch('backend.chat.utils.provider_manager.get_vector_store')
+    def test_get_vector_store(self, mock_get_vector_store):
         """Test the get_vector_store method"""
-        # Setup mocks
-        mock_instance = mock_embeddings.return_value
-        mock_chroma_instance = mock_chroma.return_value
+        mock_vector_store = MagicMock()
+        mock_get_vector_store.return_value = mock_vector_store
         
         # Call the method
         result = RAGUtils.get_vector_store()
         
         # Assertions
-        mock_embeddings.assert_called_once_with(model="text-embedding-ada-002")
-        mock_chroma.assert_called_once_with(
-            persist_directory=settings.VECTOR_STORE_PATH,
-            embedding_function=mock_instance
-        )
-        self.assertEqual(result, mock_chroma_instance)
+        mock_get_vector_store.assert_called_once()
+        self.assertEqual(result, mock_vector_store)
     
     def test_process_search_results(self):
         """Test the process_search_results method"""
@@ -70,15 +63,12 @@ class RAGUtilsTestCase(TestCase):
         self.assertEqual(result["context"], "Test content 1")
         self.assertEqual(result["image_paths"], ["image1.png"])
     
-    @patch('backend.chat.utils.OpenAIEmbeddings')
-    @patch('backend.chat.utils.Chroma.from_documents')
-    def test_create_vector_store_from_documents(self, mock_from_documents, mock_embeddings):
+    @patch('backend.chat.utils.provider_manager.create_vector_store_from_documents')
+    def test_create_vector_store_from_documents(self, mock_create_vector_store):
         """Test the create_vector_store_from_documents method"""
-        # Setup mocks
-        mock_instance = mock_embeddings.return_value
         mock_vector_store = MagicMock()
-        mock_from_documents.return_value = mock_vector_store
         mock_vector_store._collection.count.return_value = 5
+        mock_create_vector_store.return_value = mock_vector_store
         
         # Test documents
         documents = [
@@ -90,12 +80,7 @@ class RAGUtilsTestCase(TestCase):
         result = RAGUtils.create_vector_store_from_documents(documents)
         
         # Assertions
-        mock_embeddings.assert_called_once_with(model="text-embedding-ada-002")
-        mock_from_documents.assert_called_once_with(
-            documents=documents,
-            embedding=mock_instance,
-            persist_directory=settings.VECTOR_STORE_PATH
-        )
+        mock_create_vector_store.assert_called_once_with(documents)
         self.assertEqual(result, mock_vector_store)
 
 

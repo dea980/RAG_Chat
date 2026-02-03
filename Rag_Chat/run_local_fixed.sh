@@ -1,12 +1,26 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# Determine which Python interpreter to use for creating virtual environments
+PYTHON_BIN=${PYTHON_BIN:-python3}
+if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+    PYTHON_BIN=python
+fi
+
+ROOT_DIR=$(pwd)
+BACKEND_DIR="$ROOT_DIR/backend"
+FRONTEND_DIR="$ROOT_DIR/frontend"
+BACKEND_VENV="$BACKEND_DIR/venv"
+FRONTEND_VENV="$FRONTEND_DIR/venv"
+BACKEND_PYTHON="$BACKEND_VENV/bin/python"
+FRONTEND_PYTHON="$FRONTEND_VENV/bin/python"
 
 # Function to check and kill process using a specific port
 kill_port_process() {
     local port=$1
     local process_name=$2
-    if lsof -i :$port > /dev/null; then
+    if lsof -i :"$port" >/dev/null 2>&1; then
         echo "Port $port is in use. Killing existing $process_name process..."
-        lsof -ti :$port | xargs kill -9
+        lsof -ti :"$port" | xargs kill -9
         sleep 2
     fi
 }
@@ -19,194 +33,210 @@ ensure_directory() {
     fi
 }
 
-# Function to check Redis connection
+# Ensure Redis container exists and can be reached
 check_redis() {
-    echo "Testing Redis connection..."
-    if ! docker exec redis redis-cli ping > /dev/null; then
-        echo "Failed to connect to Redis. Starting Redis container..."
-        docker start redis || docker run -d -p 6379:6379 --name redis redis:7
+    echo "Ensuring Redis container is running..."
+
+    if ! docker ps -a --format '{{.Names}}' | grep -wq '^redis$'; then
+        echo "Redis container not found. Creating redis:7 container..."
+        docker run -d -p 6379:6379 --name redis redis:7 >/dev/null
         sleep 3
-        
-        # Test connection again
-        if ! docker exec redis redis-cli ping > /dev/null; then
-            echo "Failed to connect to Redis after restart"
-            return 1
-        fi
+    elif ! docker ps --format '{{.Names}}' | grep -wq '^redis$'; then
+        echo "Starting existing Redis container..."
+        docker start redis >/dev/null
+        sleep 3
     fi
-    echo "Redis connection successful"
+
+    if ! docker exec redis redis-cli ping >/dev/null 2>&1; then
+        echo "Failed to connect to Redis container 'redis'."
+        return 1
+    fi
+
+    echo "Redis container is running."
     return 0
 }
 
-# Function to fix backend requirements
+# Function to fix backend requirements merge conflicts if needed
 fix_requirements() {
-    # Check if there are merge conflicts in the requirements file
-    if grep -q "<<<<<<< " backend/requirements.txt; then
+    if [ -f "$BACKEND_DIR/requirements.txt" ] && grep -q "<<<<<<< " "$BACKEND_DIR/requirements.txt"; then
         echo "Detected merge conflicts in backend/requirements.txt. Creating fixed version..."
-        # Create a fixed version without the conflict markers
-        sed '/^<<<<<<< /d; /^=======$/d; /^>>>>>>> /d' backend/requirements.txt > backend/requirements_fixed.txt
-        mv backend/requirements_fixed.txt backend/requirements.txt
+        sed '/^<<<<<<< /d; /^=======$/d; /^>>>>>>> /d' "$BACKEND_DIR/requirements.txt" > "$BACKEND_DIR/requirements_fixed.txt"
+        mv "$BACKEND_DIR/requirements_fixed.txt" "$BACKEND_DIR/requirements.txt"
         echo "Fixed backend/requirements.txt"
     fi
 }
 
-# Start setup
+# Ensure backend virtual environment and dependencies are ready
+setup_backend_env() {
+    if [ ! -d "$BACKEND_VENV/bin" ]; then
+        echo "Creating backend virtual environment..."
+        "$PYTHON_BIN" -m venv "$BACKEND_VENV"
+    fi
+
+    echo "Installing backend dependencies..."
+    "$BACKEND_PYTHON" -m pip install --upgrade pip
+    if [ -f "$BACKEND_DIR/requirements.txt" ]; then
+        "$BACKEND_PYTHON" -m pip install -r "$BACKEND_DIR/requirements.txt"
+    else
+        echo "Warning: backend/requirements.txt not found; skipping dependency install."
+    fi
+}
+
+# Ensure frontend virtual environment and dependencies are ready
+setup_frontend_env() {
+    if [ ! -d "$FRONTEND_VENV/bin" ]; then
+        echo "Creating frontend virtual environment..."
+        "$PYTHON_BIN" -m venv "$FRONTEND_VENV"
+    fi
+
+    echo "Installing frontend dependencies..."
+    "$FRONTEND_PYTHON" -m pip install --upgrade pip
+    if [ -f "$FRONTEND_DIR/requirements.txt" ]; then
+        "$FRONTEND_PYTHON" -m pip install -r "$FRONTEND_DIR/requirements.txt"
+    else
+        echo "Warning: frontend/requirements.txt not found; skipping dependency install."
+    fi
+}
+
 echo "==== Starting project setup ===="
 
 # Check Docker is running
-if ! docker info > /dev/null 2>&1; then
+if ! docker info >/dev/null 2>&1; then
     echo "Docker is not running. Please start Docker and try again."
     exit 1
 fi
 
-# Start Redis
-echo "Starting Redis..."
-check_redis
-if [ $? -ne 0 ]; then
-    echo "Failed to start Redis. Exiting."
+# Ensure Redis container is healthy
+if ! check_redis; then
+    echo "Failed to start or connect to Redis. Exiting."
     exit 1
 fi
 
-# Fix backend requirements file if needed
+# Fix backend requirements if there are unresolved conflicts
 fix_requirements
 
-# Ensure database directory exists
-ensure_directory "backend/db"
+# Ensure backend database directory exists
+ensure_directory "$BACKEND_DIR/db"
+ensure_directory "$BACKEND_DIR/static"
 
-# Activate the correct virtual environment
-if [ -d "venv/bin" ]; then
-    echo "Activating root virtual environment..."
-    source venv/bin/activate
-elif [ -d "backend/venv/bin" ]; then
-    echo "Activating backend virtual environment..."
-    source backend/venv/bin/activate
-else
-    echo "No virtual environment found. Creating one in the root directory..."
-    python -m venv venv
-    source venv/bin/activate
-    
-    # Install requirements
-    echo "Installing project requirements..."
-    pip install -r requirements.txt
-    echo "Installing essential dependencies..."
-    pip install watchdog celery redis
-fi
+# Prepare backend environment
+setup_backend_env
 
-# Load environment variables from .env file
-if [ -f backend/.env ]; then
+# Load environment variables from backend .env using POSIX-safe approach
+if [ -f "$BACKEND_DIR/.env" ]; then
     echo "Loading environment variables from backend/.env file..."
-    export $(cat backend/.env | grep -v '^#' | xargs)
+    set -a
+    # shellcheck disable=SC1090
+    source "$BACKEND_DIR/.env"
+    set +a
 fi
 
 # Set environment variables if not already set
 export DEBUG=${DEBUG:-1}
-export DATABASE_URL=${DATABASE_URL:-"sqlite:///$(pwd)/backend/db/db.sqlite3"}
+export DATABASE_URL=${DATABASE_URL:-"sqlite:///$BACKEND_DIR/db/db.sqlite3"}
 export REDIS_HOST=${REDIS_HOST:-"localhost"}
 export REDIS_PORT=${REDIS_PORT:-6379}
 export REDIS_URL=${REDIS_URL:-"redis://localhost:6379/0"}
 export BACKEND_URL=${BACKEND_URL:-"http://localhost:8000"}
 
-# Verify OpenAI API key is available
-if [ -z "$OPENAI_API_KEY" ]; then
-    echo "Warning: OPENAI_API_KEY is not set. Some functionality may not work."
+if [ -z "$GOOGLE_API_KEY" ]; then
+    echo "Warning: GOOGLE_API_KEY is not set. Some functionality may not work."
+fi
+
+if [ -n "$QWEN_API_KEY" ]; then
+    export QWEN_API_KEY
+fi
+if [ -n "$QWEN_API_BASE" ]; then
+    export QWEN_API_BASE
+fi
+if [ -n "$QWEN_MODEL_NAME" ]; then
+    export QWEN_MODEL_NAME
 fi
 
 # Kill any process using Django port (8000)
 kill_port_process 8000 "Django"
 
-# Django backend setup
 echo "Setting up Django backend..."
-cd backend
-
-# Make database directory if it doesn't exist
-ensure_directory "db"
 
 echo "Making migrations..."
-$(which python) manage.py makemigrations
+(cd "$BACKEND_DIR" && "$BACKEND_PYTHON" manage.py makemigrations )
 
 echo "Applying migrations..."
-$(which python) manage.py migrate
+(cd "$BACKEND_DIR" && "$BACKEND_PYTHON" manage.py migrate )
 
 echo "Starting Django backend..."
-PYTHONUNBUFFERED=1 $(which python) manage.py runserver 0.0.0.0:8000 &
+(
+    cd "$BACKEND_DIR"
+    PYTHONUNBUFFERED=1 "$BACKEND_PYTHON" manage.py runserver 0.0.0.0:8000
+) &
 backend_pid=$!
-cd ..
 
 echo "Waiting for Django to start..."
 sleep 5
 
-# Check if Django server is running
-if ! kill -0 $backend_pid 2>/dev/null; then
+if ! kill -0 "$backend_pid" 2>/dev/null; then
     echo "Django server failed to start"
     exit 1
 fi
 
+# Prepare frontend environment
+setup_frontend_env
+
 # Kill any process using Streamlit port (8501)
 kill_port_process 8501 "Streamlit"
 
-# Streamlit frontend setup
 echo "Starting Streamlit frontend..."
-cd frontend
-
-# Setup frontend environment if needed
-if [ ! -d "venv/bin" ] && [ ! -f "venv/bin/activate" ]; then
-    echo "Setting up frontend virtual environment..."
-    python -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
-else
-    source venv/bin/activate
-fi
-
-# Install any missing dependencies
-pip install -r requirements.txt
-
-# Start Streamlit - use the Python from the virtual environment explicitly
-PYTHONUNBUFFERED=1 \
-REDIS_URL="redis://localhost:6379/0" \
-REDIS_HOST="localhost" \
-REDIS_PORT=6379 \
-BACKEND_URL="http://localhost:8000" \
-OPENAI_API_KEY="$OPENAI_API_KEY" \
-$(which python) -m streamlit run app.py &
+(
+    cd "$FRONTEND_DIR"
+    PYTHONUNBUFFERED=1 \
+    REDIS_URL="$REDIS_URL" \
+    REDIS_HOST="$REDIS_HOST" \
+    REDIS_PORT="$REDIS_PORT" \
+    BACKEND_URL="$BACKEND_URL" \
+    GOOGLE_API_KEY="$GOOGLE_API_KEY" \
+    QWEN_API_KEY="$QWEN_API_KEY" \
+    QWEN_API_BASE="$QWEN_API_BASE" \
+    QWEN_MODEL_NAME="$QWEN_MODEL_NAME" \
+    "$FRONTEND_PYTHON" -m streamlit run app.py
+) &
 frontend_pid=$!
-cd ..
 
-sleep 2
+sleep 5
 
-# Check if Streamlit is running
-if ! kill -0 $frontend_pid 2>/dev/null; then
+if ! kill -0 "$frontend_pid" 2>/dev/null; then
     echo "Streamlit failed to start"
     echo "Cleaning up Django process..."
-    kill $backend_pid
+    kill "$backend_pid"
     exit 1
 fi
 
-# Go back to backend for Celery
-cd backend
-
-# Start Celery worker
 echo "Starting Celery worker..."
-PYTHONUNBUFFERED=1 $(which python) -m celery -A triple_chat_pjt worker --loglevel=info &
+(
+    cd "$BACKEND_DIR"
+    PYTHONUNBUFFERED=1 "$BACKEND_PYTHON" -m celery -A triple_chat_pjt worker --loglevel=info
+) &
 worker_pid=$!
 
-if ! kill -0 $worker_pid 2>/dev/null; then
+sleep 2
+if ! kill -0 "$worker_pid" 2>/dev/null; then
     echo "Celery worker failed to start"
 else
     echo "Celery worker PID: $worker_pid"
 fi
 
-# Start Celery beat
 echo "Starting Celery beat..."
-PYTHONUNBUFFERED=1 $(which python) -m celery -A triple_chat_pjt beat --loglevel=info &
+(
+    cd "$BACKEND_DIR"
+    PYTHONUNBUFFERED=1 "$BACKEND_PYTHON" -m celery -A triple_chat_pjt beat --loglevel=info
+) &
 beat_pid=$!
 
-if ! kill -0 $beat_pid 2>/dev/null; then
+sleep 2
+if ! kill -0 "$beat_pid" 2>/dev/null; then
     echo "Celery beat failed to start"
 else
     echo "Celery beat PID: $beat_pid"
 fi
-
-cd ..
 
 echo "==== All services started successfully! ===="
 echo "Django backend PID: $backend_pid (http://localhost:8000)"
@@ -216,18 +246,29 @@ echo "Celery beat PID: $beat_pid"
 echo ""
 echo "Press Ctrl+C to stop all services"
 
-# Create a cleanup function
 cleanup() {
     echo "Cleaning up processes..."
-    kill $backend_pid $frontend_pid $worker_pid $beat_pid 2>/dev/null
+    [ -n "$backend_pid" ] && kill "$backend_pid" 2>/dev/null
+    [ -n "$frontend_pid" ] && kill "$frontend_pid" 2>/dev/null
+    [ -n "$worker_pid" ] && kill "$worker_pid" 2>/dev/null
+    [ -n "$beat_pid" ] && kill "$beat_pid" 2>/dev/null
     exit 0
 }
 
-# Set trap to catch SIGINT
-trap cleanup SIGINT
+trap cleanup SIGINT SIGTERM
 
-# Wait for any process to exit
-wait -n
+wait_for_exit() {
+    local pids=("$@")
+    while true; do
+        for pid in "${pids[@]}"; do
+            if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
+                return 0
+            fi
+        done
+        sleep 1
+    done
+}
 
-# Exit with status of process that exited first
-exit $?
+wait_for_exit "$backend_pid" "$frontend_pid" "$worker_pid" "$beat_pid"
+
+cleanup

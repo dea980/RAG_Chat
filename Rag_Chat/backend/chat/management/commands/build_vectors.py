@@ -1,13 +1,13 @@
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders import CSVLoader
 from langchain.document_loaders.excel import UnstructuredExcelLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import os
 import pandas as pd
 from langchain.schema import Document
+
+from ...providers import provider_manager
 
 # %pip install --upgrade --quiet  langchain langchain-community azure-ai-documentintelligence
 
@@ -83,15 +83,11 @@ class Command(BaseCommand):
             self.stdout.write(f"Created {len(splits)} total chunks")
 
             # Create embeddings
-            embeddings = OpenAIEmbeddings()
-                
-            # Create and save vector store
-            vector_store = Chroma.from_documents(
-                documents=splits,
-                embedding=embeddings,
-                persist_directory=settings.VECTOR_STORE_PATH,
-                collection_name="galaxy_s25"
-            )
+            api_key = os.getenv("GOOGLE_API_KEY") or getattr(settings, "GOOGLE_API_KEY", "")
+            if not api_key:
+                raise RuntimeError("GOOGLE_API_KEY is not configured. Set it in the environment or settings.")
+
+            vector_store = provider_manager.create_vector_store_from_documents(splits)
             
             self.stdout.write(f"Vector store created with {vector_store._collection.count()} documents")
             self.stdout.write(f"Vector store saved at: {vector_store._persist_directory}")

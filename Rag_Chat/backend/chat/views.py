@@ -1,20 +1,13 @@
 from django.shortcuts import render
 from django.conf import settings
-from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.throttling import UserRateThrottle
 from typing import List, Dict, Any
 from pydantic import BaseModel, Field
-from langchain_openai import ChatOpenAI
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import OpenAIEmbeddings
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
 from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.runnables.history import RunnableWithMessageHistory
 from .models import User, Chat, RagData, SearchLog
 from .serializers import ChatSerializer, RagDataSerializer, SearchLogSerializer
 import logging
@@ -24,11 +17,12 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from pathlib import Path
 import pandas as pd
 import os
-from openai import OpenAIError
 from .redis_manager import RedisMessageManager
+from .provider_overrides import set_override as set_provider_override, get_override as get_provider_override, clear_override as clear_provider_override
+from .pipeline import ModuleContext, PipelineRunner, ModuleError
 
-# Ensure OpenAI API key is set
-os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
+# Ensure Google Gemini API key is set
+os.environ["GOOGLE_API_KEY"] = settings.GOOGLE_API_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +35,7 @@ def get_message_store() -> RedisMessageManager:
         raise
 
 from .utils import RAGUtils
+from .providers import provider_manager
 
 # For backward compatibility
 def get_rag_context(question: str) -> Dict[str, Any]:
@@ -130,20 +125,36 @@ class ChatAPIView(APIView):
                 )
             chat_instance = chat_serializer.save()
             
-            # RAG Context
-            rag_context = get_rag_context(question)
-            context = rag_context["context"]
-            image_paths = rag_context["image_paths"]
-            
-            images = []
-            for image_path in image_paths:
-                cleaned_images = [img.strip() for img in image_path.split("\n") if img.strip()]
-                images.extend(cleaned_images)
-    
-            # RagData Save
+            history = history_session_handler(user_id)
+            pipeline_context = ModuleContext(
+                question=question,
+                session_id=user_id,
+                user_id=user_id,
+                history_handler=history_session_handler,
+                history=history,
+            )
+
+            pipeline = PipelineRunner(
+                [
+                    {"type": "retrieve"},
+                    {"type": "reasoning"},
+                    {"type": "generation"},
+                ]
+            )
+
+            try:
+                pipeline_context = pipeline.run(pipeline_context)
+            except ModuleError as exc:
+                logger.error(f"Pipeline execution failed: {exc}")
+                return Response(
+                    {"error": "죄송합니다. 컨텍스트 생성 중 오류가 발생했습니다."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            rag_metadata = pipeline_context.extra.get("rag_metadata", {})
             rag_data = {
-                "data_text": context,
-                "image_urls": image_paths,
+                "data_text": pipeline_context.context_text,
+                "image_urls": rag_metadata.get("image_paths", pipeline_context.images),
             }
             rag_serializer = RagDataSerializer(data=rag_data)
             if not rag_serializer.is_valid():
@@ -152,81 +163,30 @@ class ChatAPIView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             rag_instance = rag_serializer.save()
-    
-            # Update chat instance with response
+
+            response_text = pipeline_context.response or ""
             chat_instance.data_id = rag_instance.data_id
+            chat_instance.response_text = response_text
             chat_instance.save()
 
-            # SearchLog Data Save
             search_log_data = {
                 "data": rag_instance.data_id,
                 "question": chat_instance.question_id
             }
             search_log_serializer = SearchLogSerializer(data=search_log_data)
-            if not search_log_serializer.is_valid():
-                return Response(
-                    search_log_serializer.errors,
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            search_log_serializer.save()
+            if search_log_serializer.is_valid():
+                search_log_serializer.save()
+            else:
+                logger.warning(f"Failed to save search log: {search_log_serializer.errors}")
 
-            # Update history
-            history = history_session_handler(user_id)
-            history.add_message(AIMessage(content=question))
-            
-            # Generate response
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are a friendly assistant. Use the following context to inform your answer: {context}"),
-                MessagesPlaceholder(variable_name="history"),
-                ("human", "{question}"),
-            ])
-            
-            # Import API key from utils
-            from .utils import API_KEY
-            
-            output_parser = StrOutputParser()
-            model = ChatOpenAI(
-                model="gpt-4o-mini",  # 'mini' 모델 사용
-                temperature=0.7,
-                request_timeout=30,
-                openai_api_key=API_KEY
-            )
-            
-            chain = prompt | model | output_parser
-            chain_with_history = RunnableWithMessageHistory(
-                chain,
-                history_session_handler,
-                input_messages_key="question",
-                history_messages_key="history",
-            )
-
-            chat_model_output = chain_with_history.invoke(
-                {
-                    "context": context,
-                    "question": question
-                },
-                config={"configurable": {"session_id": user_id}}
-            )
-            
-            # Save response
-            chat_instance.response_text = chat_model_output
-            chat_instance.save()
-            
             return Response({
-                "response": chat_model_output,
+                "response": response_text,
                 "chat_id": chat_instance.question_id,
-                "images": images
+                "images": pipeline_context.images
             }, status=status.HTTP_200_OK)
                 
-        except OpenAIError as e:
-            logger.error(f"OpenAI API error: {str(e)}")
-            return Response(
-                {"error": "OpenAI API error occurred. Please check your API key or try again later."},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-                
         except Exception as e:
-            logger.error(f"Error in ChatAPIView: {str(e)}")
+            logger.error(f"LLM provider error: {str(e)}")
             return Response(
                 {"error": "죄송합니다. 서비스 처리 중 오류가 발생했습니다."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -239,43 +199,32 @@ class ChatUserAPIView(APIView):
         try:
             # Check for existing user_id in the request
             existing_user_id = request.data.get("user_id")
-            
-            # If user_id is provided, check if the user exists
+
             if existing_user_id:
                 logger.info(f"Checking for existing user with ID: {existing_user_id}")
                 try:
                     user = User.objects.get(user_id=existing_user_id)
-                    
+
+                    # Refresh user expiration status if necessary
+                    if user.expired_datetime is not None:
+                        user.expired_datetime = None
+                        user.save(update_fields=["expired_datetime"])
+
                     # Update the session in Redis
                     redis_manager = get_message_store()
                     redis_manager.set_session(existing_user_id)
-                    
+
                     return Response({
                         "user_id": user.user_id
                     }, status=status.HTTP_200_OK)
                 except User.DoesNotExist:
                     logger.warning(f"User with ID {existing_user_id} not found, creating new user")
-                    # Continue to create a new user
-            
-            # If we're here, either no user_id was provided or the user wasn't found
-            
-            # Mark previous user as expired
-            latest_user = User.objects.order_by('-created_datetime').first()
-            if latest_user:
-                User.objects.filter(user_id=latest_user.user_id).update(expired_datetime=timezone.now())
-                
-                # Clear message history for previous user
-                try:
-                    message_store = get_message_store()
-                    message_store.clear_messages(latest_user.user_id)
-                except Exception as e:
-                    logger.warning(f"Failed to clear message history: {str(e)}")
 
             # Create new user - User model doesn't have username field
             logger.info("Creating new user")
             user = User()
             user.save()
-            
+
             # Initialize session in Redis
             try:
                 redis_manager = get_message_store()
@@ -283,7 +232,7 @@ class ChatUserAPIView(APIView):
                 logger.info(f"Set new session in Redis for user {user.user_id}")
             except Exception as e:
                 logger.error(f"Failed to set session in Redis: {e}")
-                
+
             return Response({
                 "user_id": user.user_id
             }, status=status.HTTP_200_OK)
@@ -348,6 +297,96 @@ class UpdateActivityAPIView(APIView):
                 {"error": "활동 시간 업데이트 중 오류가 발생했습니다"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class ProviderConfigAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    COMBO_MAP = {
+        "gemini_only": {
+            "reasoning_provider": "gemini",
+            "generation_provider": "gemini",
+        },
+        "qwen_reasoning_gemini_generation": {
+            "reasoning_provider": "qwen",
+            "generation_provider": "gemini",
+        },
+        "qwen_only": {
+            "reasoning_provider": "qwen",
+            "generation_provider": "qwen",
+        },
+    }
+
+    VALID_PROVIDERS = {"gemini", "qwen"}
+
+    def _resolve_session_id(self, request) -> str:
+        session_id = request.data.get("user_id") if isinstance(request.data, dict) else None
+        session_id = session_id or request.query_params.get("user_id")
+        if session_id:
+            return session_id
+        if not request.session.session_key:
+            request.session.save()
+        return request.session.session_key
+
+    def get(self, request):
+        session_id = self._resolve_session_id(request)
+        selection = provider_manager.get_active_selection(session_id)
+        override = get_provider_override(session_id)
+        return Response({
+            "session_id": session_id,
+            "selection": selection,
+            "override": override,
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        session_id = self._resolve_session_id(request)
+        payload = request.data or {}
+        combo_key = payload.get("provider_combo")
+
+        if combo_key:
+            combo = self.COMBO_MAP.get(combo_key)
+            if not combo:
+                return Response(
+                    {"error": f"Unknown provider combo: {combo_key}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            reasoning = combo["reasoning_provider"]
+            generation = combo["generation_provider"]
+        else:
+            reasoning = payload.get("reasoning_provider")
+            generation = payload.get("generation_provider")
+            if not reasoning or not generation:
+                return Response(
+                    {"error": "reasoning_provider와 generation_provider를 지정하거나 provider_combo를 사용하세요."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        reasoning = reasoning.lower()
+        generation = generation.lower()
+        if reasoning not in self.VALID_PROVIDERS or generation not in self.VALID_PROVIDERS:
+            return Response(
+                {"error": "지원되지 않는 provider 입니다. (gemini/qwen)"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        set_provider_override(session_id, reasoning=reasoning, generation=generation)
+        selection = provider_manager.get_active_selection(session_id)
+        response = {
+            "session_id": session_id,
+            "selection": selection,
+            "provider_combo": combo_key or "custom",
+        }
+        return Response(response, status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        session_id = self._resolve_session_id(request)
+        clear_provider_override(session_id)
+        selection = provider_manager.get_active_selection(session_id)
+        return Response({
+            "session_id": session_id,
+            "selection": selection,
+            "provider_combo": "default",
+        }, status=status.HTTP_200_OK)
 class ChatRagAPIView(APIView):
     """
     API view for handling RAG operations:
@@ -356,7 +395,7 @@ class ChatRagAPIView(APIView):
     - Test similarity search (mode=3)
     """
     
-    def _create_vector_store(self, documents, embedding_model="text-embedding-ada-002"):
+    def _create_vector_store(self, documents, embedding_model="models/text-embedding-004"):
         """Create and persist a vector store from documents"""
         # Use the RAGUtils from utils.py to leverage shared code
         return RAGUtils.create_vector_store_from_documents(documents, embedding_model)
@@ -452,11 +491,11 @@ class ChatRagAPIView(APIView):
             logger.error(f"Error in similarity search: {str(e)}")
             raise
     
-    def _handle_openai_error(self, e, operation):
-        """Centralized OpenAI error handling"""
-        logger.error(f"OpenAI API error in {operation}: {str(e)}")
+    def _handle_provider_error(self, e, operation):
+        """Centralized provider error handling"""
+        logger.error(f"LLM provider error in {operation}: {str(e)}")
         return Response(
-            {"error": f"OpenAI API error occurred during {operation}"},
+            {"error": f"LLM provider error occurred during {operation}"},
             status=status.HTTP_503_SERVICE_UNAVAILABLE
         )
     
@@ -479,13 +518,13 @@ class ChatRagAPIView(APIView):
                         {"error": f"Invalid mode: {mode}. Must be 1, 2, or 3."},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-            except OpenAIError as e:
+            except Exception as e:
                 operation = {
                     1: "CSV processing",
                     2: "Excel processing",
                     3: "similarity search"
                 }.get(mode, "unknown operation")
-                return self._handle_openai_error(e, operation)
+                return self._handle_provider_error(e, operation)
                     
         except Exception as e:
             logger.error(f"Error in ChatRagAPIView: {str(e)}")

@@ -68,6 +68,7 @@ celerybeat.pid
 .env
 .env.local
 .env.*.local
+!backend/.env
 
 # Redis
 dump.rdb

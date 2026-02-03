@@ -32,7 +32,8 @@ Django, Streamlit, LangChain을 활용한 현대적인 채팅 애플리케이션
 - Docker
 - Docker Compose
 - Python 3.8+
-- OpenAI API 키
+- Google Gemini API 키
+- (선택) Qwen API 키 및 엔드포인트
 - Redis
 
 ### 환경 설정
@@ -155,9 +156,10 @@ triple_chat_pjt/
    - 세션 타임아웃 설정 확인
    - 로그에서 오류 메시지 확인
 
-4. OpenAI API 오류
+4. Google Gemini API 오류
    - API 키가 올바르게 설정되었는지 확인
-   - 환경 변수 OPENAI_API_KEY 확인
+   - 환경 변수 GOOGLE_API_KEY 확인
+   - Qwen 조합을 사용할 경우 QWEN_API_BASE와 QWEN_API_KEY도 확인
 
 ## 기여 방법
 1. Fork the repository

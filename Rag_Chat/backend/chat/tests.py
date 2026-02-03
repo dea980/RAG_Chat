@@ -2,6 +2,8 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
+from django.core.cache import cache
+from unittest.mock import patch, MagicMock
 from .models import User, Chat, RagData, SearchLog
 from .serializers import UserSerializer, ChatSerializer, RagDataSerializer, SearchLogSerializer
 import uuid
@@ -91,23 +93,33 @@ class URLRedirectTests(TestCase):
         self.assertEqual(response.status_code, 302)  # Temporary redirect
         self.assertEqual(response['Location'], '/api/v1/triple/chat/')
 
-from unittest.mock import patch
-
 class ChatAPIViewTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create()
         self.chat_url = reverse('chat-create')
 
-    @patch('chat.views.ChatOpenAI')
-    @patch('chat.views.ChatPromptTemplate')
-    def test_create_chat_success(self, mock_prompt, mock_chat):
+    class DummyChatModel:
+        def __init__(self, reply):
+            self.reply = reply
+            self.calls = []
+
+        def invoke(self, input, **kwargs):
+            self.calls.append((input, kwargs))
+            return self.reply
+
+    @patch('chat.views.history_session_handler')
+    @patch('chat.pipeline.modules.RAGUtils.get_rag_context')
+    @patch('chat.views.provider_manager.get_generation_model')
+    @patch('chat.views.provider_manager.get_reasoning_model')
+    def test_create_chat_success(self, mock_reasoning_model, mock_generation_model, mock_rag_context, mock_history_handler):
         """Test successful chat creation"""
-        # Mock the chain
-        mock_chain = mock_prompt.from_template.return_value
-        mock_chain.__or__ = lambda self, other: mock_chain
-        mock_chain.invoke.return_value = "Test response"
-        
-        data = {"topic": "Test topic"}
+        mock_rag_context.return_value = {"context": "test context", "image_paths": []}
+        history = MagicMock()
+        mock_history_handler.return_value = history
+        mock_reasoning_model.return_value = self.DummyChatModel("Reasoning summary")
+        mock_generation_model.return_value = self.DummyChatModel("Test response")
+
+        data = {"question": "Test question", "user_id": self.user.user_id}
         response = self.client.post(self.chat_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('response', response.data)
@@ -120,14 +132,17 @@ class ChatAPIViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
 
-    @patch('chat.views.ChatOpenAI')
-    @patch('chat.views.ChatPromptTemplate')
-    def test_rate_limiting(self, mock_prompt, mock_chat):
+    @patch('chat.views.history_session_handler')
+    @patch('chat.pipeline.modules.RAGUtils.get_rag_context')
+    @patch('chat.views.provider_manager.get_generation_model')
+    @patch('chat.views.provider_manager.get_reasoning_model')
+    def test_rate_limiting(self, mock_reasoning_model, mock_generation_model, mock_rag_context, mock_history_handler):
         """Test rate limiting"""
-        # Mock the chain
-        mock_chain = mock_prompt.from_template.return_value
-        mock_chain.__or__ = lambda self, other: mock_chain
-        mock_chain.invoke.return_value = "Test response"
+        mock_rag_context.return_value = {"context": "test context", "image_paths": []}
+        history = MagicMock()
+        mock_history_handler.return_value = history
+        mock_reasoning_model.return_value = self.DummyChatModel("Reasoning summary")
+        mock_generation_model.return_value = self.DummyChatModel("Test response")
 
         # Clear cache before starting the test
         from django.core.cache import cache
@@ -135,11 +150,19 @@ class ChatAPIViewTests(APITestCase):
 
         # Test that we can make 5 successful requests
         for _ in range(5):
-            response = self.client.post(self.chat_url, {"topic": "test"}, format='json')
+            response = self.client.post(
+                self.chat_url,
+                {"question": "test", "user_id": self.user.user_id},
+                format='json'
+            )
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Test that the 6th request is rate limited
-        response = self.client.post(self.chat_url, {"topic": "test"}, format='json')
+        response = self.client.post(
+            self.chat_url,
+            {"question": "test", "user_id": self.user.user_id},
+            format='json'
+        )
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
         # Wait for rate limit to reset (in a real scenario, we'd wait 60 seconds)
@@ -147,5 +170,48 @@ class ChatAPIViewTests(APITestCase):
         cache.clear()  # Clear the rate limiting cache
 
         # Test that we can make another request after clearing the cache
-        response = self.client.post(self.chat_url, {"topic": "test"}, format='json')
+        response = self.client.post(
+            self.chat_url,
+            {"question": "test", "user_id": self.user.user_id},
+            format='json'
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class ProviderConfigAPITests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create()
+        self.url = reverse('provider-config')
+
+    def test_get_default_selection(self):
+        response = self.client.get(self.url, {"user_id": self.user.user_id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["selection"]["reasoning_provider"], "gemini")
+
+    def test_set_combo(self):
+        response = self.client.post(
+            self.url,
+            {"user_id": self.user.user_id, "provider_combo": "qwen_reasoning_gemini_generation"},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["selection"]["reasoning_provider"], "qwen")
+        self.assertEqual(response.data["selection"]["generation_provider"], "gemini")
+
+        response = self.client.get(self.url, {"user_id": self.user.user_id})
+        self.assertEqual(response.data["selection"]["reasoning_provider"], "qwen")
+
+    def test_custom_override_and_clear(self):
+        payload = {
+            "user_id": self.user.user_id,
+            "reasoning_provider": "qwen",
+            "generation_provider": "qwen",
+        }
+        response = self.client.post(self.url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["selection"]["generation_provider"], "qwen")
+
+        response = self.client.delete(self.url, {"user_id": self.user.user_id}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["selection"]["reasoning_provider"], "gemini")

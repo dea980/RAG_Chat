@@ -1,17 +1,13 @@
 from django.conf import settings
 from typing import Dict, Any, List, Optional, Union
-from langchain_openai import OpenAIEmbeddings
-from langchain_community.vectorstores import Chroma
 from langchain.schema import Document
 import logging
-from openai import OpenAIError
 import os
-import openai
 import json
 from django.utils.timezone import now
 
-# Set API key directly for OpenAI
-# API_KEY = ""
+from .providers import provider_manager
+
 logger = logging.getLogger(__name__)
 
 class MetaDataManager:
@@ -124,7 +120,7 @@ class MetaDataManager:
         if not MetaData.objects.filter(key="llm_model").exists():
             MetaDataManager.set(
                 "llm_model",
-                "gpt-4o-mini",
+                provider_manager.generation_provider_name,
                 "Current LLM model in use"
             )
         
@@ -132,7 +128,7 @@ class MetaDataManager:
         if not MetaData.objects.filter(key="embedding_model").exists():
             MetaDataManager.set(
                 "embedding_model",
-                "text-embedding-ada-002",
+                os.getenv("GOOGLE_EMBEDDING_MODEL", "models/text-embedding-004"),
                 "Current embedding model in use"
             )
         
@@ -148,18 +144,10 @@ class RAGUtils:
     """Utility class for RAG operations to reduce code duplication"""
     
     @staticmethod
-    def get_vector_store(embedding_model="text-embedding-ada-002"):
-        """Get Chroma vector store with specified embedding model"""
+    def get_vector_store():
+        """Get vector store from the configured provider"""
         try:
-            embeddings = OpenAIEmbeddings(model=embedding_model, openai_api_key=API_KEY)
-            vector_store = Chroma(
-                persist_directory=settings.VECTOR_STORE_PATH,
-                embedding_function=embeddings
-            )
-            return vector_store
-        except OpenAIError as e:
-            logger.error(f"OpenAI API error in get_vector_store: {str(e)}")
-            raise
+            return provider_manager.get_vector_store()
         except Exception as e:
             logger.error(f"Error creating vector store: {str(e)}")
             raise
@@ -188,9 +176,6 @@ class RAGUtils:
             vector_store = RAGUtils.get_vector_store()
             search_results = vector_store.similarity_search(question, k=k)
             return RAGUtils.process_search_results(search_results)
-        except OpenAIError as e:
-            logger.error(f"OpenAI API error in get_rag_context: {str(e)}")
-            raise
         except Exception as e:
             logger.error(f"Error in get_rag_context: {str(e)}")
             return {
@@ -199,15 +184,10 @@ class RAGUtils:
             }
     
     @staticmethod
-    def create_vector_store_from_documents(documents: List[Document], embedding_model="text-embedding-ada-002"):
+    def create_vector_store_from_documents(documents: List[Document]):
         """Create and persist a vector store from documents"""
         try:
-            embeddings = OpenAIEmbeddings(model=embedding_model, openai_api_key=API_KEY)
-            vector_store = Chroma.from_documents(
-                documents=documents,
-                embedding=embeddings,
-                persist_directory=settings.VECTOR_STORE_PATH
-            )
+            vector_store = provider_manager.create_vector_store_from_documents(documents)
             logger.info(f"Vector store created with {vector_store._collection.count()} documents")
             return vector_store
         except Exception as e:

@@ -1,11 +1,10 @@
 # update views.py
-
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.throttling import UserRateThrottle
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from django.conf import settings
@@ -13,7 +12,6 @@ from .models import User, Chat, RagData, SearchLog
 from .serializers import ChatSerializer, RagDataSerializer
 import logging
 from langchain.schema.runnable import RunnablePassthrough
-from langchain.embeddings.openai import OpenAIEmbeddings
 import os
 from langchain.vectorstores import Chroma
 
@@ -62,7 +60,7 @@ def generate_rag_response(docs, topic, chat_instance):
     """)
     
     # model
-    model = ChatOpenAI(model="gpt-4o-mini")
+    model = ChatGoogleGenerativeAI(model="gemini-1.5-pro")
     
     # parser
     output_parser = StrOutputParser()
@@ -120,7 +118,7 @@ class ChatAPIView(APIView):
             vector_store_path = os.path.join(base_dir, "vector_store")
             
             # 임베딩 도구 설정
-            embeddings = OpenAIEmbeddings()
+            embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
             # 백터 DB 설정
             vector_store = Chroma(persist_directory=vector_store_path, embedding_function=embeddings)
             

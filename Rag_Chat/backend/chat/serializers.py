@@ -15,8 +15,7 @@ class RagDataSerializer(serializers.ModelSerializer):
 class ChatSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chat
-        fields = ['question_id', 'user', 'question_text', 'question_created_datetime', 
-                 'response_text', 'data']
+        fields = ['question_id', 'user', 'question_text', 'question_created_datetime', 'response_text', 'data']
 
 class SearchLogSerializer(serializers.ModelSerializer):
     class Meta:

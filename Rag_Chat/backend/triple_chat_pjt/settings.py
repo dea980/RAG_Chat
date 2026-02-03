@@ -13,8 +13,8 @@ import os
 from pathlib import Path
 from celery.schedules import crontab
 
-# Load OpenAI API key from environment
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+# Load Gemini API key from environment
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY', '')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -53,7 +53,7 @@ INSTALLED_APPS = [
 ]
 
 # Redis + Celery settings
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 

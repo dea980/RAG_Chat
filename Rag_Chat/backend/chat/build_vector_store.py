@@ -1,9 +1,6 @@
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 import pandas as pd
-import openai
 import os
 import sys
 import django
@@ -23,6 +20,7 @@ django.setup()
 # Import after Django setup
 from .vector_metadata import VectorMetadataManager
 from .utils import MetaDataManager
+from .providers import provider_manager
 
 logger = logging.getLogger(__name__)
 
@@ -103,20 +101,16 @@ def load_excel_data(file_path: str):
 def build_vector_store():
     '''
     RAG를 구축하는 시점과 RAG를 사용하는 시점을 분리
-    ✅ 서버 구동 시 한 번만 실행하기
+    서버 구동 시 한 번만 실행하기
     메타데이터를 별도로 저장하여 검색 성능 최적화
     '''
     try:
-        # Set OpenAI API key
-        openai.api_key = "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"
-        os.environ["OPENAI_API_KEY"] = openai.api_key
-        
         # Generate an ID for this build process
         build_id = str(uuid.uuid4())
         build_time = datetime.datetime.now().isoformat()
         
         # 현재 작업 디렉토리 출력
-        current_dir = os.getcwd()
+        current_dir = settings.BASE_DIR
         logger.info(f"현재 작업 디렉토리: {current_dir}")
         
         # CSV 파일 경로 확인
@@ -139,9 +133,6 @@ def build_vector_store():
             },
             description="Latest vector store build information"
         )
-        
-        # 1. 모델 불러오기
-        model = ChatOpenAI(model="gpt-4o-mini")
         
         # 2. 문서 불러오기
         from langchain_community.document_loaders import CSVLoader
@@ -188,18 +179,8 @@ def build_vector_store():
             f"csv_chunks_{build_id}"
         )
         
-        # embedding 도구 설정
-        embeddings = OpenAIEmbeddings()
-            
         # Chroma 벡터스토어 생성 및 저장
-        vector_store_path = settings.VECTOR_STORE_PATH
-        logger.info(f"벡터 스토어 저장 경로: {vector_store_path}")
-        
-        vector_store = Chroma.from_documents(
-            documents=splits,
-            embedding=embeddings,
-            persist_directory=vector_store_path
-        )
+        vector_store = provider_manager.create_vector_store_from_documents(splits)
         
         # 저장 확인
         doc_count = vector_store._collection.count()
@@ -228,7 +209,7 @@ def build_vector_store():
                 "build_id": build_id,
                 "document_count": doc_count,
                 "last_updated": datetime.datetime.now().isoformat(),
-                "embedding_model": "text-embedding-ada-002",
+                "embedding_model": os.getenv("GOOGLE_EMBEDDING_MODEL", "models/text-embedding-004"),
                 "chunk_size": 1000,
                 "chunk_overlap": 200
             }

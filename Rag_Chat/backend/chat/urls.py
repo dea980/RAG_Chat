@@ -6,6 +6,7 @@ urlpatterns = [
     path("chat-user/", views.ChatUserAPIView.as_view(), name='chat-user'),
     path("chat-rag/", views.ChatRagAPIView.as_view(), name='chat-rag'),
     path("update-activity/", views.UpdateActivityAPIView.as_view(), name='update-activity'),
+    path("providers/", views.ProviderConfigAPIView.as_view(), name='provider-config'),
     path("search-logs/", views.SearchLogAPIView.as_view(), name='search-logs'),
     
     # Metadata endpoints

@@ -26,7 +26,7 @@
       
 <h1 id="triple-chat-아키텍처-문서">Triple Chat 아키텍처 문서 </h1>
 <h2 id="시스템-아키텍처-개요">시스템 아키텍처 개요 </h2>
-<p>Triple Chat은 삼성 갤럭시 S25에 대한 전문 지식을 제공하는 AI 챗봇 시스템입니다. LangChain, OpenAI, ChromaDB를 활용한 RAG(Retrieval Augmented Generation) 아키텍처를 기반으로 구축되었습니다.</p>
+<p>Triple Chat은 삼성 갤럭시 S25에 대한 전문 지식을 제공하는 AI 챗봇 시스템입니다. LangChain, Google Gemini, ChromaDB를 활용한 RAG(Retrieval Augmented Generation) 아키텍처를 기반으로 구축되었습니다.</p>
 <h2 id="시스템-워크플로우-다이어그램">시스템 워크플로우 다이어그램 </h2>
 <h3 id="1-전체-시스템-아키텍처">1. 전체 시스템 아키텍처 </h3>
 <div class="mermaid">graph TB
@@ -49,14 +49,14 @@
     end
 
     subgraph "외부 서비스"
-        OpenAI[OpenAI API]
+        Gemini[Google Gemini API]
     end
 
     UI --&gt; |HTTP| API
     SessionMgr --&gt; |세션 관리| Redis
     API --&gt; |벡터 검색| ChromaDB
     API --&gt; |메타데이터| SQLite
-    RAG --&gt; |임베딩/채팅| OpenAI
+    RAG --&gt; |임베딩/채팅| Gemini
     VectorOps --&gt; ChromaDB
 </div><h3 id="2-챗봇-메시지-처리-흐름">2. 챗봇 메시지 처리 흐름 </h3>
 <div class="mermaid">sequenceDiagram
@@ -66,7 +66,7 @@
     participant R as Redis
     participant I as Static Images
     participant C as ChromaDB
-    participant O as OpenAI
+    participant O as Google Gemini
 
     U-&gt;&gt;S: 질문 입력
     S-&gt;&gt;D: POST /api/v1/triple/chat/
@@ -118,17 +118,17 @@
 </ul>
 <h3 id="4-외부-서비스">4. 외부 서비스 </h3>
 <ul>
-<li>OpenAI API
+<li>Google Gemini API
 <ul>
-<li>text-embedding-ada-002: 텍스트 임베딩</li>
-<li>gpt-3.5-turbo-1106: 채팅 응답 생성</li>
+<li>models/text-embedding-004: 텍스트 임베딩</li>
+<li>gemini-1.5-pro: 채팅 응답 생성</li>
 </ul>
 </li>
 </ul>
 <h2 id="주요-기능-구현">주요 기능 구현 </h2>
 <h3 id="1-rag-구현">1. RAG 구현 </h3>
 <pre data-role="codeBlock" data-info="python" class="language-python python"><code><span class="token keyword keyword-def">def</span> <span class="token function">get_rag_context</span><span class="token punctuation">(</span>question<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">&gt;</span> Dict<span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">,</span> Any<span class="token punctuation">]</span><span class="token punctuation">:</span>
-    embeddings <span class="token operator">=</span> OpenAIEmbeddings<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    embeddings <span class="token operator">=</span> GoogleGenerativeAIEmbeddings<span class="token punctuation">(</span><span class="token name">model</span><span class="token operator">=</span><span class="token string">"models/text-embedding-004"</span><span class="token punctuation">)</span>
     vector_store <span class="token operator">=</span> Chroma<span class="token punctuation">(</span>
         persist_directory<span class="token operator">=</span>settings<span class="token punctuation">.</span>VECTOR_STORE_PATH<span class="token punctuation">,</span>
         embedding_function<span class="token operator">=</span>embeddings
@@ -186,7 +186,7 @@ chain_with_history <span class="token operator">=</span> RunnableWithMessageHist
 logger <span class="token operator">=</span> logging<span class="token punctuation">.</span>getLogger<span class="token punctuation">(</span>__name__<span class="token punctuation">)</span>
 </code></pre><h3 id="2-에러-처리">2. 에러 처리 </h3>
 <ul>
-<li>OpenAI API 오류 처리</li>
+<li>Gemini API 오류 처리</li>
 <li>세션 만료 처리</li>
 <li>데이터베이스 연결 오류 처리</li>
 </ul>
