@@ -1,5 +1,4 @@
-Triple Chat – Internal RAG Q&A (Fact-Only Overview)  
-팔란티어 제출을 염두에 둔 메인 요약입니다. 과장 없이 현재 동작하는 것만 적었습니다.
+Triple Chat – Internal RAG Q&A 
 
 1) Purpose / 목적  
 - EN: Track Q&A per session, log retrieved context and responses, and try vendor-flexible RAG.  
