@@ -1,55 +1,71 @@
-# 백엔드 테스트 가이드
+# 백엔드 스모크 테스트 가이드 (legacy)
 
-## 테스트 환경 설정
+> **현재 권장 경로**: 자동화된 테스트는 [`backend/TestsReadme.md`](../backend/TestsReadme.md)와 GitHub Actions(`.github/workflows/ci.yml`)를 사용합니다. 본 문서는 빠른 손-테스트 절차 정도로 유지됩니다.
 
-1. 필요한 패키지 설치:
+## 사전 준비
+
+### Docker 권장 (전 스택)
 ```bash
-pip install requests
+cd Rag_Chat
+cp .env.example .env   # GOOGLE_API_KEY 채우기
+docker-compose up --build
+```
+- Postgres 5432, Redis 6379, Django 8000, Streamlit 8501 일괄 기동.
+
+### 로컬 dev (SQLite fallback)
+```bash
+cd Rag_Chat
+./run_local_fixed.sh
 ```
 
-2. Django 서버 실행:
+## 빠른 수동 검증
+
+### 1) 헬스
 ```bash
-cd backend
-python manage.py runserver
+curl -s http://localhost:8000/api/v1/triple/health/
+curl -s http://localhost:8000/api/v1/triple/health/ready/ | jq
 ```
 
-## 테스트 실행 방법
-
-1. 새로운 터미널 창을 열고 프로젝트 루트 디렉토리로 이동:
+### 2) 루트 리다이렉트
 ```bash
-cd /path/to/triple_chat_pjt
+curl -sI http://localhost:8000/ | head -5
+# → 302 Found, Location: /api/v1/triple/chat/
 ```
 
-2. 테스트 스크립트 실행:
+### 3) 사용자/세션
 ```bash
-python test.py
+curl -s -X POST http://localhost:8000/api/v1/triple/chat-user/ -H 'Content-Type: application/json' -d '{}' | jq
 ```
 
-## 테스트 항목
+### 4) 채팅 (LLM 호출)
+```bash
+curl -s -X POST http://localhost:8000/api/v1/triple/chat/ \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id":"U0001000100001","question":"갤럭시 S25 256GB 가격이 얼마인가요?"}' | jq
+```
 
-테스트 스크립트는 다음 기능들을 검증합니다:
+### 5) Knowledge (LLM 호출 없음, 결정적 검색)
+```bash
+curl -s 'http://localhost:8000/api/v1/knowledge/products/?q=galaxy' | jq
+```
 
-1. 루트 URL 리다이렉트 테스트
-   - 루트 URL(/)이 채팅 API 엔드포인트(/api/v1/triple/chat/)로 올바르게 리다이렉트되는지 확인
-   - 리다이렉트 상태 코드(302) 확인
-   - 리다이렉트 위치 헤더 확인
-
-2. 채팅 API 엔드포인트 테스트
-   - POST 요청 처리 확인
-   - 응답 상태 코드 확인
-   - 응답 데이터 구조 확인
+### 6) Moderation BLOCK 시나리오 (관리자 사전 등록 필요)
+```bash
+# /admin/moderation/forbiddenword/ 에 word="블락테스트", severity=BLOCK 등록 후
+curl -s -X POST http://localhost:8000/api/v1/triple/chat/ \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id":"U0001000100001","question":"블락테스트 확인"}'
+# → 403 + blocked_words
+```
 
 ## 테스트 결과 해석
-
-- ✅ : 테스트 통과
-- ❌ : 테스트 실패 (상세 오류 메시지 표시)
+- ✅ : 응답 200 / 200-with-expected fields
+- ❌ : 5xx 또는 expected field 누락 — 상세 로그 확인
 
 ## 문제 해결
+1. **연결 오류** — backend 컨테이너가 떠 있는지: `docker-compose ps`
+2. **DB 오류** — `docker-compose exec backend python manage.py migrate`
+3. **헬스 readiness 실패** — `/health/ready/` 응답에서 어느 컴포넌트가 down인지 확인 (db/redis/provider)
 
-1. 연결 오류 발생 시:
-   - Django 서버가 실행 중인지 확인
-   - 서버가 http://127.0.0.1:8000 에서 실행 중인지 확인
-
-2. API 응답 오류 발생 시:
-   - 응답 상태 코드 확인
-   - 응답 본문의 오류 메시지 확인
+## 자동화된 테스트
+정식 테스트는 [`backend/TestsReadme.md`](../backend/TestsReadme.md) 참조 — pytest, chunk A/B harness, GitHub Actions CI 통합 모두 거기에.

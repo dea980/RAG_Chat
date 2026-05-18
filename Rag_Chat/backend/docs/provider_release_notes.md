@@ -1,33 +1,53 @@
-# Provider Release Notes (EN/KR)
+# Provider Release Notes
+
+## 2026-05-18 — Production-readiness bundle
+
+### Provider-adjacent changes
+- Provider 호출 양옆에 **moderation filter (INBOUND/OUTBOUND)** 가 자동 적용됨. provider 구현은 정책 무관.
+- `provider_manager.{embedding,reasoning,generation}_provider_name` 속성이 `/health/ready/`에 노출되어 운영자가 현재 구성 확인 가능.
+- Settings 로드 시 `GOOGLE_API_KEY` 빈 값이어도 부팅은 가능 (CI 시나리오), 단 실제 호출에선 실패.
+
+### 새로 도입된 의존성
+- `psycopg2-binary>=2.9.9` (Postgres)
+- `rank-bm25>=0.2.2` (retrieval A/B harness — provider 호출 없이 chunk 정책 검증)
+- `django-cors-headers>=4.2.0` (CORS allowlist)
+
+### 미해결
+- Provider fallback chain 미구현 — Gemini 장애 시 Qwen 자동 전환 안 됨.
+- Embedding은 Gemini만 — 자체 호스팅 embedding(sentence-transformers/bge) 미구현.
+
+---
+
+## 2026-02-03 — Initial provider abstraction
 Version: 2026-02-03
 
-## Summary / 개요
-Provider 체계를 정비해 Gemini/Qwen 조합을 세션 단위로 전환 가능하게 했습니다. Streamlit 프리셋과 Django API가 동일 엔드포인트를 사용합니다.
+### Summary
+Provider stack updated to let Gemini/Qwen combos switch per session. Streamlit presets and the Django API share one endpoint.
 
-## Changes / 주요 변경사항
-1. ProviderManager  
-   - Env + session override로 reasoning/generation 선택.  
-   - Cache key `(provider, purpose)`로 인스턴스 재사용.
-2. Session Provider API `/api/v1/triple/providers/`  
-   - GET: 세션 선택 상태  
-   - POST: 프리셋(gemini_only, qwen_reasoning_gemini_generation, qwen_only) 또는 커스텀 적용  
-   - DELETE: override 제거
-3. Streamlit UI  
-   - 사이드바 프리셋 셀렉터, 적용 결과 JSON 표시, 즉시 반영.
-4. Vector store / indexing  
-   - `RAGUtils`, `build_vector_store.py`, `management/commands/build_vectors.py`가 Manager 경유로 임베딩 생성.  
-   - `settings.BASE_DIR` 기준 경로 사용.
-5. Docs & env template  
-   - `backend/.env`에 Gemini/Qwen 필드 추가, 관련 문서 업데이트.
+### Changes
+1. **ProviderManager**
+   - Combines env + session override to pick reasoning/generation.
+   - Cache key `(provider, purpose)` to reuse model instances.
+2. **Session Provider API** `/api/v1/triple/providers/`
+   - GET: current session selection
+   - POST: presets (`gemini_only`, `qwen_reasoning_gemini_generation`, `qwen_only`) or custom combo
+   - DELETE: remove override
+3. **Streamlit UI**
+   - Sidebar preset selector, shows applied JSON, updates session immediately.
+4. **Vector store / indexing**
+   - `RAGUtils`, `build_vector_store.py`, `management/commands/build_vectors.py` create embeddings through ProviderManager.
+   - Paths based on `settings.BASE_DIR` to reduce cwd issues.
+5. **Docs/env template**
+   - `backend/.env` includes Gemini/Qwen keys; related docs refreshed.
 
-## Considerations / 고려사항
-- `GOOGLE_API_KEY` 필수, Qwen은 `QWEN_API_KEY`, `QWEN_API_BASE` 필요.  
-- Override는 TTL(`PROVIDER_OVERRIDE_TTL`, 기본 1800초) 후 기본값으로 복귀.  
-- Reasoning→Generation 순차 호출로 지연 가능; 캐싱/비동기/스트리밍 검토.  
-- Streamlit 프리셋은 단순 조합; 세밀한 설정은 API 직접 호출.
+### Considerations
+- `GOOGLE_API_KEY` required; Qwen uses `QWEN_API_KEY`, `QWEN_API_BASE`.
+- Overrides live in cache with TTL (`PROVIDER_OVERRIDE_TTL`, default 1800s); fall back afterward.
+- Reasoning→Generation is sequential; consider caching/async/streaming for latency.
+- Streamlit presets are simple; complex mixes need direct API calls.
 
-## Next / 다음 단계
-1) 리랭커 플러그인 추가  
-2) Provider 헬스 체크 + 장애 시 기본값 fallback  
-3) 조합별 스모크 테스트 CI 매트릭스화  
-4) Streamlit 고급 패널로 커스텀 조합 입력 지원
+### Next
+1) Add reranker plugin option
+2) Health checks with fallback to defaults
+3) CI matrix for provider combos
+4) Streamlit advanced panel for custom combos

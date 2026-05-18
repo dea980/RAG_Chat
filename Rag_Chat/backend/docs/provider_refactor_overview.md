@@ -1,23 +1,27 @@
-# Provider Refactor Overview (EN/KR)
-최근 Provider 추상화 이후 구조 변화와 영향 범위를 모았습니다.
+# Provider Refactor Overview
+Summary of structure changes around the provider abstraction, and how it now fits in with the new moderation / knowledge / audit layers.
 
-## Changes / 변경 사항
-- ProviderManager: env로 embedding/reasoning/generation 선택. 기본 Gemini, Qwen 조합은 실험.  
-- Vector store path cleanup: `RAGUtils`, `build_vector_store.py`, `management/commands/build_vectors.py` 모두 ProviderManager 통해 임베딩 생성.  
-- Reasoning → Generation chain: `chat/views.py`에서 reasoning 출력 후 생성 프롬프트에 포함.  
-- Env alignment: `backend/.env`에 Gemini/Qwen 키 포함, `run_local_fixed.sh`가 동일 변수 프런트엔드에 전달.  
-- Session provider toggle: `/api/v1/triple/providers/` GET/POST로 프리셋 적용 (gemini_only, qwen_reasoning_gemini_generation, qwen_only). Streamlit 사이드바에서 호출.
+## Changes (cumulative)
+- **ProviderManager**: select embedding/reasoning/generation via env; default Gemini, Qwen combo experimental.
+- **Vector store cleanup**: `RAGUtils`, `build_vector_store.py`, `management/commands/build_vectors.py` create embeddings through ProviderManager.
+- **Reasoning → Generation chain**: `chat/views.py` feeds reasoning output into the generation prompt.
+- **Env alignment**: `Rag_Chat/.env.example` (root) is now the single template — propagated to backend container via docker-compose.
+- **Session provider toggle**: `/api/v1/triple/providers/` GET/POST applies presets (gemini_only, qwen_reasoning_gemini_generation, qwen_only); Streamlit sidebar calls it.
+- **Moderation wrap (new)**: every reasoning/generation call is sandwiched between INBOUND and OUTBOUND `moderation.filter` calls so providers stay agnostic to policy. Sanitized text is what actually leaves the process.
+- **Audit (new)**: provider responses are recorded indirectly via `Chat.response_text` (post-moderation) and `AuditLog`.
 
-## Considerations / 고려 사항
-- `GOOGLE_API_KEY` 필수, Qwen은 `QWEN_API_KEY`, `QWEN_API_BASE` 필요.  
-- 두 모델 순차 호출로 지연 증가 가능 → 캐싱/비동기/스트리밍 검토.  
-- Qwen 로컬 서빙 시 GPU 요구; 준비 안 됐으면 Gemini-only 유지.  
-- 싱글톤 캐시라 장기 실행 후 재초기화가 필요할 수 있음.
+## Considerations
+- `GOOGLE_API_KEY` required; Qwen needs `QWEN_API_KEY`, `QWEN_API_BASE`.
+- Sequential reasoning→generation can add latency; consider caching/async/streaming.
+- Qwen local serving needs GPU; otherwise stay Gemini-only.
+- Singleton cache may need reset in long-running processes.
+- **Provider 호출은 모더레이션 layer 뒤에 있다** — 새 provider를 추가해도 policy 적용은 자동.
 
-## Next Steps / 다음 단계
-1) 리랭커 플러그인 구조 (Cohere, bge-reranker 등)  
-2) Provider 헬스 체크 + 장애 시 기본값 fallback  
-3) 조합별 스모크 테스트를 CI 매트릭스로 추가  
-4) Streamlit에서 커스텀 조합 입력 지원 고급 패널 검토  
+## Next Steps
+1) Reranker plugin path (Cohere, bge-reranker, etc.) — chunk experiment 결과(150-sweet-spot) 검증 후
+2) Provider health check with fallback chain: Gemini → Qwen → Ollama
+3) CI matrix for provider-combo smoke tests
+4) Streamlit advanced panel for custom combos
+5) **Local LLM provider 추가** (Ollama) — `chat/providers/ollama.py`, env: `OLLAMA_BASE`, `OLLAMA_MODEL`. 마이그레이션 절차는 [security.md §4](security.md#4-로컬-llm-전환-경로) 참조.
 
-자세한 구조는 `provider_architecture.md` 참고.
+See `provider_architecture.md` for structure details, `provider_release_notes.md` for change log.
