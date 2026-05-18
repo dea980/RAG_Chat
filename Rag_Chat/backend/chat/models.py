@@ -43,8 +43,23 @@ class MetaData(models.Model):
 
 
 class User(models.Model):
+    # Role-based access for the internal sales-team rollout.
+    # Django Admin uses these to gate the moderation / knowledge pages.
+    class Role(models.TextChoices):
+        USER = "USER", "Employee"
+        MANAGER = "MANAGER", "Middle Manager"
+        ADMIN = "ADMIN", "C-Level Admin"
+
     user_id = models.CharField(max_length=16, primary_key=True, editable=False)
     uuid = models.UUIDField(unique=True, editable=False)
+    email = models.EmailField(blank=True, default="")
+    role = models.CharField(max_length=10, choices=Role.choices, default=Role.USER)
+    department = models.ForeignKey(
+        "knowledge.Department",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="members",
+    )
     created_datetime = models.DateTimeField(auto_now_add=True)  # SQLite time is incorrect
     last_activity = models.DateTimeField(auto_now=True, null=True)  # 활동 시간 추적을 위한 필드 추가
     expired_datetime = models.DateTimeField(null=True, blank=True)

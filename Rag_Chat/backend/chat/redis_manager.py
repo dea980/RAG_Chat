@@ -1,7 +1,7 @@
 import json
 import redis
 from django.conf import settings
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from typing import Optional, Dict, List, Any
 from redis.connection import ConnectionPool
@@ -268,3 +268,34 @@ class RedisMessageManager:
         except redis.RedisError as e:
             logger.error(f"Failed to get active sessions: {str(e)}")
             return []
+
+
+# ---------------------------------------------------------------------------
+# Session alignment helper
+# ---------------------------------------------------------------------------
+# Why: Redis TTL and DB ``User.expired_datetime`` previously drifted because
+# ``last_activity`` only updates when the field is included in ``update_fields``.
+# Single entry point that keeps both windows in sync — call this every time a
+# user does something that should extend their session.
+
+
+def refresh_user_session(user, redis_manager: "RedisMessageManager") -> bool:
+    """Refresh DB activity + Redis TTL under a single SESSION_TIMEOUT window.
+
+    Both stores now agree on when this user becomes idle: at
+    ``last_activity + SESSION_TIMEOUT``.
+    """
+    from django.utils import timezone  # local import — avoid Django bootstrap order issues
+
+    user.expired_datetime = None
+    user.last_activity = timezone.now()
+    user.save(update_fields=["expired_datetime", "last_activity"])
+
+    return redis_manager.set_session(user.user_id)
+
+
+def session_expiry_threshold():
+    """Single source of truth for the inactivity cutoff used by tasks/views."""
+    from django.utils import timezone
+
+    return timezone.now() - timedelta(seconds=settings.SESSION_TIMEOUT)

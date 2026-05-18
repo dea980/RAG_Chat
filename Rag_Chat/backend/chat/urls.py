@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .health import LivenessView, ReadinessView
 
 urlpatterns = [
     path("chat/", views.ChatAPIView.as_view(), name='chat-create'),
@@ -8,8 +9,12 @@ urlpatterns = [
     path("update-activity/", views.UpdateActivityAPIView.as_view(), name='update-activity'),
     path("providers/", views.ProviderConfigAPIView.as_view(), name='provider-config'),
     path("search-logs/", views.SearchLogAPIView.as_view(), name='search-logs'),
-    
+
     # Metadata endpoints
     path("metadata/", views.MetaDataAPIView.as_view(), name='metadata-list'),
     path("metadata/<str:key>/", views.MetaDataAPIView.as_view(), name='metadata-detail'),
+
+    # Health endpoints
+    path("health/", LivenessView.as_view(), name='health-live'),
+    path("health/ready/", ReadinessView.as_view(), name='health-ready'),
 ]

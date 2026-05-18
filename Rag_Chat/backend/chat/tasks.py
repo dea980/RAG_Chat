@@ -1,11 +1,9 @@
 from celery import shared_task
 from django.utils import timezone
-from django.conf import settings
 from datetime import timedelta
-from .models import User, Chat
-from .redis_manager import RedisMessageManager
+from .models import User
+from .redis_manager import RedisMessageManager, session_expiry_threshold
 import logging
-import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +20,10 @@ def check_session_expiry():
         active_sessions = redis_manager.get_active_sessions()
         logger.info(f"Found {len(active_sessions)} active Redis sessions")
         
-        # Get the expiry threshold
-        expiry_threshold = timezone.now() - timedelta(seconds=settings.SESSION_TIMEOUT)
-        
-        # Find inactive users that haven't been marked as expired
-        # Using the last_activity field to check for inactivity
+        # Single source of truth for the cutoff — same SESSION_TIMEOUT used by
+        # refresh_user_session(), so DB/Redis cannot drift apart.
+        expiry_threshold = session_expiry_threshold()
+
         expired_users = User.objects.filter(
             expired_datetime__isnull=True,
             last_activity__lt=expiry_threshold

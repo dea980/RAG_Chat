@@ -17,9 +17,11 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from pathlib import Path
 import pandas as pd
 import os
-from .redis_manager import RedisMessageManager
+from .redis_manager import RedisMessageManager, refresh_user_session
 from .provider_overrides import set_override as set_provider_override, get_override as get_provider_override, clear_override as clear_provider_override
 from .pipeline import ModuleContext, PipelineRunner, ModuleError
+from moderation.filter import apply as moderate_text, BlockedByModerationError
+from moderation.models import ModerationLog
 
 # Ensure Google Gemini API key is set
 os.environ["GOOGLE_API_KEY"] = settings.GOOGLE_API_KEY
@@ -124,10 +126,35 @@ class ChatAPIView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             chat_instance = chat_serializer.save()
-            
+
+            # Resolve user for moderation/audit attribution (best-effort).
+            user_obj = User.objects.filter(user_id=user_id).first()
+
+            # Inbound forbidden-word filter — runs BEFORE the LLM sees the text.
+            # BLOCK short-circuits; MASK rewrites the question; WARN is logged.
+            try:
+                mod_in = moderate_text(
+                    question,
+                    source=ModerationLog.Source.INBOUND,
+                    user=user_obj,
+                    chat=chat_instance,
+                )
+            except BlockedByModerationError as exc:
+                chat_instance.response_text = "[BLOCKED] 요청에 차단 단어가 포함되어 있습니다."
+                chat_instance.save(update_fields=["response_text"])
+                return Response(
+                    {
+                        "error": "요청에 차단된 단어가 포함되어 있습니다. 관리자에게 문의하세요.",
+                        "blocked_words": exc.words,
+                        "chat_id": chat_instance.question_id,
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            sanitized_question = mod_in.sanitized
+
             history = history_session_handler(user_id)
             pipeline_context = ModuleContext(
-                question=question,
+                question=sanitized_question,
                 session_id=user_id,
                 user_id=user_id,
                 history_handler=history_session_handler,
@@ -165,6 +192,19 @@ class ChatAPIView(APIView):
             rag_instance = rag_serializer.save()
 
             response_text = pipeline_context.response or ""
+
+            # Outbound filter — strip secrets that may have leaked through the LLM.
+            try:
+                mod_out = moderate_text(
+                    response_text,
+                    source=ModerationLog.Source.OUTBOUND,
+                    user=user_obj,
+                    chat=chat_instance,
+                )
+                response_text = mod_out.sanitized
+            except BlockedByModerationError:
+                response_text = "응답에 차단된 내용이 포함되어 표시할 수 없습니다. 관리자에게 문의하세요."
+
             chat_instance.data_id = rag_instance.data_id
             chat_instance.response_text = response_text
             chat_instance.save()
@@ -205,14 +245,9 @@ class ChatUserAPIView(APIView):
                 try:
                     user = User.objects.get(user_id=existing_user_id)
 
-                    # Refresh user expiration status if necessary
-                    if user.expired_datetime is not None:
-                        user.expired_datetime = None
-                        user.save(update_fields=["expired_datetime"])
-
-                    # Update the session in Redis
+                    # Atomically aligns DB expired_datetime + Redis TTL
                     redis_manager = get_message_store()
-                    redis_manager.set_session(existing_user_id)
+                    refresh_user_session(user, redis_manager)
 
                     return Response({
                         "user_id": user.user_id
@@ -228,7 +263,7 @@ class ChatUserAPIView(APIView):
             # Initialize session in Redis
             try:
                 redis_manager = get_message_store()
-                redis_manager.set_session(user.user_id)
+                refresh_user_session(user, redis_manager)
                 logger.info(f"Set new session in Redis for user {user.user_id}")
             except Exception as e:
                 logger.error(f"Failed to set session in Redis: {e}")
@@ -266,22 +301,16 @@ class UpdateActivityAPIView(APIView):
                     status=status.HTTP_401_UNAUTHORIZED
                 )
             
-            # Update user's last activity time in database
-            # last_activity 필드가 auto_now=True로 설정되어 있으므로
-            # 객체를 불러와서 저장만 해도 자동으로 현재 시간으로 업데이트됨
             try:
                 user = User.objects.get(user_id=user_id)
-                user.save(update_fields=['last_activity'])
-                logger.debug(f"Updated last_activity for user {user_id}")
             except User.DoesNotExist:
                 logger.error(f"User {user_id} not found when updating activity")
                 return Response(
                     {"error": "User not found"},
                     status=status.HTTP_404_NOT_FOUND
                 )
-            
-            # Refresh Redis session
-            if redis_manager.set_session(user_id):
+
+            if refresh_user_session(user, redis_manager):
                 logger.debug(f"Activity updated for user {user_id}")
                 return Response(status=status.HTTP_200_OK)
             else:

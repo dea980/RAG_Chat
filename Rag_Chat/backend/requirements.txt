@@ -24,6 +24,12 @@ celery>=5.3.6
 django-celery-beat>=2.5.0
 python-jose>=3.3.0
 
+# Database
+psycopg2-binary>=2.9.9
+
+# Retrieval eval (chunk A/B harness)
+rank-bm25>=0.2.2
+
 # Testing & CI/CD
 pytest>=7.4.0
 pytest-django>=4.5.2

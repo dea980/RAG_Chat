@@ -1,6 +1,20 @@
-version: '3.8'
-
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-triple_chat}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-triple_chat}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   redis:
     image: redis:7
     ports:
@@ -14,38 +28,83 @@ services:
       retries: 5
 
   backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     volumes:
       - ./backend:/app
       - static_volume:/app/static
-      - sqlite_data:/app/db
     ports:
       - "8000:8000"
     environment:
-      - DEBUG=0
-      - DATABASE_URL=sqlite:///db/db.sqlite3
-      - REDIS_URL=redis://redis:6379/0
+      DEBUG: "0"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-change-me}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-triple_chat}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_URL: redis://redis:6379/0
+      SESSION_TIMEOUT: ${SESSION_TIMEOUT:-300}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-gemini}
+      REASONING_PROVIDER: ${REASONING_PROVIDER:-gemini}
+      GENERATION_PROVIDER: ${GENERATION_PROVIDER:-gemini}
+      QWEN_API_KEY: ${QWEN_API_KEY:-}
+      QWEN_API_BASE: ${QWEN_API_BASE:-}
+      QWEN_MODEL_NAME: ${QWEN_MODEL_NAME:-}
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             gunicorn --bind 0.0.0.0:8000 --workers 3 triple_chat_pjt.wsgi:application"
 
   celery:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     command: celery -A triple_chat_pjt worker --loglevel=info
     volumes:
       - ./backend:/app
-      - sqlite_data:/app/db
     environment:
-      - DEBUG=0
-      - DATABASE_URL=sqlite:///db/db.sqlite3
-      - REDIS_URL=redis://redis:6379/0
+      DEBUG: "0"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-change-me}
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-triple_chat}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_URL: redis://redis:6379/0
+      SESSION_TIMEOUT: ${SESSION_TIMEOUT:-300}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
     depends_on:
-      - backend
-      - redis
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A triple_chat_pjt beat --loglevel=info
+    volumes:
+      - ./backend:/app
+    environment:
+      DEBUG: "0"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-change-me}
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-triple_chat}
+      REDIS_URL: redis://redis:6379/0
+      SESSION_TIMEOUT: ${SESSION_TIMEOUT:-300}
+    depends_on:
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
 
   frontend:
     build:
@@ -56,12 +115,12 @@ services:
     ports:
       - "8501:8501"
     environment:
-      - BACKEND_URL=http://backend:8000
-      - REDIS_URL=redis://redis:6379/0
+      BACKEND_URL: http://backend:8000
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       - backend
 
 volumes:
+  postgres_data:
   redis_data:
   static_volume:
-  sqlite_data:

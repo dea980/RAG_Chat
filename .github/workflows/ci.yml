@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+defaults:
+  run:
+    working-directory: Rag_Chat
+
+jobs:
+  lint:
+    name: Lint (flake8)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: Rag_Chat/backend/requirements.txt
+      - name: Install lint deps
+        run: pip install flake8
+      - name: flake8 (backend)
+        # Pragmatic ruleset: whitespace, blank-line spacing, late imports and
+        # other cosmetic issues from the fast-prototype Django app are
+        # suppressed. CI gates on real bugs (undefined names, syntax errors).
+        # Cleanup of cosmetic warnings is tracked as future work.
+        run: |
+          flake8 backend/chat backend/triple_chat_pjt \
+            --max-line-length=140 \
+            --extend-ignore=E501,W503,E203,F401,W291,W292,W293,E302,E303,E305,E402,E122,F841,W391,F811
+
+  django-tests:
+    name: Django tests (Postgres + Redis)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: triple_chat
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/triple_chat
+      REDIS_URL: redis://localhost:6379/0
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+      DJANGO_SECRET_KEY: ci-only-secret-not-for-prod
+      DEBUG: "0"
+      ALLOWED_HOSTS: localhost,127.0.0.1
+      SESSION_TIMEOUT: "300"
+      GOOGLE_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: Rag_Chat/backend/requirements.txt
+      - name: Install backend deps
+        working-directory: Rag_Chat/backend
+        run: pip install -r requirements.txt
+      - name: Apply migrations
+        working-directory: Rag_Chat/backend
+        run: python manage.py migrate --noinput
+      - name: Run pytest
+        working-directory: Rag_Chat/backend
+        run: pytest -x --tb=short
+
+  retrieval-eval:
+    name: Retrieval A/B (chunk size x overlap)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: Rag_Chat/backend/requirements.txt
+      - name: Install backend deps
+        working-directory: Rag_Chat/backend
+        run: pip install -r requirements.txt
+      - name: Run chunk A/B harness
+        working-directory: Rag_Chat/backend
+        run: |
+          python -m chat.tests.evals.run_chunk_ab \
+            --sizes 80,150,250,500,1000 \
+            --overlaps 0,30,80,150 \
+            --k 5 \
+            --output chat/tests/evals/ci_results.json \
+            --markdown chat/tests/evals/ci_report.md
+      - name: Surface report in step summary
+        working-directory: Rag_Chat/backend
+        run: cat chat/tests/evals/ci_report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload eval artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: chunk-ab-results
+          path: |
+            Rag_Chat/backend/chat/tests/evals/ci_results.json
+            Rag_Chat/backend/chat/tests/evals/ci_report.md
+
+  docker-build:
+    name: Docker build (backend + frontend)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: Rag_Chat/backend
+          push: false
+          tags: triple-chat-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: Rag_Chat/frontend
+          push: false
+          tags: triple-chat-frontend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

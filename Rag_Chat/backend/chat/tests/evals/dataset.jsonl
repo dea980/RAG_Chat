@@ -1,0 +1,12 @@
+{"id": "q01", "question": "갤럭시 S25 기본형 팬텀 블랙 256GB 가격이 얼마인가요?", "expected_keywords": ["Galaxy S25", "Phantom Black", "256GB", "1199.99"], "scenario": "영업팀 가격 문의"}
+{"id": "q02", "question": "S25 Ultra 1TB 모델 RAM 사양 알려줘", "expected_keywords": ["Galaxy S25 Ultra", "1TB", "16GB"], "scenario": "영업팀 스펙 비교"}
+{"id": "q03", "question": "S25 Plus 실버 색상 512GB 가격은?", "expected_keywords": ["Galaxy S25 Plus", "Silver", "512GB", "1499.99"], "scenario": "영업팀 가격 문의"}
+{"id": "q04", "question": "Galaxy S25 Ultra 메인 카메라 화소수가 얼마야?", "expected_keywords": ["Galaxy S25 Ultra", "200MP"], "scenario": "영업팀 카메라 사양"}
+{"id": "q05", "question": "갤럭시 S25 Plus 배터리 용량은 얼마인가요?", "expected_keywords": ["Galaxy S25 Plus", "5500mAh"], "scenario": "영업팀 사양 안내"}
+{"id": "q06", "question": "S25 시리즈 중에 7인치 디스플레이 가지는 모델 있어?", "expected_keywords": ["Galaxy S25 Ultra", "7.0\""], "scenario": "영업팀 비교 질문"}
+{"id": "q07", "question": "네이비 블루 색상 갤럭시 S25 스토리지 옵션 있어?", "expected_keywords": ["Galaxy S25", "Navy Blue", "512GB"], "scenario": "영업팀 색상/스토리지 매칭"}
+{"id": "q08", "question": "S25 Ultra 페리스코프 카메라 스펙은?", "expected_keywords": ["Galaxy S25 Ultra", "10MP Periscope"], "scenario": "영업팀 카메라 상세"}
+{"id": "q09", "question": "갤럭시 S25 시리즈 중 가장 비싼 모델은 얼마예요?", "expected_keywords": ["Galaxy S25 Ultra", "1TB", "1799.99"], "scenario": "영업팀 최상위 모델 안내"}
+{"id": "q10", "question": "기본 S25 모델 디스플레이 사이즈 알려줘", "expected_keywords": ["Galaxy S25", "6.8\""], "scenario": "영업팀 디스플레이 사양"}
+{"id": "q11", "question": "S25 Plus 팬텀 블랙 256GB 카메라 망원 렌즈 화소수는?", "expected_keywords": ["Galaxy S25 Plus", "Phantom Black", "256GB", "64MP Telephoto"], "scenario": "영업팀 카메라 상세 비교"}
+{"id": "q12", "question": "16GB RAM 가지는 모델 모두 알려주세요", "expected_keywords": ["Galaxy S25", "Navy Blue", "Galaxy S25 Plus", "Silver", "Galaxy S25 Ultra"], "scenario": "영업팀 사양 일괄 조회"}

@@ -1,0 +1,342 @@
+[
+  {
+    "chunk_size": 80,
+    "chunk_overlap": 0,
+    "num_chunks": 28,
+    "avg_recall_at_k": 0.5694,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      0.75,
+      0.5,
+      0.5,
+      0.0,
+      0.333,
+      0.0,
+      0.0,
+      1.0,
+      0.75,
+      1.0
+    ]
+  },
+  {
+    "chunk_size": 80,
+    "chunk_overlap": 30,
+    "num_chunks": 28,
+    "avg_recall_at_k": 0.6528,
+    "per_question_recall": [
+      0.75,
+      1.0,
+      1.0,
+      0.5,
+      0.5,
+      0.0,
+      0.333,
+      1.0,
+      0.0,
+      1.0,
+      0.75,
+      1.0
+    ]
+  },
+  {
+    "chunk_size": 150,
+    "chunk_overlap": 0,
+    "num_chunks": 14,
+    "avg_recall_at_k": 0.8333,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "chunk_size": 150,
+    "chunk_overlap": 30,
+    "num_chunks": 14,
+    "avg_recall_at_k": 0.8333,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "chunk_size": 150,
+    "chunk_overlap": 80,
+    "num_chunks": 20,
+    "avg_recall_at_k": 0.8333,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "chunk_size": 250,
+    "chunk_overlap": 0,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7889,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      0.8
+    ]
+  },
+  {
+    "chunk_size": 250,
+    "chunk_overlap": 30,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7889,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      0.8
+    ]
+  },
+  {
+    "chunk_size": 250,
+    "chunk_overlap": 80,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7889,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      0.8
+    ]
+  },
+  {
+    "chunk_size": 250,
+    "chunk_overlap": 150,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7889,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      0.8
+    ]
+  },
+  {
+    "chunk_size": 500,
+    "chunk_overlap": 0,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7889,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      0.8
+    ]
+  },
+  {
+    "chunk_size": 500,
+    "chunk_overlap": 30,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7889,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      0.8
+    ]
+  },
+  {
+    "chunk_size": 500,
+    "chunk_overlap": 80,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7889,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      0.8
+    ]
+  },
+  {
+    "chunk_size": 500,
+    "chunk_overlap": 150,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7889,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      0.8
+    ]
+  },
+  {
+    "chunk_size": 1000,
+    "chunk_overlap": 0,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7889,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      0.8
+    ]
+  },
+  {
+    "chunk_size": 1000,
+    "chunk_overlap": 30,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7889,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      0.8
+    ]
+  },
+  {
+    "chunk_size": 1000,
+    "chunk_overlap": 80,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7889,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      0.8
+    ]
+  },
+  {
+    "chunk_size": 1000,
+    "chunk_overlap": 150,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7889,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      0.8
+    ]
+  }
+]

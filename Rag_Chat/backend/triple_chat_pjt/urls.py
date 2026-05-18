@@ -24,6 +24,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/triple/", include("chat.urls")),
+    path("api/v1/knowledge/", include("knowledge.urls")),
     path("", RedirectView.as_view(url='/api/v1/triple/chat/', permanent=False)),
 ]
 
