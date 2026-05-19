@@ -17,9 +17,10 @@ except ImportError:  # pragma: no cover - optional dependency handled at runtime
     GoogleGenerativeAIEmbeddings = None  # type: ignore
 
 try:
-    from langchain_openai import ChatOpenAI
+    from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 except ImportError:  # pragma: no cover
     ChatOpenAI = None  # type: ignore
+    OpenAIEmbeddings = None  # type: ignore
 
 from langchain_community.vectorstores import Chroma
 
@@ -66,6 +67,8 @@ class ProviderManager:
         if self._embedding_model is None:
             if self.embedding_provider_name == "gemini":
                 self._embedding_model = self._create_gemini_embeddings()
+            elif self.embedding_provider_name == "openrouter":
+                self._embedding_model = self._create_openrouter_embeddings()
             else:
                 raise ValueError(
                     f"Unsupported embedding provider: {self.embedding_provider_name}"
@@ -145,6 +148,8 @@ class ProviderManager:
             return self._create_gemini_chat_model(purpose)
         if provider == "qwen":
             return self._create_qwen_chat_model(purpose)
+        if provider == "openrouter":
+            return self._create_openrouter_chat_model(purpose)
         raise ValueError(f"Unsupported chat provider: {provider}")
 
     def _create_gemini_chat_model(self, purpose: str):
@@ -186,6 +191,67 @@ class ProviderManager:
             base_url=base_url,
             model=model_name,
             temperature=temperature,
+        )
+
+    # ------------------------------------------------------------------
+    # OpenRouter (OpenAI-compatible) — single API key gives access to
+    # Gemini / Llama / Qwen / DeepSeek / etc. Free-tier models keep LLM
+    # cost at zero for the sales-team beta.
+    # ------------------------------------------------------------------
+    def _openrouter_base_url(self) -> str:
+        return os.getenv("OPENROUTER_BASE", "https://openrouter.ai/api/v1")
+
+    def _openrouter_headers(self) -> Dict[str, str]:
+        # Optional headers OpenRouter recommends for leaderboard / referer.
+        headers: Dict[str, str] = {}
+        referer = os.getenv("OPENROUTER_HTTP_REFERER")
+        title = os.getenv("OPENROUTER_X_TITLE")
+        if referer:
+            headers["HTTP-Referer"] = referer
+        if title:
+            headers["X-Title"] = title
+        return headers
+
+    def _create_openrouter_embeddings(self):
+        if OpenAIEmbeddings is None:
+            raise ImportError(
+                "langchain-openai must be installed to use OpenRouter embeddings"
+            )
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENROUTER_API_KEY must be set to use OpenRouter embeddings")
+        model = os.getenv(
+            "OPENROUTER_EMBEDDING_MODEL",
+            "nvidia/llama-nemotron-embed-v1-1b-v2:free",
+        )
+        return OpenAIEmbeddings(
+            api_key=api_key,
+            base_url=self._openrouter_base_url(),
+            model=model,
+            default_headers=self._openrouter_headers() or None,
+        )
+
+    def _create_openrouter_chat_model(self, purpose: str):
+        if ChatOpenAI is None:
+            raise ImportError(
+                "langchain-openai must be installed to use OpenRouter chat models"
+            )
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENROUTER_API_KEY must be set to use the OpenRouter provider")
+        default_model = os.getenv(
+            "OPENROUTER_MODEL_NAME",
+            "meta-llama/llama-3.3-70b-instruct:free",
+        )
+        model_override = os.getenv(f"OPENROUTER_{purpose}_MODEL")
+        model_name = model_override or default_model
+        temperature = float(os.getenv(f"{purpose}_TEMPERATURE", "0.7"))
+        return ChatOpenAI(
+            api_key=api_key,
+            base_url=self._openrouter_base_url(),
+            model=model_name,
+            temperature=temperature,
+            default_headers=self._openrouter_headers() or None,
         )
 
     # ------------------------------------------------------------------

@@ -6,7 +6,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "5432:5432"
+      # Host:Container — host 5432가 native Postgres / 다른 docker postgres에
+      # 이미 점유돼 있으므로 5433으로 expose. 컨테이너 내부망은 그대로 5432
+      # (backend/celery는 postgres:5432 로 접근).
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -35,23 +38,17 @@ services:
       - ./backend:/app
       - static_volume:/app/static
     ports:
-      - "8000:8000"
+      # Host 8000 / 8001 are taken by other local services — expose on 8002.
+      # Container internal port stays 8000 (Streamlit talks to backend:8000).
+      - "8002:8000"
+    env_file:
+      - .env   # All env vars from Rag_Chat/.env injected into the container
     environment:
-      DEBUG: "0"
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-change-me}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      # Service-internal overrides (these must match docker network, not host)
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-triple_chat}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
-      SESSION_TIMEOUT: ${SESSION_TIMEOUT:-300}
-      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
-      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-gemini}
-      REASONING_PROVIDER: ${REASONING_PROVIDER:-gemini}
-      GENERATION_PROVIDER: ${GENERATION_PROVIDER:-gemini}
-      QWEN_API_KEY: ${QWEN_API_KEY:-}
-      QWEN_API_BASE: ${QWEN_API_BASE:-}
-      QWEN_MODEL_NAME: ${QWEN_MODEL_NAME:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,7 +56,7 @@ services:
         condition: service_healthy
     command: >
       sh -c "python manage.py migrate --noinput &&
-             gunicorn --bind 0.0.0.0:8000 --workers 3 triple_chat_pjt.wsgi:application"
+             gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 triple_chat_pjt.wsgi:application"
 
   celery:
     build:
@@ -68,15 +65,13 @@ services:
     command: celery -A triple_chat_pjt worker --loglevel=info
     volumes:
       - ./backend:/app
+    env_file:
+      - .env
     environment:
-      DEBUG: "0"
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-change-me}
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-triple_chat}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
-      SESSION_TIMEOUT: ${SESSION_TIMEOUT:-300}
-      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
     depends_on:
       backend:
         condition: service_started
@@ -92,12 +87,11 @@ services:
     command: celery -A triple_chat_pjt beat --loglevel=info
     volumes:
       - ./backend:/app
+    env_file:
+      - .env
     environment:
-      DEBUG: "0"
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-change-me}
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-triple_chat}
       REDIS_URL: redis://redis:6379/0
-      SESSION_TIMEOUT: ${SESSION_TIMEOUT:-300}
     depends_on:
       backend:
         condition: service_started
@@ -117,6 +111,8 @@ services:
     environment:
       BACKEND_URL: http://backend:8000
       REDIS_URL: redis://redis:6379/0
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
     depends_on:
       - backend
 

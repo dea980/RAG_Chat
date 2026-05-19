@@ -122,12 +122,14 @@ ensure_directory "$BACKEND_DIR/static"
 # Prepare backend environment
 setup_backend_env
 
-# Load environment variables from backend .env using POSIX-safe approach
-if [ -f "$BACKEND_DIR/.env" ]; then
-    echo "Loading environment variables from backend/.env file..."
+# Load environment variables from the single root .env (source of truth).
+# backend/.env was consolidated into Rag_Chat/.env — see backend/README.md
+# "Environment variables" section for the inline template.
+if [ -f "$ROOT_DIR/.env" ]; then
+    echo "Loading environment variables from .env file..."
     set -a
     # shellcheck disable=SC1090
-    source "$BACKEND_DIR/.env"
+    source "$ROOT_DIR/.env"
     set +a
 fi
 

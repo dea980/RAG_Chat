@@ -72,3 +72,12 @@ celerybeat.pid
 
 # Redis
 dump.rdb
+
+# Agent tooling artifacts
+.claude/
+.omc/
+
+# Django collectstatic output
+backend/staticfiles/
+# FAISS/Chroma vector dirs (rebuilt at boot)
+backend/vector_store/

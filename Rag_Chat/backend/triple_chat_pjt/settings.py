@@ -14,11 +14,23 @@ from pathlib import Path
 from urllib.parse import urlparse
 from celery.schedules import crontab
 
-# Load Gemini API key from environment
-GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY', '')
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# ---------------------------------------------------------------------------
+# Single source of truth for env vars: Rag_Chat/.env (one directory above
+# the Django project). docker-compose loads the same file automatically.
+# Falls back silently when python-dotenv is missing (e.g. minimal CI image).
+# ---------------------------------------------------------------------------
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR.parent / ".env")
+except ImportError:  # pragma: no cover
+    pass
+
+# Load Gemini API key from environment (kept for backwards compat;
+# new code reads via provider_manager → OPENROUTER_API_KEY etc.)
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY', '')
 
 
 # Quick-start development settings - unsuitable for production
@@ -106,6 +118,9 @@ CELERY_BEAT_SCHEDULE = {
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Whitenoise serves /static/ assets straight from gunicorn — required for
+    # Django admin CSS when DEBUG=0. Must come right after SecurityMiddleware.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -115,6 +130,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "audit.middleware.AuditLogMiddleware",
 ]
+
+# Whitenoise — compress + cache busting for static files.
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 ROOT_URLCONF = "triple_chat_pjt.urls"
 
@@ -214,7 +232,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 
 # Static files configuration
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

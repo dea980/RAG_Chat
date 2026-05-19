@@ -30,6 +30,9 @@ psycopg2-binary>=2.9.9
 # Retrieval eval (chunk A/B harness)
 rank-bm25>=0.2.2
 
+# Pinned because chromadb 0.4.x uses np.float_ which was removed in NumPy 2.0
+numpy<2.0
+
 # Testing & CI/CD
 pytest>=7.4.0
 pytest-django>=4.5.2
