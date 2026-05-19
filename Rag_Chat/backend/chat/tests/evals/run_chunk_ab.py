@@ -42,6 +42,12 @@ from rank_bm25 import BM25Okapi
 from langchain_community.document_loaders import CSVLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
+try:
+    from scipy.stats import mannwhitneyu
+    _HAVE_SCIPY = True
+except ImportError:  # pragma: no cover - optional, harness still works without stats
+    _HAVE_SCIPY = False
+
 # ---------------------------------------------------------------------------
 # Types
 # ---------------------------------------------------------------------------
@@ -168,6 +174,48 @@ def render_markdown(results: List[GridResult], k: int) -> str:
         f"**Best:** chunk_size={best.chunk_size}, overlap={best.chunk_overlap} "
         f"→ recall@{k}={best.avg_recall_at_k:.3f} ({best.num_chunks} chunks)"
     )
+
+    # -------------------------------------------------------------------
+    # Statistical test — best vs production baseline (1000/200) if present,
+    # else best vs runner-up. n is small (≈12), so use the non-parametric
+    # Mann-Whitney U test. p<0.05 → reject H0 (no diff). Effect size shown
+    # as the recall mean gap.
+    # -------------------------------------------------------------------
+    if _HAVE_SCIPY and len(results) >= 2:
+        baseline = lookup.get((1000, 200))
+        if not baseline or baseline is best:
+            others = [r for r in results if r is not best]
+            baseline = max(others, key=lambda r: r.avg_recall_at_k)
+
+        try:
+            stat, p = mannwhitneyu(
+                best.per_question_recall,
+                baseline.per_question_recall,
+                alternative="two-sided",
+            )
+            gap = best.avg_recall_at_k - baseline.avg_recall_at_k
+            verdict = "유의 (p<0.05)" if p < 0.05 else "보수적: sample 부족 — 유망하나 미확정"
+            lines.append("")
+            lines.append("### Statistical test (Mann-Whitney U, two-sided)")
+            lines.append(
+                f"- **Best**  ({best.chunk_size}/{best.chunk_overlap}): "
+                f"recall={best.avg_recall_at_k:.3f}"
+            )
+            lines.append(
+                f"- **Compare** ({baseline.chunk_size}/{baseline.chunk_overlap}): "
+                f"recall={baseline.avg_recall_at_k:.3f}"
+            )
+            lines.append(f"- Recall gap: **{gap:+.3f}** · U={stat:.1f} · p={p:.4f}")
+            lines.append(f"- 결론: **{verdict}**")
+            lines.append(
+                "- 메모: n≈12로 통계적 power 부족. "
+                "Wilcoxon signed-rank가 paired data엔 더 적절 — 다음 마일스톤."
+            )
+        except ValueError as exc:
+            lines.append(f"\n_Mann-Whitney 계산 실패: {exc}_")
+    elif not _HAVE_SCIPY:
+        lines.append("\n_scipy 미설치 → 통계 검정 생략_")
+
     return "\n".join(lines)
 
 

@@ -424,10 +424,13 @@ class ChatRagAPIView(APIView):
     - Test similarity search (mode=3)
     """
     
-    def _create_vector_store(self, documents, embedding_model="models/text-embedding-004"):
-        """Create and persist a vector store from documents"""
-        # Use the RAGUtils from utils.py to leverage shared code
-        return RAGUtils.create_vector_store_from_documents(documents, embedding_model)
+    def _create_vector_store(self, documents):
+        """Create and persist a vector store from documents.
+
+        Embedding model is resolved by ProviderManager (.env 설정 — 현재 Gemini
+        gemini-embedding-001). 옛 하드코딩된 'text-embedding-004' 은 deprecated.
+        """
+        return RAGUtils.create_vector_store_from_documents(documents)
         
     def _process_csv_data(self):
         """Process CSV data into vector store"""

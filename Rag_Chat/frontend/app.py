@@ -421,12 +421,12 @@ else:
 # Admin controls in sidebar
 st.sidebar.markdown("---")
 st.sidebar.markdown("### Admin Controls")
-if st.sidebar.button("Load Phone Data"):
-    with st.sidebar.status("Loading phone data..."):
+if st.sidebar.button("Update Phone Data"):
+    with st.sidebar.status("Updating phone data..."):
         if load_phone_data():
-            st.sidebar.success("Phone data loaded successfully!")
+            st.sidebar.success("Phone data updated successfully!")
         else:
-            st.sidebar.error("Failed to load phone data. Please try again.")
+            st.sidebar.error("Failed to update phone data. Please try again.")
 
 provider_options = {
     "Gemini Only": "gemini_only",
