@@ -152,7 +152,7 @@ internal-chat/
 │
 ├── docker-compose.yml                # 전체 서비스 오케스트레이션
 ├── docker-compose.dev.yml            # 개발 환경 오버라이드
-├── .env.example                      # 환경변수 템플릿
+├── .env                              # 단일 환경변수 파일 (gitignored, 템플릿은 backend/README.md inline)
 └── README.md
 ```
 
@@ -452,7 +452,7 @@ services:
 
 ---
 
-## 11. 환경변수 목록 (.env.example)
+## 11. 환경변수 목록 (단일 `.env` — 템플릿은 [backend/README.md](backend/README.md) inline)
 
 ```bash
 # Django

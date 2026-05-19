@@ -7,7 +7,7 @@
 ### Docker 권장 (전 스택)
 ```bash
 cd Rag_Chat
-cp .env.example .env   # GOOGLE_API_KEY 채우기
+# Rag_Chat/.env 를 backend/README.md inline 템플릿대로 작성 후 키 채우기
 docker-compose up --build
 ```
 - Postgres 5432, Redis 6379, Django 8000, Streamlit 8501 일괄 기동.

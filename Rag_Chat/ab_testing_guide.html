@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>RAG A/B 테스트 — 차근차근 입문 가이드</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#fff; --bg-soft:#f8fafc;
+    --accent:#2563eb; --warn:#d97706; --ok:#16a34a; --danger:#dc2626;
+    --analogy:#fef9c3; --analogy-ink:#854d0e;
+    --mono:"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;} body{margin:0;padding:0;color:var(--ink);background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Noto Sans KR",sans-serif;font-size:15.5px;line-height:1.75;}
+  .wrap{display:grid;grid-template-columns:260px 1fr;min-height:100vh;}
+  nav.side{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;border-right:1px solid var(--line);padding:28px 20px;background:var(--bg-soft);}
+  nav.side h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;}
+  nav.side ol{list-style:none;padding:0;margin:0 0 22px;counter-reset:nav;}
+  nav.side li{counter-increment:nav;margin:5px 0;}
+  nav.side li a{text-decoration:none;color:var(--ink);display:block;padding:6px 8px;border-radius:6px;font-size:13.5px;}
+  nav.side li a::before{content:counter(nav) ". ";color:var(--muted);}
+  nav.side li a:hover{background:#fff;}
+  nav.side .tag{display:inline-block;padding:2px 8px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:11px;color:var(--muted);margin-bottom:12px;}
+
+  main{padding:40px 56px 120px;max-width:880px;}
+  h1{font-size:30px;margin:0 0 6px;line-height:1.3;}
+  h2{font-size:22px;margin:60px 0 10px;padding-top:24px;border-top:1px solid var(--line);}
+  h2:first-of-type{border-top:0;padding-top:0;margin-top:8px;}
+  h3{font-size:17px;margin:30px 0 8px;}
+  h4{font-size:14px;margin:18px 0 4px;}
+  .lede{color:var(--muted);font-size:16px;margin:0 0 24px;}
+  p{margin:8px 0 14px;}
+  ul,ol{padding-left:22px;}
+  li{margin:5px 0;}
+
+  table{width:100%;border-collapse:collapse;margin:14px 0 22px;font-size:14px;}
+  th,td{border:1px solid var(--line);padding:10px 12px;vertical-align:top;text-align:left;}
+  th{background:var(--bg-soft);font-size:12px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em;}
+  td code,p code{font-family:var(--mono);background:var(--bg-soft);padding:1px 6px;border-radius:4px;font-size:13px;}
+
+  .analogy{border-left:4px solid var(--warn);background:var(--analogy);color:var(--analogy-ink);padding:12px 16px;margin:14px 0;border-radius:0 8px 8px 0;}
+  .analogy strong{color:var(--analogy-ink);}
+  .analogy h4{margin:0 0 4px;color:var(--analogy-ink);}
+
+  .definition{border:1px solid var(--line);border-radius:10px;padding:14px 18px;background:var(--bg-soft);margin:14px 0;}
+  .definition .term{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;}
+  .definition .name{font-size:18px;font-weight:700;margin:2px 0 6px;}
+  .definition p{margin:0;font-size:14.5px;}
+
+  .callout{border-left:4px solid var(--accent);background:#eff6ff;padding:12px 16px;margin:14px 0;border-radius:0 8px 8px 0;}
+  .callout.warn{border-left-color:var(--warn);background:#fffbeb;}
+  .callout.ok{border-left-color:var(--ok);background:#ecfdf5;}
+  .callout.danger{border-left-color:var(--danger);background:#fef2f2;}
+  .callout h4{margin:0 0 4px;font-size:14px;}
+
+  pre.code{background:#0b1020;color:#cdd6f4;padding:14px 16px;border-radius:8px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;}
+  pre.code .c{color:#6b7280;} pre.code .k{color:#c4b5fd;}
+
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:700;font-size:11px;}
+  .pill.ok{background:#ecfdf5;color:var(--ok);}
+  .pill.warn{background:#fffbeb;color:var(--warn);}
+  .pill.bad{background:#fef2f2;color:var(--danger);}
+
+  .qa{border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:10px 0;}
+  .qa .q{font-weight:700;color:var(--accent);font-size:14px;margin-bottom:4px;}
+  .qa .a{font-size:14px;}
+
+  hr{border:none;border-top:1px solid var(--line);margin:36px 0;}
+  @media print{.wrap{grid-template-columns:1fr;}nav.side{display:none;}main{padding:0;max-width:none;}h2{break-before:page;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="side">
+  <span class="tag">입문 학습 자료</span>
+  <h2>차근차근</h2>
+  <ol>
+    <li><a href="#start">시작 전에</a></li>
+    <li><a href="#what-ab">A/B 테스트란?</a></li>
+    <li><a href="#what-rag">RAG란?</a></li>
+    <li><a href="#why-multi">왜 한 가지가 아니라 여러 차원?</a></li>
+    <li><a href="#chunk">차원 1 · 청크 크기</a></li>
+    <li><a href="#embedding">차원 2 · 임베딩 모델</a></li>
+    <li><a href="#generation">차원 3 · 생성 모델</a></li>
+    <li><a href="#topk">차원 4 · top-k</a></li>
+    <li><a href="#routing">차원 5 · 라우팅</a></li>
+    <li><a href="#metrics">지표 — 무엇을 잰다</a></li>
+    <li><a href="#stats">통계 — 진짜 차이인가</a></li>
+    <li><a href="#procedure">실험 절차 7단계</a></li>
+    <li><a href="#ours">우리 케이스</a></li>
+    <li><a href="#resources">더 공부할 자료</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<h1>RAG A/B 테스트 — 차근차근 입문 가이드</h1>
+<p class="lede">"A/B 테스트가 뭔지", "RAG의 어디를 비교해야 하는지", "그 결과가 진짜인지 아닌지" — 처음부터 비유와 예시로 풀어가는 자료. 우리 챗봇(Triple Chat) 컨텍스트로 곧장 연결됩니다.</p>
+
+<!-- ================================ -->
+<h2 id="start">0 · 시작 전에 — 이 문서를 읽는 법</h2>
+<p>각 섹션은 <b>① 정의 → ② 비유 → ③ 우리 시스템에서의 의미 → ④ 어떻게 측정</b> 순서로 같은 패턴을 따릅니다. 모르는 용어가 나오면 그 자리에서 박스로 정의 — 앞 섹션부터 차례로 읽으시면 모든 용어가 누적됩니다.</p>
+
+<!-- ================================ -->
+<h2 id="what-ab">1 · A/B 테스트란 무엇인가</h2>
+
+<div class="definition">
+  <div class="term">정의</div>
+  <div class="name">A/B 테스트</div>
+  <p>똑같은 상황에서 <b>한 가지만</b> 다른 두 버전 A와 B를 둘 다 돌려보고, 어느 쪽이 더 잘 작동하는지 <b>숫자로 비교</b>하는 실험.</p>
+</div>
+
+<div class="analogy">
+  <h4>비유 — 김치찌개 레시피</h4>
+  <p>같은 재료·같은 양·같은 화구. <b>딱 한 가지만</b> 다르게: A는 김치 200g, B는 김치 250g. 그 외 모든 것이 같아야 "차이는 김치 양 때문"이라 결론 낼 수 있습니다. 만약 김치 양 *그리고* 마늘 양 둘 다 바꿨다면 어느 쪽이 맛 차이의 원인인지 모릅니다.</p>
+</div>
+
+<h3>핵심 규칙 두 가지</h3>
+<ol>
+  <li><b>변수는 한 번에 하나만</b> 바꿉니다 (A는 김치 200, B는 250, 다른 건 동일).</li>
+  <li><b>측정 기준을 미리 정합니다</b> — "어떤 숫자가 더 높아야 이기는지"를 실험 전에 약속.</li>
+</ol>
+
+<!-- ================================ -->
+<h2 id="what-rag">2 · RAG란 무엇인가</h2>
+
+<div class="definition">
+  <div class="term">정의</div>
+  <div class="name">RAG (Retrieval-Augmented Generation)</div>
+  <p>LLM에게 답을 시키기 전에, <b>관련 문서를 먼저 찾아서</b>(Retrieval) 컨텍스트로 함께 넣은 뒤 답을 만들게 하는(Generation) 방식.</p>
+</div>
+
+<div class="analogy">
+  <h4>비유 — 시험 보는 학생</h4>
+  <p>친구한테 "갤럭시 S25 가격 알아?"라고 물었을 때:</p>
+  <ul>
+    <li><b>그냥 LLM</b>: 친구가 기억으로 답함. 옛 정보일 수도, 모르면 그럴듯하게 지어냄(=hallucination).</li>
+    <li><b>RAG</b>: 친구가 카탈로그를 먼저 펴서 해당 페이지를 본 다음 답함. 정확도↑.</li>
+  </ul>
+</div>
+
+<p>우리 챗봇은 <b>벡터 검색 → reasoning → generation</b> 순서. 영업팀 카탈로그 CSV를 잘게 잘라 벡터로 저장해두고, 질문 들어오면 가장 가까운 조각 몇 개를 LLM에 함께 줍니다.</p>
+
+<!-- ================================ -->
+<h2 id="why-multi">3 · 왜 한 가지가 아니라 여러 차원을 비교해야 하나</h2>
+
+<div class="analogy">
+  <h4>비유 — 자동차 튜닝</h4>
+  <p>같은 차에서 <b>엔진만</b> 좋게 바꾸면 가속은 좋아지지만, 타이어가 약하면 곧 미끄러집니다. RAG도 같아서 <b>검색만</b> 좋게 만들어도 생성 모델이 약하면 답이 틀리고, 생성만 좋게 해도 검색이 엉뚱한 chunk를 가져오면 답이 틀립니다.</p>
+</div>
+
+<p>그래서 RAG는 적어도 <b>세 가지 축</b>을 따로 봐야 합니다.</p>
+<table>
+  <thead><tr><th>축</th><th>역할</th><th>여기서 비교할 변수</th></tr></thead>
+  <tbody>
+    <tr><td><b>Retrieval</b></td><td>관련 문서 찾기</td><td>청크 크기 · 임베딩 모델 · top-k · reranker</td></tr>
+    <tr><td><b>Generation</b></td><td>찾은 컨텍스트로 답 만들기</td><td>생성 모델 · reasoning step · 프롬프트</td></tr>
+    <tr><td><b>Architecture</b></td><td>RAG vs 다른 길</td><td>정형 질문은 SQL로 우회 (agentic routing)</td></tr>
+  </tbody>
+</table>
+
+<!-- ================================ -->
+<h2 id="chunk">4 · 차원 1 · 청크 크기 (chunk size & overlap)</h2>
+
+<div class="definition">
+  <div class="term">용어</div>
+  <div class="name">청크 (chunk)</div>
+  <p>긴 문서를 검색 가능하게 잘게 자른 한 조각. 글자 수(예: 500자)로 자르고, 옆 조각과 일부 겹치게(overlap, 예: 100자) 만듭니다.</p>
+</div>
+
+<h4>왜 중요한가</h4>
+<p>LLM은 retrieved chunk <b>안에 사실이 온전히 있어야</b> 답을 만듭니다.</p>
+<ul>
+  <li><b>너무 작게 자르면</b>: "갤럭시 S25"라는 단어와 "1199.99달러"가 다른 청크에 떨어져, 검색이 둘을 동시에 못 잡습니다 → recall↓.</li>
+  <li><b>너무 크게 자르면</b>: 한 청크에 가격·카메라·디스플레이가 다 섞여, 임베딩이 "평균"이 되어 특정 질문에 정확히 매칭이 어려워집니다 → 정확도↓ + 토큰 비용↑.</li>
+</ul>
+
+<div class="analogy">
+  <h4>비유 — 사전을 자르는 방법</h4>
+  <p>"갤럭시 S25 가격이 얼마야"를 찾을 때, 사전을 <b>한 글자씩</b> 자르면 "갤"만 찾고 "가격"은 따로 찾아야 합니다. 반대로 <b>책 한 권을 통째</b>로 두면 페이지 전체를 보고 "가격" 부분만 골라내야 합니다. 적당한 크기가 필요합니다.</p>
+</div>
+
+<h4>어떻게 측정</h4>
+<p><code>recall@5</code> — 질문이 요구하는 키워드 5개 중 검색된 top-5 chunk에 몇 개가 들어 있는지의 비율. 우리 실험에서 chunk_size=150이 0.833으로 가장 높았습니다.</p>
+
+<!-- ================================ -->
+<h2 id="embedding">5 · 차원 2 · 임베딩 모델 (embedding model)</h2>
+
+<div class="definition">
+  <div class="term">용어</div>
+  <div class="name">임베딩 (embedding)</div>
+  <p>문장이나 단어를 <b>숫자 벡터</b>(보통 768~3072차원)로 바꾸는 것. 의미가 비슷하면 벡터도 가깝게 위치하도록 학습됨.</p>
+</div>
+
+<h4>왜 중요한가</h4>
+<p>검색의 핵심은 "질문 벡터"와 "청크 벡터" 사이의 <b>거리</b>입니다. 거리 가까운 청크가 top-k에 뽑힙니다. 임베딩 모델이 우리 도메인(한국어·제품 카탈로그)을 잘 이해해야 의미상 가까운 청크를 가깝게 둡니다.</p>
+
+<div class="analogy">
+  <h4>비유 — 책장 정리</h4>
+  <p>요리책 사이에 갑자기 SF 소설을 끼워 두면 "요리 책 추천해줘"라고 했을 때 SF가 같이 뽑힐 수 있습니다. 임베딩이 도메인을 잘 잡으면, 같은 주제 책끼리 자연스럽게 모입니다.</p>
+</div>
+
+<h4>어떻게 측정</h4>
+<p>같은 청크·같은 질문 세트를 두 임베딩 모델로 각각 검색해서 <code>recall@k</code> 비교. 또는 <b>MTEB leaderboard</b>(여러 도메인 평가 표준)에서 한국어 점수 확인.</p>
+
+<!-- ================================ -->
+<h2 id="generation">6 · 차원 3 · 생성 모델 (generation model)</h2>
+
+<h4>왜 중요한가</h4>
+<p>검색이 정확한 청크를 잘 가져왔다 해도, LLM이 그 안의 정보를 <b>잘못 추론</b>하거나 <b>지어내면</b>(hallucination) 답이 틀립니다.</p>
+
+<div class="analogy">
+  <h4>비유 — 시험 보는 학생 (다시)</h4>
+  <p>같은 카탈로그를 봐도 어떤 학생은 정확히 옮겨 쓰고, 어떤 학생은 "어… 한 1200달러였던 것 같은데"라고 흐릿하게 답합니다. 모델 크기·훈련 방식이 영향.</p>
+</div>
+
+<h4>어떻게 측정</h4>
+<ul>
+  <li><b>Faithfulness</b>: 답이 컨텍스트에 실제 근거가 있는가? (점수 1.0 = 완전 근거, 0.0 = 100% 지어냄)</li>
+  <li><b>Answer relevancy</b>: 답이 질문에 맞는가? (벗어난 답 거름)</li>
+  <li>이 두 점수는 <b>RAGAS</b>가 자동으로 LLM에게 채점시켜 줍니다.</li>
+</ul>
+
+<!-- ================================ -->
+<h2 id="topk">7 · 차원 4 · top-k</h2>
+
+<div class="definition">
+  <div class="term">용어</div>
+  <div class="name">top-k</div>
+  <p>검색에서 <b>가장 가까운 청크 k개</b>를 LLM에 넘긴다는 의미. k=3이면 3개, k=10이면 10개.</p>
+</div>
+
+<h4>왜 중요한가</h4>
+<ul>
+  <li>k가 너무 작으면 정답 청크가 누락될 수 있음.</li>
+  <li>k가 너무 크면 노이즈(엉뚱한 청크)가 같이 들어가 LLM이 혼란스러워하고 토큰비도 늘어남.</li>
+</ul>
+
+<div class="analogy">
+  <h4>비유 — 시험에서 참고할 책 권수</h4>
+  <p>책 1권만 들고 들어가면 그 책에 답이 없으면 끝. 100권 들고 들어가면 답을 찾는 시간이 너무 오래 걸리고 결국 잘못된 책을 인용할 수도 있습니다.</p>
+</div>
+
+<h4>일반 가이드</h4>
+<p>RAG는 보통 <b>k = 3 ~ 10</b> 사이. 우리 시스템 기본값은 3.</p>
+
+<!-- ================================ -->
+<h2 id="routing">8 · 차원 5 · 라우팅 (agentic routing)</h2>
+
+<h4>왜 중요한가</h4>
+<p>"갤럭시 S25 가격 얼마야?" 같은 정형 질문은 사실 <b>RAG보다 SQL이 더 정확하고 빠릅니다</b>. 가격은 DB에 정확한 숫자로 들어 있으니까요. 라우팅은 LLM이 질문을 보고 "이건 SQL로 가야지 / 이건 RAG로 가야지"를 스스로 선택하는 구조입니다.</p>
+
+<div class="analogy">
+  <h4>비유 — 안내데스크</h4>
+  <p>호텔 안내데스크에 가서 "전화번호 알려주세요"라고 하면 직원이 즉시 답합니다 (DB 조회). "이 호텔 분위기 어때요?"라고 하면 직원이 가이드북 펴서 한참 보고 답합니다 (RAG). 안내데스크 직원이 알아서 두 길을 가르는 것이 라우팅.</p>
+</div>
+
+<h4>어떻게 측정</h4>
+<p>같은 질문 세트를 (a) 항상 RAG로 (b) routing 적용으로 비교해 <b>정확도와 latency 둘 다</b> 봅니다. 정형 질문이 많을수록 라우팅 이득 큼.</p>
+
+<!-- ================================ -->
+<h2 id="metrics">9 · 지표 — 무엇을 잰다 (지표를 모르면 판단도 불가능)</h2>
+
+<h3>9-1. Retrieval 지표 (검색 자체를 평가)</h3>
+
+<div class="definition">
+  <div class="term">지표</div>
+  <div class="name">recall@k</div>
+  <p>"검색해야 했던 정답 중 top-k에 잡힌 비율." 1.0이면 다 잡음, 0.0이면 하나도 못 잡음.</p>
+</div>
+
+<div class="definition">
+  <div class="term">지표</div>
+  <div class="name">precision@k</div>
+  <p>"top-k 중 진짜 관련 있는 것의 비율." k를 크게 키우면 recall은 오르지만 precision은 떨어지는 경향.</p>
+</div>
+
+<div class="definition">
+  <div class="term">지표</div>
+  <div class="name">MRR (Mean Reciprocal Rank)</div>
+  <p>"정답이 몇 등에서 처음 나타났나"의 평균 역수. 1등이면 1.0, 2등이면 0.5, 5등이면 0.2. <b>순위가 얼마나 위에 있는가</b>를 잡습니다.</p>
+</div>
+
+<div class="analogy">
+  <h4>비유 — 이메일 스팸 분류기</h4>
+  <p><b>recall</b>: 진짜 스팸 100개 중 분류기가 잡은 비율 (놓치면 안 됨).<br><b>precision</b>: 분류기가 "스팸"이라 한 것 중 진짜 스팸 비율 (정상 메일을 스팸으로 잘못 분류하면 안 됨).<br>둘 사이엔 trade-off가 있어서 같이 봐야 합니다.</p>
+</div>
+
+<h3>9-2. Generation 지표 (답변 품질을 평가)</h3>
+
+<div class="definition">
+  <div class="term">지표</div>
+  <div class="name">Faithfulness</div>
+  <p>"답이 retrieved context에 실제 근거가 있는가?" 0.7 미만이면 hallucination 위험.</p>
+</div>
+
+<div class="definition">
+  <div class="term">지표</div>
+  <div class="name">Answer Relevancy</div>
+  <p>"답이 질문 의도에 맞는가?" 컨텍스트는 정답을 담고 있어도, 답이 동떨어진 방향이면 거름.</p>
+</div>
+
+<h3>9-3. 운영 지표 (실사용 측면)</h3>
+
+<table>
+  <thead><tr><th>지표</th><th>의미</th><th>임계값 가이드</th></tr></thead>
+  <tbody>
+    <tr><td><b>p50 latency</b></td><td>요청 절반 이상이 이 시간 안에 끝남</td><td>1초 이하 권장</td></tr>
+    <tr><td><b>p95 latency</b></td><td>요청 95%가 이 시간 안에 끝남</td><td>5초 초과면 영업팀 UX 깨짐</td></tr>
+    <tr><td><b>응답 실패율</b></td><td>5xx 에러 + timeout 비율</td><td>1% 초과 시 실험 즉시 중단</td></tr>
+    <tr><td><b>moderation 발동률</b></td><td>금지어 차단/마스킹 횟수 비율</td><td>실험 전후 ±20% 이내</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <h4>왜 여러 지표를 동시에 보나</h4>
+  <p>recall만 보면 "더 많이 가져오는 게 좋다"는 환상에 빠집니다. 응답 시간이 두 배가 되더라도 recall이 1%p 좋아진 게 가치 있을까요? 사용자는 빨라야 합니다. 그래서 <b>주 지표 + 가드 지표</b>를 같이 봅니다.</p>
+</div>
+
+<!-- ================================ -->
+<h2 id="stats">10 · 통계 — "이 차이가 진짜인가 우연인가"</h2>
+
+<div class="analogy">
+  <h4>비유 — 동전 던지기</h4>
+  <p>동전을 10번 던졌더니 앞면이 7번, 친구는 4번 나왔습니다. "내 동전이 더 잘 나오는가"라고 결론 낼 수 있을까요? 10번은 너무 적어서 우연일 수 있습니다. 만약 1000번씩 던졌는데 700 vs 400이면 그땐 진짜 차이일 가능성 큽니다.</p>
+</div>
+
+<div class="definition">
+  <div class="term">개념</div>
+  <div class="name">p-value</div>
+  <p>"실제로 두 그룹이 차이 없는데 우연으로 지금 같은 차이가 나올 확률." 작을수록(보통 0.05 미만) "차이가 진짜다"라고 봅니다.</p>
+</div>
+
+<div class="definition">
+  <div class="term">개념</div>
+  <div class="name">통계적 검정 (statistical test)</div>
+  <p>두 그룹 숫자를 입력하면 p-value를 계산해 주는 절차. 우리 경우 <b>Mann-Whitney U test</b>를 씁니다 — sample 수가 적어도 동작하고 분포 가정도 없음.</p>
+</div>
+
+<h3>왜 n=12로는 한계가 있나</h3>
+<p>우리 평가셋은 12문항. recall@5가 0.833 vs 0.789 — 차이 0.044는 동전 10번 던져서 4번 vs 5번 나온 것과 비슷한 상황. "유망"하지만 "확정"이라 말하긴 어려움. 안전한 결론을 내려면 보통 <b>40문항 이상</b>이 필요합니다.</p>
+
+<div class="callout warn">
+  <h4>자소서에 쓸 한 줄</h4>
+  <p>"평가셋이 n=12로 작아 Mann-Whitney U test로 비모수 검정을 적용했고, 향후 영업팀 실사용 로그를 모아 n=50+로 확장할 계획을 명시함으로써 통계적 한계를 정직하게 남겼습니다."</p>
+</div>
+
+<!-- ================================ -->
+<h2 id="procedure">11 · 실험 절차 7단계 (한 번에 한 변수)</h2>
+
+<ol>
+  <li><b>가설을 한 줄로 쓴다</b> — 실험 <i>시작 전</i>에. 예: "chunk_size=150이 chunk_size=1000보다 recall@5에서 5%p 이상 좋다."</li>
+  <li><b>변수는 하나만</b> — chunk_size만 바꾸고 다른 건 동일.</li>
+  <li><b>주 지표 + 가드 지표를 미리 정한다</b> — 주: recall@5. 가드: p95 latency, 실패율, moderation 발동률.</li>
+  <li><b>두 버전을 같은 평가셋에 돌린다</b> — 12문항 모두.</li>
+  <li><b>통계 검정</b> — Mann-Whitney U로 p-value 확인.</li>
+  <li><b>가드 모두 통과했는지 확인</b> — 하나라도 깨지면 거부.</li>
+  <li><b>한 번 더 돌린다</b> — 우연을 줄이려면 재현 확인.</li>
+</ol>
+
+<h3>판단 표 (chunk A/B 예)</h3>
+<table>
+  <thead><tr><th></th><th>recall ↑ (+5%p 이상)</th><th>recall 거의 같음</th><th>recall ↓</th></tr></thead>
+  <tbody>
+    <tr><th>latency 같거나 ↓</th><td class="pill ok">✅ 채택</td><td><span class="pill warn">△ 보류</span></td><td><span class="pill bad">❌ 거부</span></td></tr>
+    <tr><th>latency 20% 이상 ↑</th><td><span class="pill warn">△ trade-off</span></td><td><span class="pill bad">❌ 거부</span></td><td><span class="pill bad">❌ 거부</span></td></tr>
+  </tbody>
+</table>
+
+<!-- ================================ -->
+<h2 id="ours">12 · 지금 우리 케이스에 적용</h2>
+
+<table>
+  <thead><tr><th>결정</th><th>현재 상태</th><th>다음 액션</th></tr></thead>
+  <tbody>
+    <tr><td>chunk_size 150 vs 1000</td><td><span class="pill warn">recall 차이 0.044, n=12로 통계 미검정</span></td><td>Mann-Whitney U test 추가</td></tr>
+    <tr><td>OpenRouter(Qwen+Nemotron) vs 옛 Gemini</td><td><span class="pill bad">아직 비교 안 함</span></td><td>같은 12문항을 두 provider로 돌려 recall + faithfulness + latency 비교</td></tr>
+    <tr><td>임베딩 변경 후 vector store</td><td><span class="pill bad">미재빌드</span></td><td><code>manage.py build_vectors</code> 강제 실행</td></tr>
+    <tr><td>평가셋 12 → 50+</td><td><span class="pill bad">미시작</span></td><td>영업팀 시연 시 실제 질문 로그 수집</td></tr>
+  </tbody>
+</table>
+
+<!-- ================================ -->
+<h2 id="resources">13 · 더 공부할 자료</h2>
+
+<h3>RAG 평가 framework</h3>
+<ul>
+  <li><b>RAGAS</b> — <code>faithfulness / answer_relevancy / context_precision / context_recall</code> 4축을 LLM이 자동 채점. <a href="https://docs.ragas.io/" target="_blank">docs.ragas.io</a></li>
+  <li><b>TruLens</b> — RAG triad (context relevance / groundedness / answer relevance). <a href="https://www.trulens.org/" target="_blank">trulens.org</a></li>
+</ul>
+
+<h3>벤치마크 (모델 고를 때)</h3>
+<ul>
+  <li><b>MTEB</b> 임베딩 모델 leaderboard. <a href="https://huggingface.co/spaces/mteb/leaderboard" target="_blank">huggingface.co/spaces/mteb/leaderboard</a></li>
+  <li><b>BEIR</b> 18개 IR task. <a href="https://github.com/beir-cellar/beir" target="_blank">github.com/beir-cellar/beir</a></li>
+</ul>
+
+<h3>읽을 거리</h3>
+<ul>
+  <li>Anthropic, <b>"Introducing Contextual Retrieval"</b> (2024.09) — chunk 전략의 정량 분석.</li>
+  <li>Jakob Nielsen, <b>"Response Time Limits"</b> (1993) — UX 응답 시간 0.1s/1s/10s 룰의 원조.</li>
+</ul>
+
+<h3>통계 도구</h3>
+<pre class="code"><span class="c"># 우리가 쓸 통계 검정 한 줄</span>
+<span class="k">from</span> scipy.stats <span class="k">import</span> mannwhitneyu
+stat, p = mannwhitneyu(group_a, group_b, alternative=<span class="k">'greater'</span>)
+<span class="c"># p &lt; 0.05면 통계적으로 유의한 차이</span></pre>
+
+<hr>
+
+<h2 id="faq">FAQ — 자주 헷갈리는 점</h2>
+
+<div class="qa">
+  <div class="q">Q. recall이랑 accuracy랑 같은 거 아닌가요?</div>
+  <div class="a">A. 다릅니다. <b>accuracy</b>는 "전체 중 맞춘 비율"인데 검색 시스템은 보통 "맞춘 것 + 안 맞춘 것" 비대칭이라 무의미합니다. <b>recall</b>은 "정답 중 잡은 비율"로 검색에 적합.</div>
+</div>
+
+<div class="qa">
+  <div class="q">Q. p-value 0.05는 어디서 나온 숫자인가요?</div>
+  <div class="a">A. 1925년 통계학자 Fisher가 관행으로 제안한 임계값. 절대적인 게 아니라 분야에 따라 0.01 또는 0.1을 쓰기도 합니다. 우리 같은 작은 sample에선 효과 크기와 같이 봐야 합니다.</div>
+</div>
+
+<div class="qa">
+  <div class="q">Q. 왜 평가셋이 작으면 통계적으로 결론 못 내나요?</div>
+  <div class="a">A. 동전을 10번 던져서 7번 앞면이 나와도 우연일 수 있는 것과 같습니다. n이 작을수록 우연으로 큰 차이가 나올 확률이 높아서, 진짜 차이를 확신하기 어렵습니다.</div>
+</div>
+
+<div class="qa">
+  <div class="q">Q. chunk_size 150이 최선이면 그냥 바꾸면 되지 왜 testing이 필요하나요?</div>
+  <div class="a">A. 150은 우리 12문항·갤럭시 카탈로그에서 최선이었습니다. 다른 문서(법률 문서, 매뉴얼 등)에 적용하면 sweet spot이 다를 수 있습니다. "이 데이터에선" 150이라는 단서를 붙여야 합니다.</div>
+</div>
+
+<div class="qa">
+  <div class="q">Q. RAG와 fine-tuning 중 뭐가 좋나요?</div>
+  <div class="a">A. 자주 바뀌는 정보(가격, 인사) → RAG. 도메인 톤·스타일 학습 → fine-tuning. 두 가지 같이 쓸 수도 있습니다.</div>
+</div>
+
+<hr>
+<p style="color:var(--muted);font-size:13px">관련 문서: <a href="prd.html">prd.html</a> · <a href="workflow.html">workflow.html</a> · <a href="backend/docs/chunk_experiment.md">chunk_experiment.md</a></p>
+
+</main>
+</div>
+</body>
+</html>

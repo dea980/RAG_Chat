@@ -5,7 +5,7 @@ Summary of structure changes around the provider abstraction, and how it now fit
 - **ProviderManager**: select embedding/reasoning/generation via env; default Gemini, Qwen combo experimental.
 - **Vector store cleanup**: `RAGUtils`, `build_vector_store.py`, `management/commands/build_vectors.py` create embeddings through ProviderManager.
 - **Reasoning → Generation chain**: `chat/views.py` feeds reasoning output into the generation prompt.
-- **Env alignment**: `Rag_Chat/.env.example` (root) is now the single template — propagated to backend container via docker-compose.
+- **Env alignment**: `Rag_Chat/.env` (root) is the single source of truth — the inline template lives in [`backend/README.md`](../README.md#environment-variables-single-source-rag_chatenv). docker-compose loads the same `.env` automatically.
 - **Session provider toggle**: `/api/v1/triple/providers/` GET/POST applies presets (gemini_only, qwen_reasoning_gemini_generation, qwen_only); Streamlit sidebar calls it.
 - **Moderation wrap (new)**: every reasoning/generation call is sandwiched between INBOUND and OUTBOUND `moderation.filter` calls so providers stay agnostic to policy. Sanitized text is what actually leaves the process.
 - **Audit (new)**: provider responses are recorded indirectly via `Chat.response_text` (post-moderation) and `AuditLog`.

@@ -30,7 +30,7 @@ graph TB
 | 금지어 필터 | ✅ `moderation` 앱 — INBOUND/OUTBOUND BLOCK/MASK/WARN |
 | 감사 로그 | ✅ `audit.AuditLogMiddleware` |
 | 헬스체크 | ✅ `/api/v1/triple/health/` + `/health/ready/` |
-| Postgres 마이그레이션 | ✅ `DATABASE_URL`, docker-compose, .env.example |
+| Postgres 마이그레이션 | ✅ `DATABASE_URL`, docker-compose, `.env` 단일 (backend/README.md inline) |
 
 ## API Contract (current)
 
@@ -55,7 +55,7 @@ graph TB
 
 ## Deployment Notes (docker-first)
 
-1) **권장**: `cd Rag_Chat && cp .env.example .env && docker-compose up --build`
+1) **권장**: `cd Rag_Chat` → `.env` 작성 ([backend/README.md](../../README.md#environment-variables-single-source-rag_chatenv) inline 템플릿) → `docker-compose up --build`
    — Postgres + Redis + backend(gunicorn) + Celery worker + beat + Streamlit 일괄 기동.
 2) gunicorn + whitenoise; backend는 stateless이므로 replicas 확장 가능.
 3) redis / celery: compose 정의 유지; `--scale celery=N`.

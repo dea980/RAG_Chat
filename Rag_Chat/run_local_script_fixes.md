@@ -1,5 +1,5 @@
 # run_local_fixed.sh Notes
-Local-run helper for the SQLite-fallback dev mode. For the full Postgres + RBAC + moderation + audit stack, prefer `docker-compose up --build` (see [.env.example](.env.example) and [README](../README.md)).
+Local-run helper for the SQLite-fallback dev mode. For the full Postgres + RBAC + moderation + audit stack, prefer `docker-compose up --build` — env 변수 템플릿은 [backend/README.md](backend/README.md#environment-variables-single-source-rag_chatenv) 에 inline 으로 들어 있습니다.
 
 ## Issues found (in the original script)
 - Single root venv assumption mixing backend/frontend deps
@@ -28,7 +28,7 @@ Optional: `PYTHON_BIN=/path/to/python ./run_local_fixed.sh`
 - Demo / 영업팀 베타 / 대외비 모드 → **docker-compose**:
   ```bash
   cd Rag_Chat
-  cp .env.example .env   # GOOGLE_API_KEY, DJANGO_SECRET_KEY, POSTGRES_PASSWORD 채우기
+  # Rag_Chat/.env 를 backend/README.md 의 "Environment variables" 섹션 템플릿대로 작성
   docker-compose up --build
   docker-compose exec backend python manage.py createsuperuser
   ```
@@ -41,6 +41,6 @@ Optional: `PYTHON_BIN=/path/to/python ./run_local_fixed.sh`
 - 단일 노드 dev 셋업 — Celery beat이 있어 세션 만료 cleanup은 자동.
 
 ## Related
-- [.env.example](.env.example) — 환경변수 템플릿
+- [backend/README.md](backend/README.md#environment-variables-single-source-rag_chatenv) — 환경변수 템플릿 (inline)
 - [docker-compose.yml](docker-compose.yml) — 전체 스택 정의
 - [backend/README.md](backend/README.md) — backend 실행 옵션
