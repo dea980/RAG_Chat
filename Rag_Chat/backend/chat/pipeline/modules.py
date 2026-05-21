@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import os
 from typing import Dict, List
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -11,6 +13,8 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from ..providers import provider_manager
 from ..utils import RAGUtils
 from .base import ModuleContext, PipelineModule, ModuleError
+
+logger = logging.getLogger(__name__)
 
 
 class RetrieveModule(PipelineModule):
@@ -126,3 +130,36 @@ acknowledge it honestly.""",
 
         return context
 
+
+class RerankModule(PipelineModule):
+    """ONNX cross-encoder rerank of retrieved documents."""
+
+    name = "rerank"
+
+    def __init__(self, top_k: int | None = None) -> None:
+        self.top_k = top_k if top_k is not None else int(os.getenv("RERANKER_TOP_K", "3"))
+
+    def run(self, context: ModuleContext) -> ModuleContext:
+        docs = context.extra.get("retrieved_docs") or []
+        if not docs:
+            return context
+
+        reranker = provider_manager.get_reranker()
+        if reranker is None:
+            return context
+
+        try:
+            scores = reranker.score(context.question, [d.page_content for d in docs])
+        except Exception as exc:
+            logger.warning("Reranker scoring failed, keeping original order: %s", exc)
+            return context
+
+        ranked = sorted(zip(docs, scores), key=lambda x: x[1], reverse=True)[: self.top_k]
+        top_docs = [d for d, _ in ranked]
+
+        context.context_text = "\n\n".join(d.page_content for d in top_docs)
+        context.images = [
+            d.metadata["image_path"] for d in top_docs if "image_path" in d.metadata
+        ]
+        context.extra["retrieved_docs"] = top_docs
+        return context
