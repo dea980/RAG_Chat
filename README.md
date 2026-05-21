@@ -25,6 +25,13 @@ Most RAG demos chase model output quality; we focused on the parts that decide w
 ### High-level flow
 1) User question in Streamlit → 2) Vector search → 3) LLM generation → 4) Log question/context/response (session state in Redis)
 
+### Reranker
+
+After dense vector retrieval, an ONNX cross-encoder (`BAAI/bge-reranker-v2-m3`)
+rescores the top-N candidates and selects the top-K for the LLM. The model
+downloads on first run to `~/.cache/huggingface/` (~568 MB). To disable,
+set `RERANKER_ENABLED=0`.
+
 ## 4) Data Model (summary)
 - User(user_id, created_datetime, expired_datetime)
 - Chat(question_id, user_id, question_text, response_text, created_datetime, data_id)
