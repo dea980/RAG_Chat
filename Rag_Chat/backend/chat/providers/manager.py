@@ -57,6 +57,34 @@ class ProviderManager:
         self._embedding_model = None
         self._vector_store_cache = None
         self._chat_model_cache: Dict[Tuple[str, str], object] = {}
+        self._reranker = None
+        self._reranker_init_attempted = False
+
+    def get_reranker(self):
+        """Return a singleton ONNX reranker, or None if disabled / unavailable.
+
+        Honors:
+        - RERANKER_ENABLED (default "1"): set to "0" to disable.
+        - RERANKER_MODEL (default "BAAI/bge-reranker-v2-m3").
+        - RERANKER_DEVICE (default "cpu").
+        """
+        if os.getenv("RERANKER_ENABLED", "1") != "1":
+            return None
+        if self._reranker is not None:
+            return self._reranker
+        if self._reranker_init_attempted:
+            return None  # prior init failed; do not retry on every request
+        self._reranker_init_attempted = True
+        try:
+            from ..rerankers import OnnxBgeReranker  # local import to avoid heavy load at startup
+            self._reranker = OnnxBgeReranker(
+                model_id=os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-v2-m3"),
+                device=os.getenv("RERANKER_DEVICE", "cpu"),
+            )
+            return self._reranker
+        except Exception as exc:  # pragma: no cover - defensive guard
+            logger.error("Failed to initialise reranker: %s", exc)
+            return None
 
     # ------------------------------------------------------------------
     # Embeddings / Vector store
