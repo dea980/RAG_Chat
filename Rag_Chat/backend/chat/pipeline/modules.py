@@ -37,6 +37,7 @@ class RetrieveModule(PipelineModule):
 
         context.images = images
         context.extra["rag_metadata"] = rag_context
+        context.extra["retrieved_docs"] = rag_context.get("docs", [])
         return context
 
 
