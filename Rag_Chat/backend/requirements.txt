@@ -50,3 +50,7 @@ langchain-google-genai>=1.0.7
 chromadb==0.4.22
 pandas>=2.1.4
 openpyxl>=3.1.2
+
+# Reranker (ONNX cross-encoder)
+optimum[onnxruntime]>=1.20.0
+onnxruntime>=1.17.0
