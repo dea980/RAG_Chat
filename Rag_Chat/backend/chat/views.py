@@ -164,6 +164,7 @@ class ChatAPIView(APIView):
             pipeline = PipelineRunner(
                 [
                     {"type": "retrieve"},
+                    {"type": "rerank"},
                     {"type": "reasoning"},
                     {"type": "generation"},
                 ]
