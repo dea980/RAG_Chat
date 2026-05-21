@@ -154,34 +154,31 @@ class RAGUtils:
     
     @staticmethod
     def process_search_results(search_results):
-        """Process search results to extract context and image paths"""
+        """Process search results into legacy fields plus raw docs."""
         context = "\n".join([doc.page_content for doc in search_results])
-        image_paths = []
-        
-        for result in search_results:
-            if "image_path" in result.metadata:
-                image_paths.append(result.metadata["image_path"])
-                
+        image_paths = [
+            doc.metadata["image_path"]
+            for doc in search_results
+            if "image_path" in doc.metadata
+        ]
         return {
             "context": context,
-            "image_paths": image_paths
+            "image_paths": image_paths,
+            "docs": list(search_results),
         }
-    
+
     @staticmethod
-    def get_rag_context(question: str, k: int = 3) -> Dict[str, Any]:
-        """
-        Retrieve RAG context for a given question with improved error handling
-        """
+    def get_rag_context(question: str, k: int | None = None) -> Dict[str, Any]:
+        """Retrieve RAG context (top-k raw docs + merged text)."""
+        if k is None:
+            k = int(os.getenv("RERANKER_TOP_N", "20"))
         try:
             vector_store = RAGUtils.get_vector_store()
             search_results = vector_store.similarity_search(question, k=k)
             return RAGUtils.process_search_results(search_results)
         except Exception as e:
             logger.error(f"Error in get_rag_context: {str(e)}")
-            return {
-                "context": "",
-                "image_paths": []
-            }
+            return {"context": "", "image_paths": [], "docs": []}
     
     @staticmethod
     def create_vector_store_from_documents(documents: List[Document]):
