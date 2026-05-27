@@ -490,12 +490,27 @@ if st.session_state.user_id:
             st.session_state.embedding_config = result.get("embedding", {})
             st.sidebar.success(f"Provider updated to {selected_label}")
 
+    def _kv_lines(d: dict) -> str:
+        """dict → markdown 키:값 리스트. 중첩 dict 는 한 줄에 inline."""
+        lines = []
+        for k, v in d.items():
+            if isinstance(v, dict):
+                inner = " · ".join(f"{ik}=`{iv}`" for ik, iv in v.items())
+                lines.append(f"- **{k}**: {inner}" if inner else f"- **{k}**: _(empty)_")
+            else:
+                lines.append(f"- **{k}**: `{v}`")
+        return "\n".join(lines) if lines else "_(none)_"
+
     if "provider_selection" in st.session_state:
         st.sidebar.caption("Current Providers")
-        st.sidebar.json(st.session_state.provider_selection)
+        st.sidebar.markdown(_kv_lines(st.session_state.provider_selection))
+        with st.sidebar.expander("Raw JSON", expanded=False):
+            st.json(st.session_state.provider_selection)
     if "embedding_config" in st.session_state:
         st.sidebar.caption("Embedding Configuration")
-        st.sidebar.json(st.session_state.embedding_config)
+        st.sidebar.markdown(_kv_lines(st.session_state.embedding_config))
+        with st.sidebar.expander("Raw JSON", expanded=False):
+            st.json(st.session_state.embedding_config)
         st.sidebar.caption("Embedding changes require rebuilding the vector index.")
 else:
     st.sidebar.info("Provider controls available after session starts.")
