@@ -14,7 +14,7 @@ from chat.ingest.base import WriteResult
 
 
 class IngestUploadAPITests(APITestCase):
-    @patch("chat.ingest_views.ChromaSink.write")
+    @patch("chat.ingest.sinks.chroma.ChromaSink.write")
     def test_upload_txt_file_returns_processed_result(self, mock_write):
         mock_write.return_value = WriteResult(count=1, ids=["chunk-1"])
         upload = SimpleUploadedFile(
