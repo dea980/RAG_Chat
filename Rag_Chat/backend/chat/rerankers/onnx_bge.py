@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from typing import List
 
 import torch
@@ -38,4 +37,4 @@ class OnnxBgeReranker:
         ).to(self.device)
         with torch.no_grad():
             logits = self._model(**inputs).logits
-        return [round(float(x), 6) for x in logits.view(-1).cpu().tolist()]
+        return [float(x) for x in logits.view(-1).cpu().tolist()]

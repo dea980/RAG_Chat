@@ -54,7 +54,7 @@ class RAGUtilsTestCase(TestCase):
         mock_vector_store.similarity_search.return_value = [doc1]
         
         # Call the method
-        result = RAGUtils.get_rag_context("test question")
+        result = RAGUtils.get_rag_context("test question", k=3)
         
         # Assertions
         mock_get_vector_store.assert_called_once()

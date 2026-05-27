@@ -1,7 +1,6 @@
 """Unit tests for RerankModule."""
 from unittest.mock import MagicMock, patch
 
-import pytest
 from langchain.schema import Document
 
 from chat.pipeline.base import ModuleContext

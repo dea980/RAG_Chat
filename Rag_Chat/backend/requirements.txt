@@ -23,6 +23,7 @@ redis>=5.0.1
 celery>=5.3.6
 django-celery-beat>=2.5.0
 python-jose>=3.3.0
+tiktoken>=0.7.0
 
 # Database
 psycopg2-binary>=2.9.9
@@ -50,6 +51,9 @@ langchain-google-genai>=1.0.7
 chromadb==0.4.22
 pandas>=2.1.4
 openpyxl>=3.1.2
+pypdf>=4.0.0
+docx2txt>=0.8
+beautifulsoup4>=4.12.0
 
 # Reranker (ONNX cross-encoder)
 # Optional for local Docker: install requirements-reranker.txt and set
