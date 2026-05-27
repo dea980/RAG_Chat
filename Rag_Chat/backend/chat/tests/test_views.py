@@ -93,3 +93,75 @@ class SearchLogAPIViewTestCase(TestCase):
         
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.data['error'], "Failed to retrieve search logs")
+
+
+class ProviderConfigAPIViewTestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    @patch("chat.views.provider_manager.get_embedding_config")
+    def test_get_returns_chat_selection_and_embedding_config(self, mock_embedding_config):
+        mock_embedding_config.return_value = {
+            "provider": "gemini",
+            "model": "models/text-embedding-004",
+            "scope": "system",
+            "requires_reindex": True,
+        }
+
+        response = self.client.get(reverse("provider-config"), {"user_id": "session-1"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("selection", response.data)
+        self.assertEqual(response.data["embedding"], mock_embedding_config.return_value)
+
+    def test_post_accepts_ollama_only_combo(self):
+        response = self.client.post(
+            reverse("provider-config"),
+            {"user_id": "session-1", "provider_combo": "ollama_only"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["selection"],
+            {
+                "reasoning_provider": "ollama",
+                "generation_provider": "ollama",
+            },
+        )
+
+    def test_post_accepts_huggingface_only_combo(self):
+        response = self.client.post(
+            reverse("provider-config"),
+            {"user_id": "session-1", "provider_combo": "huggingface_only"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["selection"],
+            {
+                "reasoning_provider": "huggingface",
+                "generation_provider": "huggingface",
+            },
+        )
+
+    def test_post_accepts_openrouter_manual_provider(self):
+        response = self.client.post(
+            reverse("provider-config"),
+            {
+                "user_id": "session-1",
+                "reasoning_provider": "openrouter",
+                "generation_provider": "ollama",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["selection"],
+            {
+                "reasoning_provider": "openrouter",
+                "generation_provider": "ollama",
+            },
+        )

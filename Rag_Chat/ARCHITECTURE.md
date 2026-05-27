@@ -56,7 +56,7 @@
 | Auth (Frontend) | NextAuth.js v5 | 세션 관리, 나중에 SSO 확장 |
 | Database | PostgreSQL 16 | 동시 접속 안정성, SQLite 대체 |
 | Cache / Session | Redis 7 | 채팅 히스토리, Celery broker |
-| Background Task | Celery + Celery Beat | 세션 정리, 주기적 인덱싱 |
+| Background Task | Celery + Celery Beat | 세션 정리. 주기적 인덱싱은 Upload API/외부 트리거가 생기는 Phase 8 후보 |
 | Vector DB | FAISS (기존 유지) | RAG 벡터 검색 |
 | LLM | Gemini / Qwen (기존 유지) | provider 추상화 유지 |
 | Styling | Tailwind CSS + shadcn/ui | 빠른 UI 구성 |
@@ -416,7 +416,7 @@ services:
   redis:        # Redis 7 (세션 + Celery broker)
   backend:      # Django API (gunicorn)
   celery:       # Celery worker
-  celery-beat:  # 주기적 태스크 (세션 정리, 재인덱싱)
+  celery-beat:  # 주기적 태스크 (현재 세션 정리, 재인덱싱은 Phase 8 후보)
   frontend:     # Next.js (standalone output)
   nginx:        # 리버스 프록시 (프로덕션)
 ```

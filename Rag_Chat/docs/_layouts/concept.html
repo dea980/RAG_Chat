@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>{{ title }} — Triple Chat 개념 노트</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#fff; --bg-soft:#f8fafc;
+    --accent:#2563eb; --warn:#d97706; --ok:#16a34a; --danger:#dc2626;
+    --analogy:#fef9c3; --analogy-ink:#854d0e;
+    --mono:"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;padding:0;color:var(--ink);background:var(--bg);
+       font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Noto Sans KR",sans-serif;
+       font-size:15.5px;line-height:1.75;}
+  .wrap{display:grid;grid-template-columns:260px 1fr;min-height:100vh;}
+  nav.side{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+           border-right:1px solid var(--line);padding:28px 20px;background:var(--bg-soft);}
+  nav.side .crumb{font-size:12px;color:var(--muted);margin-bottom:14px;}
+  nav.side .crumb a{color:var(--muted);text-decoration:none;}
+  nav.side .crumb a:hover{color:var(--accent);}
+  nav.side h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;}
+  nav.side .tag{display:inline-block;padding:2px 8px;border-radius:999px;background:#fff;
+                border:1px solid var(--line);font-size:11px;color:var(--muted);margin-bottom:12px;}
+  nav.side ol{list-style:none;padding:0;margin:0 0 22px;counter-reset:nav;}
+  nav.side li{counter-increment:nav;margin:5px 0;}
+  nav.side li a{text-decoration:none;color:var(--ink);display:block;padding:6px 8px;
+                border-radius:6px;font-size:13.5px;}
+  nav.side li a::before{content:counter(nav) ". ";color:var(--muted);}
+  nav.side li a:hover{background:#fff;}
+  nav.side .meta{font-size:12px;color:var(--muted);margin-top:12px;border-top:1px solid var(--line);padding-top:12px;}
+  nav.side .meta div{margin:4px 0;}
+  nav.side .meta b{color:var(--ink);}
+
+  main{padding:40px 56px 120px;max-width:880px;}
+  h1{font-size:30px;margin:0 0 6px;line-height:1.3;}
+  h2{font-size:22px;margin:60px 0 10px;padding-top:24px;border-top:1px solid var(--line);}
+  h2:first-of-type{border-top:0;padding-top:0;margin-top:8px;}
+  h3{font-size:17px;margin:30px 0 8px;}
+  h4{font-size:14px;margin:18px 0 4px;}
+  .lede{color:var(--muted);font-size:16px;margin:0 0 24px;}
+  p{margin:8px 0 14px;}
+  ul,ol{padding-left:22px;}
+  li{margin:5px 0;}
+  a{color:var(--accent);}
+
+  table{width:100%;border-collapse:collapse;margin:14px 0 22px;font-size:14px;}
+  th,td{border:1px solid var(--line);padding:10px 12px;vertical-align:top;text-align:left;}
+  th{background:var(--bg-soft);font-size:12px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em;}
+  td code,p code,li code{font-family:var(--mono);background:var(--bg-soft);padding:1px 6px;border-radius:4px;font-size:13px;}
+
+  .analogy{border-left:4px solid var(--warn);background:var(--analogy);color:var(--analogy-ink);
+           padding:12px 16px;margin:14px 0;border-radius:0 8px 8px 0;}
+  .analogy strong{color:var(--analogy-ink);}
+  .analogy h4{margin:0 0 4px;color:var(--analogy-ink);}
+
+  .definition{border:1px solid var(--line);border-radius:10px;padding:14px 18px;
+              background:var(--bg-soft);margin:14px 0;}
+  .definition .term{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;}
+  .definition .name{font-size:18px;font-weight:700;margin:2px 0 6px;}
+  .definition p{margin:0;font-size:14.5px;}
+
+  .callout{border-left:4px solid var(--accent);background:#eff6ff;padding:12px 16px;
+           margin:14px 0;border-radius:0 8px 8px 0;}
+  .callout.warn{border-left-color:var(--warn);background:#fffbeb;}
+  .callout.ok{border-left-color:var(--ok);background:#ecfdf5;}
+  .callout.danger{border-left-color:var(--danger);background:#fef2f2;}
+  .callout h4{margin:0 0 4px;font-size:14px;}
+
+  pre.code, pre{background:#0b1020;color:#cdd6f4;padding:14px 16px;border-radius:8px;
+                overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55;}
+  pre code{background:transparent;color:inherit;padding:0;}
+
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:700;font-size:11px;}
+  .pill.ok{background:#ecfdf5;color:var(--ok);}
+  .pill.warn{background:#fffbeb;color:var(--warn);}
+  .pill.bad{background:#fef2f2;color:var(--danger);}
+
+  .qa{border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:10px 0;}
+  .qa .q{font-weight:700;color:var(--accent);font-size:14px;margin-bottom:4px;}
+  .qa .a{font-size:14px;}
+
+  .level-badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;
+               font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-right:6px;}
+  .level-badge.beginner{background:#ecfdf5;color:var(--ok);}
+  .level-badge.intermediate{background:#fffbeb;color:var(--warn);}
+  .level-badge.advanced{background:#fef2f2;color:var(--danger);}
+
+  .related{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 22px;}
+  .related a{display:inline-block;padding:6px 12px;border:1px solid var(--line);border-radius:999px;
+             text-decoration:none;color:var(--ink);background:var(--bg-soft);font-size:13px;}
+  .related a:hover{background:#fff;border-color:var(--accent);color:var(--accent);}
+
+  .footer-nav{display:flex;justify-content:space-between;margin-top:60px;padding-top:24px;
+              border-top:1px solid var(--line);gap:16px;}
+  .footer-nav a{flex:1;padding:14px 18px;border:1px solid var(--line);border-radius:10px;
+                text-decoration:none;color:var(--ink);background:var(--bg-soft);}
+  .footer-nav a:hover{background:#fff;border-color:var(--accent);}
+  .footer-nav .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  .footer-nav .title{font-size:14px;font-weight:700;margin-top:4px;}
+  .footer-nav .next{text-align:right;}
+
+  hr{border:none;border-top:1px solid var(--line);margin:36px 0;}
+  @media print{.wrap{grid-template-columns:1fr;}nav.side{display:none;}main{padding:0;max-width:none;}h2{break-before:page;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="side">
+  <div class="crumb"><a href="index.html">← 개념 인덱스</a></div>
+  <span class="tag">{{ category }}</span>
+  <h2>이 문서 차례</h2>
+  <ol>
+    {% for h in toc %}
+    <li><a href="#{{ h.id }}">{{ h.text }}</a></li>
+    {% endfor %}
+  </ol>
+
+  {% if prerequisites %}
+  <div class="meta">
+    <div><b>먼저 읽기</b></div>
+    {% for p in prerequisites %}
+    <div>· <a href="{{ p.slug }}.html">{{ p.title }}</a></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="meta">
+    <div><b>난이도</b> · {{ level }}</div>
+    {% if updated %}<div><b>업데이트</b> · {{ updated }}</div>{% endif %}
+  </div>
+</nav>
+
+<main>
+
+<div>
+  <span class="level-badge {{ level_class }}">{{ level }}</span>
+  <span class="tag">{{ category }}</span>
+</div>
+<h1>{{ title }}</h1>
+{% if summary %}<p class="lede">{{ summary }}</p>{% endif %}
+
+{% if related %}
+<div class="related">
+  {% for r in related %}<a href="{{ r.slug }}.html">↗ {{ r.title }}</a>{% endfor %}
+</div>
+{% endif %}
+
+{{ body | safe }}
+
+<div class="footer-nav">
+  {% if prev %}
+  <a href="{{ prev.slug }}.html">
+    <div class="label">← 이전</div>
+    <div class="title">{{ prev.title }}</div>
+  </a>
+  {% else %}<span></span>{% endif %}
+  {% if next %}
+  <a href="{{ next.slug }}.html" class="next">
+    <div class="label">다음 →</div>
+    <div class="title">{{ next.title }}</div>
+  </a>
+  {% else %}<span></span>{% endif %}
+</div>
+
+<hr>
+<p style="color:var(--muted);font-size:13px">
+  관련 프로젝트 문서:
+  <a href="../prd.html">prd.html</a> ·
+  <a href="../workflow.html">workflow.html</a> ·
+  <a href="../ab_testing_guide.html">ab_testing_guide.html</a>
+</p>
+
+</main>
+</div>
+</body>
+</html>

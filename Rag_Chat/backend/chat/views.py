@@ -345,9 +345,21 @@ class ProviderConfigAPIView(APIView):
             "reasoning_provider": "qwen",
             "generation_provider": "qwen",
         },
+        "openrouter_only": {
+            "reasoning_provider": "openrouter",
+            "generation_provider": "openrouter",
+        },
+        "ollama_only": {
+            "reasoning_provider": "ollama",
+            "generation_provider": "ollama",
+        },
+        "huggingface_only": {
+            "reasoning_provider": "huggingface",
+            "generation_provider": "huggingface",
+        },
     }
 
-    VALID_PROVIDERS = {"gemini", "qwen"}
+    VALID_PROVIDERS = {"gemini", "qwen", "openrouter", "ollama", "huggingface"}
 
     def _resolve_session_id(self, request) -> str:
         session_id = request.data.get("user_id") if isinstance(request.data, dict) else None
@@ -366,6 +378,7 @@ class ProviderConfigAPIView(APIView):
             "session_id": session_id,
             "selection": selection,
             "override": override,
+            "embedding": provider_manager.get_embedding_config(),
         }, status=status.HTTP_200_OK)
 
     def post(self, request):
@@ -405,6 +418,7 @@ class ProviderConfigAPIView(APIView):
             "session_id": session_id,
             "selection": selection,
             "provider_combo": combo_key or "custom",
+            "embedding": provider_manager.get_embedding_config(),
         }
         return Response(response, status=status.HTTP_200_OK)
 
@@ -416,6 +430,7 @@ class ProviderConfigAPIView(APIView):
             "session_id": session_id,
             "selection": selection,
             "provider_combo": "default",
+            "embedding": provider_manager.get_embedding_config(),
         }, status=status.HTTP_200_OK)
 class ChatRagAPIView(APIView):
     """

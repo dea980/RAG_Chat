@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Triple Chat — 개념 인덱스</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--bg:#fff;--bg-soft:#f8fafc;
+        --accent:#2563eb;--warn:#d97706;--ok:#16a34a;--danger:#dc2626;}
+  *{box-sizing:border-box;}
+  body{margin:0;padding:0;color:var(--ink);background:var(--bg);
+       font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Noto Sans KR",sans-serif;
+       font-size:15.5px;line-height:1.7;}
+  header{padding:48px 56px 24px;border-bottom:1px solid var(--line);background:var(--bg-soft);}
+  header h1{margin:0;font-size:30px;}
+  header p{margin:6px 0 0;color:var(--muted);}
+  main{padding:36px 56px 120px;max-width:1100px;}
+  h2{font-size:18px;margin:32px 0 14px;padding-bottom:6px;border-bottom:1px solid var(--line);}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+  .card{border:1px solid var(--line);border-radius:10px;padding:16px 18px;
+        background:var(--bg-soft);text-decoration:none;color:var(--ink);display:block;}
+  .card:hover{background:#fff;border-color:var(--accent);}
+  .card .title{font-weight:700;font-size:16px;margin:0 0 4px;}
+  .card .summary{color:var(--muted);font-size:13.5px;margin:6px 0 0;}
+  .badges{display:flex;gap:6px;margin-bottom:6px;}
+  .level-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;
+               font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+  .level-badge.beginner{background:#ecfdf5;color:var(--ok);}
+  .level-badge.intermediate{background:#fffbeb;color:var(--warn);}
+  .level-badge.advanced{background:#fef2f2;color:var(--danger);}
+  .tag{display:inline-block;padding:2px 8px;border-radius:999px;background:#fff;
+       border:1px solid var(--line);font-size:11px;color:var(--muted);}
+  .empty{color:var(--muted);font-style:italic;}
+</style>
+</head>
+<body>
+<header>
+  <h1>Triple Chat — 개념 인덱스</h1>
+  <p>RAG 고도화 학습 노트. 카테고리별로 정리, 필요한 순서대로 읽으세요.</p>
+</header>
+<main>
+  {% for cat, items in categories %}
+  <h2>{{ cat }}</h2>
+  <div class="grid">
+    {% for c in items %}
+    <a class="card" href="{{ c.slug }}.html">
+      <div class="badges">
+        <span class="level-badge {{ c.level_class }}">{{ c.level }}</span>
+        <span class="tag">{{ c.category }}</span>
+      </div>
+      <div class="title">{{ c.title }}</div>
+      {% if c.summary %}<div class="summary">{{ c.summary }}</div>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty">아직 등록된 개념이 없습니다. <code>docs/concepts/</code> 에 마크다운을 추가하고 <code>python scripts/build_concepts.py</code> 를 실행하세요.</p>
+  {% endfor %}
+</main>
+</body>
+</html>

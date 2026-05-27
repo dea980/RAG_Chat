@@ -42,8 +42,14 @@ POSTGRES_PASSWORD=postgres
 # ---- Session (Redis TTL ↔ DB expired_datetime 단일 윈도우, 초) ----
 SESSION_TIMEOUT=300
 
-# ---- LLM Provider 선택 (역할별; 셋 다 openrouter 권장) ----
+# ---- Provider 선택 ----
+# Chat LLM provider는 역할별로 바꿀 수 있다.
+# 지원: gemini, qwen, openrouter, ollama, huggingface
+#
+# Embedding provider/model은 별도 축이다. 변경하면 기존 Chroma index와
+# embedding 차원이 달라질 수 있으므로 벡터 재생성이 필요하다.
 EMBEDDING_PROVIDER=openrouter
+EMBEDDING_MODEL=nvidia/llama-nemotron-embed-v1-1b-v2:free
 REASONING_PROVIDER=openrouter
 GENERATION_PROVIDER=openrouter
 
@@ -55,6 +61,21 @@ OPENROUTER_EMBEDDING_MODEL=nvidia/llama-nemotron-embed-v1-1b-v2:free
 OPENROUTER_MODEL_NAME=qwen/qwen3-235b-a22b:free
 OPENROUTER_REASONING_MODEL=qwen/qwen3-235b-a22b:free
 OPENROUTER_GENERATION_MODEL=nvidia/nemotron-nano-9b-v2:free
+
+# ---- Ollama 로컬 endpoint ----
+# ollama serve 후 provider=ollama 로 선택
+# OLLAMA_BASE_URL=http://localhost:11434/v1
+# OLLAMA_MODEL=llama3.1
+# OLLAMA_REASONING_MODEL=llama3.1
+# OLLAMA_GENERATION_MODEL=qwen2.5:7b
+
+# ---- Hugging Face OpenAI-compatible endpoint ----
+# Hugging Face Inference Endpoint 또는 TGI OpenAI-compatible endpoint 필요
+# HUGGINGFACE_API_KEY=
+# HUGGINGFACE_BASE_URL=
+# HUGGINGFACE_MODEL=meta-llama/Llama-3.1-8B-Instruct
+# HUGGINGFACE_REASONING_MODEL=
+# HUGGINGFACE_GENERATION_MODEL=
 
 # ---- Gemini (provider=gemini 일 때만; 백업) ----
 # GOOGLE_API_KEY=

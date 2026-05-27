@@ -103,6 +103,27 @@ class ProviderManager:
                 )
         return self._embedding_model
 
+    def get_embedding_config(self) -> Dict[str, object]:
+        """Return system-scoped embedding config for UI/API display."""
+        provider = self.embedding_provider_name
+        model = os.getenv("EMBEDDING_MODEL")
+        if not model:
+            if provider == "gemini":
+                model = os.getenv("GOOGLE_EMBEDDING_MODEL", "models/text-embedding-004")
+            elif provider == "openrouter":
+                model = os.getenv(
+                    "OPENROUTER_EMBEDDING_MODEL",
+                    "nvidia/llama-nemotron-embed-v1-1b-v2:free",
+                )
+            else:
+                model = os.getenv(f"{provider.upper()}_EMBEDDING_MODEL", "")
+        return {
+            "provider": provider,
+            "model": model,
+            "scope": "system",
+            "requires_reindex": True,
+        }
+
     def get_vector_store(self):
         """Construct a Chroma vector store hooked to the embedding model."""
 
@@ -178,6 +199,10 @@ class ProviderManager:
             return self._create_qwen_chat_model(purpose)
         if provider == "openrouter":
             return self._create_openrouter_chat_model(purpose)
+        if provider == "ollama":
+            return self._create_ollama_chat_model(purpose)
+        if provider == "huggingface":
+            return self._create_huggingface_chat_model(purpose)
         raise ValueError(f"Unsupported chat provider: {provider}")
 
     def _create_gemini_chat_model(self, purpose: str):
@@ -214,6 +239,46 @@ class ProviderManager:
         model_name = model_override or default_model
         temperature = float(os.getenv(f"{purpose}_TEMPERATURE", "0.7"))
 
+        return ChatOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            model=model_name,
+            temperature=temperature,
+        )
+
+    def _create_ollama_chat_model(self, purpose: str):
+        if ChatOpenAI is None:
+            raise ImportError(
+                "langchain-openai must be installed to use Ollama chat models"
+            )
+
+        default_model = os.getenv("OLLAMA_MODEL", "llama3.1")
+        model_override = os.getenv(f"OLLAMA_{purpose}_MODEL")
+        model_name = model_override or default_model
+        temperature = float(os.getenv(f"{purpose}_TEMPERATURE", "0.7"))
+        return ChatOpenAI(
+            api_key=os.getenv("OLLAMA_API_KEY", "ollama"),
+            base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
+            model=model_name,
+            temperature=temperature,
+        )
+
+    def _create_huggingface_chat_model(self, purpose: str):
+        if ChatOpenAI is None:
+            raise ImportError(
+                "langchain-openai must be installed to use Hugging Face chat models"
+            )
+
+        api_key = os.getenv("HUGGINGFACE_API_KEY")
+        base_url = os.getenv("HUGGINGFACE_BASE_URL")
+        if not api_key or not base_url:
+            raise RuntimeError(
+                "HUGGINGFACE_API_KEY and HUGGINGFACE_BASE_URL must be set to use the Hugging Face provider"
+            )
+        default_model = os.getenv("HUGGINGFACE_MODEL", "meta-llama/Llama-3.1-8B-Instruct")
+        model_override = os.getenv(f"HUGGINGFACE_{purpose}_MODEL")
+        model_name = model_override or default_model
+        temperature = float(os.getenv(f"{purpose}_TEMPERATURE", "0.7"))
         return ChatOpenAI(
             api_key=api_key,
             base_url=base_url,
