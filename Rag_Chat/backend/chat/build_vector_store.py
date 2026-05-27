@@ -1,3 +1,29 @@
+"""DEPRECATED — use chat.ingest.pipeline.ingest_path instead.
+
+Phase 1~6 의 ingest layer (chat/ingest/) 가 이 파일의 기능을 전부 대체한다:
+- CSV/XLSX 적재 → chat.ingest.loaders.structured.{csv,excel}
+- 청킹       → chat.ingest.splitters
+- Chroma 적재 → chat.ingest.sinks.ChromaSink
+- ORM 적재   → chat.ingest.sinks.KnowledgeOrmSink (Phase 6)
+- dedup     → chat.ingest.manifest (Phase 2 SHA256)
+
+신규 호출 예:
+    from chat.ingest.pipeline import ingest_path
+    from chat.ingest.sinks import ChromaSink, KnowledgeOrmSink, CompositeSink
+    ingest_path("galaxy_s25_data.csv",
+                sink=CompositeSink([ChromaSink(), KnowledgeOrmSink()]))
+
+이 파일은 후방 호환을 위해 남겨두며, 다음 정리 라운드에서 제거 예정.
+"""
+import warnings
+
+warnings.warn(
+    "chat.build_vector_store is deprecated; use chat.ingest.pipeline.ingest_path"
+    " with sinks=CompositeSink([ChromaSink(), KnowledgeOrmSink()]) instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 import pandas as pd

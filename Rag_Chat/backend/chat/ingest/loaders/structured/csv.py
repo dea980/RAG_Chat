@@ -1,14 +1,16 @@
-"""CSV loader — langchain CSVLoader 를 RawDoc 으로 감싼다.
+"""CSV loader — csv.DictReader 로 행 단위 RawDoc 생성.
 
-CSVLoader 는 행마다 `col: value\\ncol: value\\n...` 형태로 page_content 를
-만든다. 우리는 그것을 RawDoc.content 로 그대로 사용하고, 컬럼 원본 값은
-metadata['fields'] 에 보존한다 (정확 조회용 — Phase 6 ORM sink 가 활용).
+각 행은 'column: value\\n...' 형태로 content 가 직렬화되고, 컬럼 원본 값은
+metadata['fields'] 에 dict 로 보존된다. Phase 6 의 ORM sink 가 이 fields 를
+정확 조회용으로 활용한다 (Chroma 는 벡터·근사 검색, ORM 은 SQL·정확 조회).
+
+기존엔 LangChain CSVLoader 를 래핑했으나 fields 가 LangChain 의 메타데이터
+(source/row) 만 들어가서 ORM 매핑이 불가능했다 — 직접 DictReader 로 전환.
 """
 from __future__ import annotations
 
+import csv
 from typing import Iterable
-
-from langchain_community.document_loaders import CSVLoader
 
 from ...base import RawDoc
 from ...registry import register
@@ -22,16 +24,24 @@ class CsvLoader:
     source_type = "csv"
 
     def load(self, path: str) -> Iterable[RawDoc]:
-        """파일을 읽고 각 행을 RawDoc 으로 yield."""
-        for i, doc in enumerate(CSVLoader(file_path=path).load()):
-            yield RawDoc(
-                content=doc.page_content,
-                source_file=path,
-                source_type=self.source_type,
-                section=f"row:{i}",
-                metadata={
-                    "row_index": i,
-                    # CSVLoader 가 채운 metadata (source 등) 를 보존
-                    "fields": dict(doc.metadata),
-                },
-            )
+        """파일을 읽고 각 행을 RawDoc 으로 yield.
+
+        content 는 '컬럼: 값' 줄들의 join — Excel loader 와 동일한 직렬화로
+        Chroma 벡터 표현이 포맷 간 일관적이게 한다.
+        """
+        with open(path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for i, row in enumerate(reader):
+                content = "\n".join(
+                    f"{col}: {val}" for col, val in row.items() if val not in (None, "")
+                )
+                yield RawDoc(
+                    content=content,
+                    source_file=path,
+                    source_type=self.source_type,
+                    section=f"row:{i}",
+                    metadata={
+                        "row_index": i,
+                        "fields": dict(row),
+                    },
+                )

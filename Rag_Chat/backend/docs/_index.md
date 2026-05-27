@@ -7,6 +7,7 @@
 > 🗺 **한 페이지 시각 요약**: [reports/project_journey.html](reports/project_journey.html)
 > 👉 **다음 세션 진입점**: [sessions/handoff.md](sessions/handoff.md) — env/provider 현재 상태 + 즉시 처리할 것
 > 🔧 **커밋 분할 핸드오프**: [sessions/commit_split_plan.md](sessions/commit_split_plan.md)
+> 🌙 **2026-05-27 밤 (4-에이전트 병렬)**: [sessions/2026-05-27-night-parallel.md](sessions/2026-05-27-night-parallel.md) — 깨어났을 때 1페이지 요약은 [sessions/handoff_night.md](sessions/handoff_night.md)
 
 상태 범례 — ✅ done · 🟢 active · ⏳ planned · ⏸ paused · 📝 reference
 
@@ -23,10 +24,12 @@
 | 2+ | ✅ | Chunk Lab + Token Lab 페이지 |
 | 3 | ✅ | 텍스트 loader (PDF/DOCX/HTML/TXT) + splitter dispatch 통합 |
 | 4 | ✅ | Clause/heading splitter (opt-in only) |
-| 5 | ⏳ | OCR loader (분류 2) |
-| 6 | ⏳ | ORM sink (knowledge_product 로 분류 3 이전) |
-| 7 | ⏳ | HWP / CAD (분류 4) — 변환 단계 별도 |
+| 5 | 🟢 | OCR loader (분류 2) — T3 야간 병렬, uncommitted |
+| 6 | 🟢 | ORM sink (KnowledgeOrmSink + CompositeSink, csv.py fields 보존, build_vector_store deprecated) — seed_demo 이전은 별도 |
+| 7-a | 🟢 | HWP loader 리서치 — T4 야간 병렬 진행 중 |
+| 7-b | ⏳ | CAD/dwg (분류 4) — 변환 단계 별도 |
 | 8 | ⏸ | Upload API + Celery 비동기 (트리거 발생 시) |
+| Lab | 🟢 | Embedding Lab Mode A — T2 야간 병렬, uncommitted |
 
 ---
 
@@ -54,6 +57,10 @@
 | [phase3_text_loaders.md](features/ingest/phase3_text_loaders.md) | ✅ | PDF/DOCX/HTML loader 통합 |
 | [phase3_integration.md](features/ingest/phase3_integration.md) | ✅ | splitter dispatch + Upload manifest 통합 PR |
 | [phase4_splitters.md](features/ingest/phase4_splitters.md) | ✅ | Clause/Heading splitter (opt-in) |
+| [phase5_ocr.md](features/ingest/phase5_ocr.md) | 🟢 | OCR loader 통합 노트 (T3 결과 채울 자리, 골격) |
+| [phase6_orm_sink.md](features/ingest/phase6_orm_sink.md) | ✅ | KnowledgeOrmSink + CompositeSink, csv.py fields 보존, build_vector_store deprecated (2026-05-27) |
+| [phase7a_hwp.md](features/ingest/phase7a_hwp.md) | 🟢 | HWP loader 통합 노트 (T4 리서치 후 다음 세션에서 구현) |
+| [phase7a_hwp_research.md](features/ingest/phase7a_hwp_research.md) | 🟢 | T4 가 직접 작성 — HWP 라이브러리 비교 + 권고 |
 | [upload_api.md](features/ingest/upload_api.md) | 📝 | Upload API 통합 기록 (이슈는 phase3_integration 참고) |
 | [async_plan.md](features/ingest/async_plan.md) | ⏸ | Celery + Redis 비동기 인제스천 — Phase 8 보류 |
 | [async_tradeoff.html](features/ingest/async_tradeoff.html) | ⏸ | 인제스천 부하 분리 vs LLM 컨텍스트 캐시 비교 (결론 = "지금 불필요") |
@@ -86,7 +93,8 @@
 
 | 문서 | 상태 | 페이지 |
 |---|---|---|
-| [design.md](features/embedding_lab/design.md) | ⏳ 설계 | 임베딩 모델/언어 비교 페이지 — 강사가 짚은 "한국어 약점" 검증 (구현 전) |
+| [design.md](features/embedding_lab/design.md) | ✅ 설계 | 임베딩 모델/언어 비교 페이지 — 강사가 짚은 "한국어 약점" 검증 |
+| [page.md](features/embedding_lab/page.md) | 🟢 | T2 야간 병렬 결과 통합 노트 (Mode A 만, 골격) |
 
 ---
 
@@ -95,8 +103,10 @@
 | 문서 | 상태 | 역할 |
 |---|---|---|
 | [handoff.md](sessions/handoff.md) | 🟢 | 다음 세션 진입점 — env/provider 현재 상태 + 즉시 처리 |
+| [handoff_night.md](sessions/handoff_night.md) | 🟢 | 2026-05-27 야간 4-에이전트 병렬 결과 1페이지 요약 (깨어났을 때) |
 | [commit_split_plan.md](sessions/commit_split_plan.md) | 🟢 | `feature/onnx-reranker` 잔여 변경분 커밋 분할 계획 |
-| [2026-05-27.md](sessions/2026-05-27.md) | 📝 | 2026-05-27 작업 로그 |
+| [2026-05-27.md](sessions/2026-05-27.md) | 📝 | 2026-05-27 낮 작업 로그 |
+| [2026-05-27-night-parallel.md](sessions/2026-05-27-night-parallel.md) | 🟢 | 2026-05-27 밤 — 4-에이전트 병렬 작업 narrative + 학습 포인트 |
 
 ---
 
@@ -170,7 +180,36 @@ frontend/pages/
 - [ARCHITECTURE.md](../../ARCHITECTURE.md) — 상위 아키텍처
 - [프로젝트현황.md](../../프로젝트현황.md) — 진행 상황 한국어 정리
 
-기타:
-- `Rag_Chat/docs/` — 정적 사이트 빌드 골격 (`_layouts/`, `concepts/hybrid-search.md`)
+### 9.1 정적 컨셉 사이트 — `Rag_Chat/docs/`
+
+별도 정적 사이트 빌드 인프라. `09ba978` 커밋에서 도입됨.
+
+```
+Rag_Chat/docs/
+├── _layouts/
+│   ├── concept.html          # Jinja2 — 개별 컨셉 페이지 템플릿
+│   └── index.html            # Jinja2 — 인덱스 페이지
+├── concepts/
+│   ├── _template.md          # 새 컨셉 작성용 frontmatter 템플릿
+│   └── hybrid-search.md      # 첫 컨셉 — 하이브리드 검색 (BM25 + 벡터)
+└── build/                    # 빌드 산출물 (gitignored 가능)
+
+Rag_Chat/scripts/build_concepts.py   # markdown → HTML 빌더 (Jinja2)
+```
+
+빌드 명령:
+```bash
+cd Rag_Chat
+python scripts/build_concepts.py            # 1회 빌드
+python scripts/build_concepts.py --watch    # 파일 변경 시 재빌드
+```
+
+의존성: `markdown`, `jinja2`, `pyyaml`.
+
+본 `backend/docs/` 와의 차이:
+- `backend/docs/` = **프로젝트 진행 narrative + 통합 노트** (이 인덱스가 다루는 영역)
+- `Rag_Chat/docs/` = **재사용 가능 컨셉 사전** (Hybrid Search, Reranker 등 — 정적 학습 페이지)
+
+### 9.2 기타
 - `docs/superpowers/` — superpowers plans/specs (`2026-05-19-onnx-reranker`, `2026-05-27-model-provider-switching`)
 - `Rag_Chat/backend/TestsReadme.md`, `Rag_Chat/frontend/README.md`, `Rag_Chat/triple_chat_pjt/testReadme.md` — 모듈별 readme (이동하지 않음)

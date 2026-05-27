@@ -226,6 +226,68 @@ git 영향 — 추적된 파일 24개가 D(이동) + 새 디렉토리 6개가 un
 
 ---
 
+## 12. 2026-05-27 (저녁 마감) — Phase 6 ORM Sink + Phase 5 OCR loader
+
+이번 세션 (저녁) 추가 작업:
+
+- **Phase 6 — ORM Sink + CSV fields 보존** ✅
+  - `chat/ingest/sinks/knowledge_orm.py` 신설 — `KnowledgeOrmSink` (CSV/Excel → `Product.update_or_create`,
+    `name_column` 기본 `Model`, 비정형 source_type 은 silently skip).
+  - `chat/ingest/sinks/composite.py` 신설 — `CompositeSink` (여러 sink fan-out, prefix 기반 delete 라우팅).
+  - `chat/ingest/loaders/structured/csv.py` 수정 — LangChain CSVLoader 래핑 제거,
+    `csv.DictReader` 직접 사용. `metadata['fields']` 에 실제 컬럼 값 dict 가 들어가
+    ORM 매핑 가능 (이전엔 LangChain source/row 만 있어 매핑 불가).
+  - `chat/build_vector_store.py` 에 `DeprecationWarning` 추가. Ingest layer 가 대체.
+  - 단위 테스트 7개 (`test_knowledge_orm_sink.py`) — pytest 실행은 *기존 postgres
+    인증 문제* 로 막힘 (`health/ready/` 가 `database ok=false`). 코드 import / dry-run 통과.
+  - 자세히: [phase6_orm_sink.md](../features/ingest/phase6_orm_sink.md).
+- **Phase 5 — OCR image loader** (sub-agent 디스패치)
+  - `chat/ingest/loaders/ocr/image.py` + `__init__.py` 신설. `OcrImageLoader`,
+    `extensions = (".png", ".jpg", ".jpeg", ".tiff", ".tif", ".bmp")`, `source_type = "ocr"`,
+    pytesseract `lang="kor+eng"`.
+  - `chat/ingest/loaders/__init__.py` 에 `from .ocr import image as _ocr_image` 한 줄.
+  - `chat/tests/ingest/test_ocr_loader.py` — 2 pass, 3 skip (tesseract 미설치 환경 가드).
+- **app 8000 정리** — DY-ADAS uvicorn (PID 53406) 종료, `docker-compose.yml` backend
+  포트 `8002:8000` → `8000:8000`, `chunk_lab.py` 기본 포트 8001 → 8000 통일.
+
+### ⚠️ 정리할 잔재
+
+- **OCR loader 중복 파일** — `chat/ingest/loaders/text/ocr.py` (다른 agent 가 미리
+  만든 것) 와 `chat/ingest/loaders/ocr/image.py` (이 세션 sub-agent 가 만든
+  설계상 올바른 위치) 가 *둘 다* `@register` 한다.
+  `loader_for(".png")` 가 어느 클래스를 반환할지 결정적이지 않을 위험.
+  다음 세션에서 `text/ocr.py` 삭제 + `text/__init__.py` import 정리 필요.
+
+### 이번 세션 신규/변경 파일 (저녁분)
+
+```
+backend/chat/build_vector_store.py                   # M (deprecation)
+backend/chat/ingest/loaders/structured/csv.py        # M (DictReader 전환, fields 보존)
+backend/chat/ingest/sinks/__init__.py                # M (3개 sink export)
+backend/chat/ingest/sinks/knowledge_orm.py           # 신규
+backend/chat/ingest/sinks/composite.py               # 신규
+backend/chat/tests/test_knowledge_orm_sink.py        # 신규
+backend/chat/ingest/loaders/ocr/__init__.py          # 신규 (sub-agent)
+backend/chat/ingest/loaders/ocr/image.py             # 신규 (sub-agent)
+backend/chat/ingest/loaders/__init__.py              # M (sub-agent 한 줄 import)
+backend/chat/tests/ingest/test_ocr_loader.py         # 신규 (sub-agent)
+backend/docs/features/ingest/phase6_orm_sink.md      # 신규
+backend/docs/_index.md                               # M (Phase 6 row 🟢, doc entry 추가)
+backend/docs/sessions/handoff.md                     # 이 섹션
+docker-compose.yml                                   # M (8002:8000 → 8000:8000)
+frontend/pages/chunk_lab.py                          # M (기본 포트 8001 → 8000)
+```
+
+### 다음 세션 우선순위
+
+1. **postgres 인증 fix** — `health/ready/` 가 `ok=true` 로 회복되도록 volume
+   재설정 또는 .env 일치. Phase 6 통합 테스트 + 전체 chat 기능에 영향.
+2. **OCR 중복 파일 정리** — `text/ocr.py` 삭제 + `text/__init__.py` 정리.
+3. **seed_demo 갱신** — `KnowledgeOrmSink` 로 CSV 한 줄로 대체 (Phase 6.5).
+4. **galaxy_lineup.csv 실적재 검증** — `ingest_path` + `CompositeSink` 로 종합 동작 확인.
+
+---
+
 ## 관련 문서
 - [project_status.html](../reports/project_status.html) — provider/env 시각화
 - [project_journey.html](../reports/project_journey.html) — Ingest Phase 1~3+ 시각 요약
