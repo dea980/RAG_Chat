@@ -82,6 +82,12 @@
 |---|---|---|
 | [page.md](features/token_lab/page.md) | 🟢 | `frontend/pages/token_lab.py` — 모델/언어별 토큰화 비교 (미커밋) |
 
+### 3.5 Embedding Lab — [`features/embedding_lab/`](features/embedding_lab/)
+
+| 문서 | 상태 | 페이지 |
+|---|---|---|
+| [design.md](features/embedding_lab/design.md) | ⏳ 설계 | 임베딩 모델/언어 비교 페이지 — 강사가 짚은 "한국어 약점" 검증 (구현 전) |
+
 ---
 
 ## 4. 세션 / 핸드오프 — [`sessions/`](sessions/)

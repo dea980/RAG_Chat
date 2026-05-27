@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rag_Chat Python File Guide</title>
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --fg: #151922;
+    --muted: #667085;
+    --line: #d7dce3;
+    --card: #ffffff;
+    --soft: #eef4ff;
+    --soft2: #ecfdf3;
+    --soft3: #fff7ed;
+    --accent: #2563eb;
+    --ok: #0f766e;
+    --warn: #b45309;
+    --code: #f1f5f9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --line: #30363d;
+      --card: #161b22;
+      --soft: #0c2545;
+      --soft2: #0d2f2c;
+      --soft3: #3a2407;
+      --accent: #58a6ff;
+      --ok: #3fb950;
+      --warn: #d29922;
+      --code: #21262d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto;
+    max-width: 1180px;
+    padding: 40px 24px 80px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+    line-height: 1.6;
+  }
+  h1 { margin: 0 0 6px; font-size: 30px; }
+  h2 { margin: 42px 0 12px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); font-size: 21px; }
+  h3 { margin: 28px 0 10px; font-size: 17px; }
+  p.lead { margin-top: 0; color: var(--muted); }
+  code {
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: var(--code);
+    font-size: 13px;
+  }
+  .note {
+    margin: 18px 0;
+    padding: 16px 18px;
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    background: var(--card);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  @media (max-width: 880px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--card);
+  }
+  .card b { display: block; margin-bottom: 4px; }
+  .tag {
+    display: inline-block;
+    margin: 0 6px 6px 0;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--soft);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 28px;
+    background: var(--card);
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 9px 11px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--code);
+    font-weight: 700;
+  }
+  td.path {
+    width: 34%;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .flow {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(130px, 1fr));
+    gap: 8px;
+    margin: 16px 0 22px;
+  }
+  .step {
+    min-height: 92px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--card);
+    position: relative;
+  }
+  .step::after {
+    content: "→";
+    position: absolute;
+    right: -12px;
+    top: 34px;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .step:last-child::after { content: ""; }
+  .step b { display: block; color: var(--accent); }
+  @media (max-width: 980px) {
+    .flow { grid-template-columns: 1fr; }
+    .step::after { content: "↓"; right: 16px; top: auto; bottom: -16px; }
+    .step:last-child::after { content: ""; }
+  }
+  .status-ok { color: var(--ok); font-weight: 700; }
+  .status-warn { color: var(--warn); font-weight: 700; }
+  .small { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>Rag_Chat Python File Guide</h1>
+<p class="lead">
+  각 Python 파일이 왜 필요한지, 그리고 요청·RAG·ingest·세션 흐름이 어떻게 연결되는지 한 화면에서 보기 위한 문서.
+  기준 시점: 현재 워크트리의 Django/Streamlit 구조.
+</p>
+
+<div class="note">
+  <b>빠른 결론</b><br>
+  이 프로젝트의 중심축은 <code>frontend/app.py</code> → <code>chat/views.py</code> →
+  <code>chat/pipeline/*</code> → <code>chat/providers/manager.py</code> →
+  <code>Chroma/LLM</code> 이다. 데이터 적재는 <code>build_vectors.py</code> →
+  <code>chat/ingest/pipeline.py</code> → <code>IngestManifest</code> + <code>ChromaSink</code> 로 분리됐다.
+  토큰 비교는 <code>frontend/pages/token_lab.py</code> → <code>chat/token_views.py</code> →
+  <code>chat/token_utils.py</code> 로 연결된다.
+</div>
+
+<h2>1. 큰 구조</h2>
+<div class="grid">
+  <div class="card">
+    <span class="tag">frontend</span>
+    <b>Streamlit 사용자 화면</b>
+    <span class="small">사용자 생성, 세션 갱신, provider 조합 선택, 채팅 요청 전송을 담당한다.</span>
+  </div>
+  <div class="card">
+    <span class="tag">backend</span>
+    <b>Django REST API</b>
+    <span class="small">채팅, 검색 로그, health, knowledge 조회, moderation/audit 기록을 제공한다.</span>
+  </div>
+  <div class="card">
+    <span class="tag">rag</span>
+    <b>RAG Pipeline</b>
+    <span class="small">retrieve → rerank → reasoning → generation 순서로 답변을 만든다.</span>
+  </div>
+  <div class="card">
+    <span class="tag">ingest</span>
+    <b>데이터 적재 계층</b>
+    <span class="small">파일을 RawDoc 으로 표준화하고, manifest 로 중복을 막고, Chroma 에 기록한다.</span>
+  </div>
+  <div class="card">
+    <span class="tag">infra</span>
+    <b>Redis / Celery / DB</b>
+    <span class="small">Redis 는 세션·대화 history·provider override 에 쓰이고, Celery 는 세션 만료 작업 기반이다.</span>
+  </div>
+  <div class="card">
+    <span class="tag">ops</span>
+    <b>Admin / Audit / Moderation</b>
+    <span class="small">관리자 페이지, 금지어 필터, API 감사 로그로 운영 안전성을 보강한다.</span>
+  </div>
+</div>
+
+<h2>2. 요청 흐름</h2>
+
+<h3>채팅 응답 생성</h3>
+<div class="flow">
+  <div class="step"><b>1. UI</b><code>frontend/app.py</code><br>질문과 user_id 전송</div>
+  <div class="step"><b>2. API</b><code>chat/views.py</code><br>Chat 저장, inbound moderation</div>
+  <div class="step"><b>3. Retrieve</b><code>pipeline/modules.py</code><br>Chroma similarity search</div>
+  <div class="step"><b>4. Rerank</b><code>onnx_bge.py</code><br>선택적 ONNX rerank</div>
+  <div class="step"><b>5. LLM</b><code>providers/manager.py</code><br>reasoning/generation 모델 호출</div>
+  <div class="step"><b>6. Persist</b><code>models.py</code><br>RagData/SearchLog 저장, outbound moderation</div>
+</div>
+
+<h3>데이터 적재</h3>
+<div class="flow">
+  <div class="step"><b>1. Command</b><code>build_vectors.py</code><br>CSV/XLSX source 선택</div>
+  <div class="step"><b>2. Registry</b><code>ingest/registry.py</code><br>확장자로 loader 결정</div>
+  <div class="step"><b>3. Manifest</b><code>ingest/manifest.py</code><br>SHA256 중복 확인</div>
+  <div class="step"><b>4. Load/Split</b><code>loaders/*</code><br>RawDoc 생성 후 chunk 생성</div>
+  <div class="step"><b>5. Sink</b><code>sinks/chroma.py</code><br>결정론적 id 로 Chroma upsert</div>
+  <div class="step"><b>6. Record</b><code>IngestManifest</code><br>ids/chunk_count 기록</div>
+</div>
+
+<h3>세션과 대화 history</h3>
+<div class="flow">
+  <div class="step"><b>1. User</b><code>ChatUserAPIView</code><br>user_id 생성/재사용</div>
+  <div class="step"><b>2. TTL</b><code>redis_manager.py</code><br>Redis session TTL 설정</div>
+  <div class="step"><b>3. Activity</b><code>UpdateActivityAPIView</code><br>DB/Redis 만료 시간 갱신</div>
+  <div class="step"><b>4. History</b><code>RedisMessageHistory</code><br>LangChain history 로 변환</div>
+  <div class="step"><b>5. Provider</b><code>provider_overrides.py</code><br>세션별 모델 조합 캐시</div>
+  <div class="step"><b>6. Cleanup</b><code>tasks.py</code><br>만료 세션 정리</div>
+</div>
+
+<h2>3. Python 파일 역할표</h2>
+
+<h3>Root / scripts</h3>
+<table>
+  <thead><tr><th>파일</th><th>왜 필요한가</th><th>읽는 시점</th></tr></thead>
+  <tbody>
+    <tr><td class="path">session_test.py</td><td>세션 관련 로컬 실험/스모크 테스트용 스크립트.</td><td>세션 문제가 있을 때만.</td></tr>
+    <tr><td class="path">triple_chat_pjt/test.py</td><td>초기 실험 코드로 보이는 별도 테스트 파일.</td><td>현재 런타임 핵심은 아님.</td></tr>
+    <tr><td class="path">scripts/build_concepts.py</td><td><code>docs/concepts</code> 자료를 정적 페이지로 빌드하는 문서 도구.</td><td>문서 사이트 갱신 시.</td></tr>
+  </tbody>
+</table>
+
+<h3>Frontend</h3>
+<table>
+  <thead><tr><th>파일</th><th>왜 필요한가</th><th>흐름상 위치</th></tr></thead>
+  <tbody>
+    <tr><td class="path">frontend/app.py</td><td>현재 메인 Streamlit 앱. user_id 초기화, provider 선택 UI, 채팅 입력/출력, Redis session check 를 담당한다.</td><td>사용자 진입점.</td></tr>
+    <tr><td class="path">frontend/api.py</td><td>Django API 호출 래퍼. user 생성, provider 조회/변경, 데이터 로드 요청을 함수로 감싼다.</td><td>UI 와 backend 사이.</td></tr>
+    <tr><td class="path">frontend/chat.py</td><td>초기 단순 챗봇 UI. 현재 API payload 와 맞지 않는 legacy 성격이 강하다.</td><td>정리/삭제 후보.</td></tr>
+    <tr><td class="path">frontend/pages/chunk_lab.py</td><td>청킹 전략을 저장 없이 미리보기로 비교하는 Streamlit page.</td><td>ingest 실험 도구.</td></tr>
+    <tr><td class="path">frontend/pages/token_lab.py</td><td>입력 텍스트의 모델별/언어별 토큰 수를 비교하는 Streamlit page.</td><td>토큰 분석 도구.</td></tr>
+  </tbody>
+</table>
+
+<h3>Django project shell</h3>
+<table>
+  <thead><tr><th>파일</th><th>왜 필요한가</th><th>흐름상 위치</th></tr></thead>
+  <tbody>
+    <tr><td class="path">backend/manage.py</td><td>Django management command 진입점. migrate, runserver, build_vectors 를 실행한다.</td><td>CLI 운영.</td></tr>
+    <tr><td class="path">backend/urls.py</td><td>옛 root URL 설정으로 보이는 파일. 실제 프로젝트 URL 은 <code>triple_chat_pjt/urls.py</code>가 중심이다.</td><td>호환/정리 확인 대상.</td></tr>
+    <tr><td class="path">triple_chat_pjt/settings.py</td><td>앱 등록, DB/Redis/Celery/CORS/static/vector store/env 설정의 단일 중심.</td><td>서버 부팅 시.</td></tr>
+    <tr><td class="path">triple_chat_pjt/urls.py</td><td><code>/api/v1/triple/</code>, knowledge, admin 등 URL 라우팅의 루트.</td><td>HTTP 요청 첫 라우팅.</td></tr>
+    <tr><td class="path">triple_chat_pjt/celery.py</td><td>Celery app 정의. worker/beat 가 Django 설정을 읽도록 연결한다.</td><td>background worker 부팅.</td></tr>
+    <tr><td class="path">triple_chat_pjt/asgi.py</td><td>ASGI 서버용 Django application. 비동기 서버 배포 경로.</td><td>ASGI 배포 시.</td></tr>
+    <tr><td class="path">triple_chat_pjt/wsgi.py</td><td>Gunicorn 같은 WSGI 서버용 application.</td><td>Docker backend 실행.</td></tr>
+    <tr><td class="path">triple_chat_pjt/__init__.py</td><td>Python 패키지 표시.</td><td>import 기반.</td></tr>
+  </tbody>
+</table>
+
+<h3>chat 앱: 모델/API/세션</h3>
+<table>
+  <thead><tr><th>파일</th><th>왜 필요한가</th><th>흐름상 위치</th></tr></thead>
+  <tbody>
+    <tr><td class="path">chat/models.py</td><td><code>User</code>, <code>Chat</code>, <code>RagData</code>, <code>SearchLog</code>, <code>MetaData</code>, <code>IngestManifest</code> 저장 구조.</td><td>DB 영속성.</td></tr>
+    <tr><td class="path">chat/serializers.py</td><td>DRF 가 모델을 JSON request/response 로 변환하는 계약.</td><td>API 입출력.</td></tr>
+    <tr><td class="path">chat/views.py</td><td>채팅, 사용자 세션, provider 설정, search log, metadata, legacy RAG endpoint 를 제공하는 핵심 API.</td><td>채팅 요청 중심.</td></tr>
+    <tr><td class="path">chat/urls.py</td><td>chat 앱 API path 와 view 를 연결한다.</td><td>URL dispatch.</td></tr>
+    <tr><td class="path">chat/health.py</td><td>liveness/readiness. DB, Redis, provider 설정 상태를 점검한다.</td><td>운영/헬스체크.</td></tr>
+    <tr><td class="path">chat/ingest_views.py</td><td>Chunk Lab 이 쓰는 ingest preview API. 임베딩·저장 없이 splitter 결과만 반환한다.</td><td>청킹 미리보기.</td></tr>
+    <tr><td class="path">chat/token_views.py</td><td>Token Lab 이 쓰는 토큰 계산 API. 입력 텍스트와 언어 샘플 비교 결과를 반환한다.</td><td>토큰 분석 API.</td></tr>
+    <tr><td class="path">chat/token_utils.py</td><td>tiktoken 기반 exact/fallback 계산과 Gemini/Claude/Qwen 추정치를 만든다.</td><td>토큰 계산 핵심.</td></tr>
+    <tr><td class="path">chat/admin.py</td><td>chat 모델들을 Django Admin 에 노출한다.</td><td>관리자 운영.</td></tr>
+    <tr><td class="path">chat/apps.py</td><td>Django app config.</td><td>앱 로딩.</td></tr>
+    <tr><td class="path">chat/tasks.py</td><td>Celery task. 만료 세션 점검 등 background 작업을 담당한다.</td><td>worker/beat.</td></tr>
+    <tr><td class="path">chat/redis_manager.py</td><td>Redis connection pool, chat history 저장, session TTL 관리, active session 조회.</td><td>세션/history.</td></tr>
+    <tr><td class="path">chat/session_strategies.py</td><td>demo token 과 JWT token 전략을 같은 인터페이스로 제공한다.</td><td>인증 전환 경로.</td></tr>
+    <tr><td class="path">chat/provider_overrides.py</td><td>세션별 reasoning/generation provider override 를 Django cache 에 저장한다.</td><td>provider 실험 UI.</td></tr>
+    <tr><td class="path">chat/utils.py</td><td>RAG 검색 유틸과 MetaDataManager. Chroma 검색 결과를 context/images/docs 로 가공한다.</td><td>retrieve 단계.</td></tr>
+    <tr><td class="path">chat/vector_metadata.py</td><td>벡터 문서/인덱스/통계 메타데이터를 DB MetaData 로 관리하는 보조 유틸.</td><td>운영 메타데이터.</td></tr>
+    <tr><td class="path">chat/views2.py</td><td>대체/실험 view 파일로 보이며 현재 URL 중심 파일은 <code>views.py</code>다.</td><td>정리 확인 대상.</td></tr>
+    <tr><td class="path">chat/build_vector_store.py</td><td>구형 vector build 코드. 현재는 ingest layer 기반 <code>build_vectors.py</code>가 우선이다.</td><td>deprecated 후보.</td></tr>
+    <tr><td class="path">chat/__init__.py</td><td>Python 패키지 표시.</td><td>import 기반.</td></tr>
+  </tbody>
+</table>
+
+<h3>chat 앱: RAG pipeline</h3>
+<table>
+  <thead><tr><th>파일</th><th>왜 필요한가</th><th>흐름상 위치</th></tr></thead>
+  <tbody>
+    <tr><td class="path">chat/pipeline/base.py</td><td><code>ModuleContext</code>, <code>PipelineModule</code>, <code>ModuleError</code> 정의. pipeline 모듈들이 공유하는 계약.</td><td>pipeline 타입/상태.</td></tr>
+    <tr><td class="path">chat/pipeline/runner.py</td><td>설정된 step 목록을 실제 module 객체로 만들고 순서대로 실행한다.</td><td>pipeline orchestration.</td></tr>
+    <tr><td class="path">chat/pipeline/modules.py</td><td>retrieve, rerank, reasoning, generation 의 실제 구현.</td><td>답변 생성 핵심.</td></tr>
+    <tr><td class="path">chat/pipeline/__init__.py</td><td>pipeline package export.</td><td>import 편의.</td></tr>
+    <tr><td class="path">chat/rerankers/onnx_bge.py</td><td>BGE ONNX cross-encoder reranker. 검색 결과를 LLM 입력 전 재정렬한다.</td><td>선택적 rerank.</td></tr>
+    <tr><td class="path">chat/rerankers/__init__.py</td><td>reranker export.</td><td>import 편의.</td></tr>
+    <tr><td class="path">chat/providers/manager.py</td><td>Gemini/OpenRouter/Qwen embedding/chat model, Chroma vector store, reranker singleton 을 생성·캐시한다.</td><td>외부 AI provider 중심.</td></tr>
+    <tr><td class="path">chat/providers/__init__.py</td><td>provider_manager singleton 을 노출한다.</td><td>import 편의.</td></tr>
+  </tbody>
+</table>
+
+<h3>chat 앱: ingest layer</h3>
+<table>
+  <thead><tr><th>파일</th><th>왜 필요한가</th><th>흐름상 위치</th></tr></thead>
+  <tbody>
+    <tr><td class="path">chat/management/commands/build_vectors.py</td><td>CSV/XLSX 기본 source 를 ingest layer 로 보내는 management command. <code>--rebuild</code>, <code>--force</code> 지원.</td><td>ingest CLI 진입점.</td></tr>
+    <tr><td class="path">chat/ingest/base.py</td><td><code>RawDoc</code>, <code>WriteResult</code>, Loader/Splitter/Sink protocol 정의.</td><td>ingest 공통 계약.</td></tr>
+    <tr><td class="path">chat/ingest/registry.py</td><td>확장자별 loader 등록/조회. 새 포맷 추가 시 pipeline 수정 없이 loader 만 추가하게 해준다.</td><td>loader dispatch.</td></tr>
+    <tr><td class="path">chat/ingest/manifest.py</td><td>파일 SHA256, source URI, 성공/실패/superseded 기록을 담당하는 helper.</td><td>dedup/멱등성.</td></tr>
+    <tr><td class="path">chat/ingest/pipeline.py</td><td>manifest 확인 → loader → splitter → sink → manifest 기록까지 묶는 ingest orchestrator.</td><td>ingest 핵심.</td></tr>
+    <tr><td class="path">chat/ingest/loaders/__init__.py</td><td>loader 모듈을 side-effect import 해서 registry 를 채운다.</td><td>loader 등록.</td></tr>
+    <tr><td class="path">chat/ingest/loaders/structured/csv.py</td><td>CSV 행을 <code>RawDoc</code> 으로 변환한다.</td><td>CSV ingest.</td></tr>
+    <tr><td class="path">chat/ingest/loaders/structured/excel.py</td><td>Excel workbook/sheet/row 를 <code>RawDoc</code> 으로 변환한다.</td><td>Excel ingest.</td></tr>
+    <tr><td class="path">chat/ingest/loaders/structured/__init__.py</td><td>structured loader package 표시.</td><td>import 기반.</td></tr>
+    <tr><td class="path">chat/ingest/splitters/row.py</td><td>표 데이터용 pass-through splitter. 1행을 1청크로 유지한다.</td><td>CSV/Excel chunking.</td></tr>
+    <tr><td class="path">chat/ingest/splitters/recursive.py</td><td>긴 텍스트용 RecursiveCharacterTextSplitter wrapper.</td><td>PDF/DOCX/TXT 예정.</td></tr>
+    <tr><td class="path">chat/ingest/splitters/__init__.py</td><td>splitter package 표시.</td><td>import 기반.</td></tr>
+    <tr><td class="path">chat/ingest/sinks/chroma.py</td><td>RawDoc chunk 를 LangChain Document 로 바꾸고 결정론적 id 로 Chroma 에 upsert/delete/reset 한다.</td><td>vector store write.</td></tr>
+    <tr><td class="path">chat/ingest/sinks/__init__.py</td><td>sink package 표시.</td><td>import 기반.</td></tr>
+    <tr><td class="path">chat/ingest/__init__.py</td><td>ingest package 표시.</td><td>import 기반.</td></tr>
+  </tbody>
+</table>
+
+<h3>knowledge 앱</h3>
+<table>
+  <thead><tr><th>파일</th><th>왜 필요한가</th><th>흐름상 위치</th></tr></thead>
+  <tbody>
+    <tr><td class="path">knowledge/models.py</td><td>Department, Contact, Product 같은 정확 조회용 구조화 데이터 모델.</td><td>LLM 없이 deterministic lookup.</td></tr>
+    <tr><td class="path">knowledge/views.py</td><td>제품/담당자/부서 검색 API. RAG 대신 SQL 로 답해야 하는 질문에 적합하다.</td><td>knowledge API.</td></tr>
+    <tr><td class="path">knowledge/urls.py</td><td>knowledge endpoint route.</td><td>URL dispatch.</td></tr>
+    <tr><td class="path">knowledge/admin.py</td><td>Department/Contact/Product 를 Admin 에서 관리한다.</td><td>운영 데이터 관리.</td></tr>
+    <tr><td class="path">knowledge/apps.py</td><td>Django app config.</td><td>앱 로딩.</td></tr>
+    <tr><td class="path">knowledge/management/commands/seed_demo.py</td><td>데모용 부서/담당자/제품 데이터를 주입한다.</td><td>초기 데이터 세팅.</td></tr>
+    <tr><td class="path">knowledge/__init__.py, management/__init__.py, commands/__init__.py</td><td>Python/Django command package 표시.</td><td>import 기반.</td></tr>
+  </tbody>
+</table>
+
+<h3>moderation 앱</h3>
+<table>
+  <thead><tr><th>파일</th><th>왜 필요한가</th><th>흐름상 위치</th></tr></thead>
+  <tbody>
+    <tr><td class="path">moderation/models.py</td><td>ForbiddenWord 와 ModerationLog. 어떤 단어를 어떤 severity 로 처리할지 저장한다.</td><td>보안/검수 데이터.</td></tr>
+    <tr><td class="path">moderation/filter.py</td><td>inbound/outbound 텍스트에 BLOCK/MASK/WARN 정책을 적용한다.</td><td>LLM 호출 전후.</td></tr>
+    <tr><td class="path">moderation/admin.py</td><td>금지어와 검수 로그를 Django Admin 에서 관리한다.</td><td>운영 검수.</td></tr>
+    <tr><td class="path">moderation/apps.py</td><td>Django app config.</td><td>앱 로딩.</td></tr>
+    <tr><td class="path">moderation/__init__.py</td><td>Python package 표시.</td><td>import 기반.</td></tr>
+  </tbody>
+</table>
+
+<h3>audit 앱</h3>
+<table>
+  <thead><tr><th>파일</th><th>왜 필요한가</th><th>흐름상 위치</th></tr></thead>
+  <tbody>
+    <tr><td class="path">audit/models.py</td><td>API 요청/응답 상태를 남기는 AuditLog 모델.</td><td>감사 로그 저장.</td></tr>
+    <tr><td class="path">audit/middleware.py</td><td>모든 요청을 가로채 path/method/status/user/ip 를 기록한다.</td><td>Django middleware.</td></tr>
+    <tr><td class="path">audit/admin.py</td><td>AuditLog 를 Admin 에서 조회한다.</td><td>운영 감사.</td></tr>
+    <tr><td class="path">audit/apps.py</td><td>Django app config.</td><td>앱 로딩.</td></tr>
+    <tr><td class="path">audit/__init__.py</td><td>Python package 표시.</td><td>import 기반.</td></tr>
+  </tbody>
+</table>
+
+<h3>Tests / evals / migrations</h3>
+<table>
+  <thead><tr><th>파일 묶음</th><th>왜 필요한가</th><th>읽는 시점</th></tr></thead>
+  <tbody>
+    <tr><td class="path">chat/tests/test_rerank.py</td><td>RerankModule 이 score 순서대로 top-k 를 고르고 실패 시 원래 순서를 유지하는지 검증한다.</td><td>rerank 수정 시.</td></tr>
+    <tr><td class="path">chat/tests/test_onnx_bge.py</td><td>ONNX reranker model/tokenizer 를 mock 해서 score 반환 형태를 검증한다.</td><td>reranker 수정 시.</td></tr>
+    <tr><td class="path">chat/tests/test_utils.py</td><td>RAGUtils 의 vector store/search result 가공을 검증한다.</td><td>retrieve 수정 시.</td></tr>
+    <tr><td class="path">chat/tests/test_views.py</td><td>SearchLog API 테스트. 현재 모델 구조 변화에 맞춰 보수가 필요하다.</td><td>API 테스트 복구 시.</td></tr>
+    <tr><td class="path">chat/tests/evals/run_chunk_ab.py</td><td>chunk size/overlap A/B 를 BM25 로 오프라인 평가한다.</td><td>청킹 전략 검토 시.</td></tr>
+    <tr><td class="path">chat/tests.py</td><td>Django 기본 테스트 파일. 별도 tests package 와 중복될 수 있다.</td><td>테스트 정리 시.</td></tr>
+    <tr><td class="path">*/migrations/*.py</td><td>DB schema 변경 이력. 직접 로직을 실행하는 파일이 아니라 migrate 가 읽는 선언적 기록이다.</td><td>모델 변경/DB 문제 시.</td></tr>
+    <tr><td class="path">*/migrations/__init__.py, tests/__init__.py</td><td>패키지 표시 파일.</td><td>일반적으로 읽지 않아도 됨.</td></tr>
+  </tbody>
+</table>
+
+<h2>4. 처음 읽는 순서</h2>
+<ol>
+  <li><code>frontend/app.py</code> 에서 사용자가 어떤 payload 를 보내는지 확인한다.</li>
+  <li><code>chat/urls.py</code> 와 <code>chat/views.py</code> 로 endpoint 를 따라간다.</li>
+  <li><code>chat/pipeline/modules.py</code> 와 <code>chat/pipeline/runner.py</code> 로 RAG 실행 순서를 본다.</li>
+  <li><code>chat/providers/manager.py</code> 로 어떤 embedding/LLM/vector store 가 실제 생성되는지 본다.</li>
+  <li>데이터 적재는 <code>chat/management/commands/build_vectors.py</code> 에서 시작해 <code>chat/ingest/pipeline.py</code> 로 내려간다.</li>
+  <li>운영 안정성은 <code>moderation/filter.py</code>, <code>audit/middleware.py</code>, <code>chat/health.py</code> 를 확인한다.</li>
+</ol>
+
+<h2>5. 정리 후보</h2>
+<table>
+  <thead><tr><th>파일</th><th>이유</th><th>권장 처리</th></tr></thead>
+  <tbody>
+    <tr><td class="path">frontend/chat.py</td><td>현재 chat API 는 <code>question</code> + <code>user_id</code> 를 요구하지만 이 파일은 legacy payload 를 사용한다.</td><td>deprecated 표시 또는 삭제.</td></tr>
+    <tr><td class="path">chat/build_vector_store.py</td><td>ingest layer 와 <code>build_vectors.py</code> 가 새 경로다.</td><td>호환 wrapper 로 줄이거나 삭제.</td></tr>
+    <tr><td class="path">chat/views2.py</td><td>URL 에 연결된 중심 view 가 아니다.</td><td>사용처 확인 후 정리.</td></tr>
+    <tr><td class="path">backend/urls.py</td><td>프로젝트 root URL 과 역할이 겹칠 수 있다.</td><td>실제 참조 여부 확인.</td></tr>
+    <tr><td class="path">chat/tests.py</td><td><code>chat/tests/</code> package 와 중복된다.</td><td>비우거나 tests package 로 통합.</td></tr>
+  </tbody>
+</table>
+
+<p class="small">
+  관련 문서: <code>ingest_layer.md</code>, <code>ingest_phase1_skeleton.md</code>,
+  <code>async_ingest_plan.md</code>, <code>chunk_experiment.md</code>.
+</p>
+
+</body>
+</html>

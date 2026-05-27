@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG_Chat — Project Journey</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #1a1a1a;
+    --muted: #666;
+    --border: #e1e1e1;
+    --accent: #2563eb;
+    --pro: #16a34a;
+    --con: #dc2626;
+    --warn: #d97706;
+    --card-default: #ffffff;
+    --card-skel: #eff6ff;
+    --card-manifest: #ecfdf5;
+    --card-lab: #fef3c7;
+    --card-phase3: #fae8ff;
+    --card-integration: #e0f2fe;
+    --code-bg: #f3f4f6;
+    --shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --pro: #3fb950;
+      --con: #f85149;
+      --warn: #f0b429;
+      --card-default: #161b22;
+      --card-skel: #0c2545;
+      --card-manifest: #0a2a1c;
+      --card-lab: #3a2a08;
+      --card-phase3: #2d1241;
+      --card-integration: #0a2740;
+      --code-bg: #161b22;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+    max-width: 1100px; margin: 0 auto; padding: 40px 24px;
+    line-height: 1.6;
+  }
+  h1 { font-size: 32px; margin-bottom: 4px; letter-spacing: -.5px; }
+  h2 { font-size: 22px; margin-top: 48px; padding-bottom: 6px; border-bottom: 2px solid var(--accent); }
+  h3 { font-size: 17px; margin-top: 20px; }
+  h4 { font-size: 14px; margin: 14px 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  p.lead { color: var(--muted); font-size: 15px; margin-top: 0; }
+  code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: 13px; font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre {
+    background: var(--code-bg); padding: 14px; border-radius: 6px;
+    overflow-x: auto; font-size: 13px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    line-height: 1.5;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th, td { padding: 10px 12px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
+
+  .timeline {
+    display: flex; gap: 8px; margin: 32px 0;
+    overflow-x: auto; padding-bottom: 8px;
+  }
+  .timeline-step {
+    flex: 1; min-width: 130px; padding: 10px 12px;
+    border-radius: 8px; border: 1px solid var(--border);
+    background: var(--card-default); position: relative;
+    box-shadow: var(--shadow);
+  }
+  .timeline-step .num {
+    display: inline-block; font-size: 11px; font-weight: 700;
+    color: var(--accent); letter-spacing: 1px;
+  }
+  .timeline-step .title { font-size: 14px; font-weight: 600; margin-top: 2px; }
+  .timeline-step .meta { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .timeline-step.done { border-left: 4px solid var(--pro); }
+  .timeline-step.pending { border-left: 4px solid var(--muted); opacity: .7; }
+
+  .card {
+    padding: 22px 24px; margin: 24px 0;
+    border-radius: 10px; border: 1px solid var(--border);
+    background: var(--card-default); box-shadow: var(--shadow);
+  }
+  .card.skel { background: var(--card-skel); }
+  .card.manifest { background: var(--card-manifest); }
+  .card.lab { background: var(--card-lab); }
+  .card.phase3 { background: var(--card-phase3); }
+  .card.integration { background: var(--card-integration); }
+  .card-header {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+  .card-header h3 { margin: 0; flex: 1; }
+  .tag {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 600; background: var(--accent); color: #fff;
+  }
+  .tag.done { background: var(--pro); }
+  .tag.warn { background: var(--warn); }
+  .tag.pending { background: var(--muted); color: #fff; }
+
+  ul.tight, ol.tight { margin: 8px 0; }
+  ul.tight li, ol.tight li { margin: 3px 0; font-size: 14px; }
+
+  .files {
+    background: var(--code-bg); padding: 12px 16px; border-radius: 6px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px; line-height: 1.7; margin: 12px 0;
+  }
+  .files .added { color: var(--pro); }
+  .files .modified { color: var(--accent); }
+  .files .note { color: var(--muted); }
+
+  .check { color: var(--pro); font-weight: 700; }
+  .cross { color: var(--con); font-weight: 700; }
+  .warnico { color: var(--warn); font-weight: 700; }
+
+  .verdict {
+    background: var(--code-bg);
+    border-left: 4px solid var(--accent);
+    padding: 14px 18px;
+    border-radius: 4px;
+    margin-top: 24px;
+  }
+  .small { font-size: 13px; color: var(--muted); }
+
+  a { color: var(--accent); }
+  a:hover { text-decoration: underline; }
+
+  .grid-2 {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0;
+  }
+  @media (max-width: 720px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h1>RAG_Chat — Project Journey</h1>
+<p class="lead">
+  Ingest Layer 가 없던 상태에서 Phase 3 통합까지. 한 화면에서 각 단계의
+  문제·변경·검증·학습 포인트를 본다. 코드 본체는 <code>backend/chat/ingest/</code>,
+  세부 문서는 <a href="_index.md">_index.md</a>.
+  · 최근 갱신: 2026-05-27
+</p>
+
+<h2>0. Timeline</h2>
+
+<div class="timeline">
+  <div class="timeline-step done">
+    <div class="num">PHASE 1</div>
+    <div class="title">Skeleton</div>
+    <div class="meta">Loader/Splitter/Sink 추상</div>
+  </div>
+  <div class="timeline-step done">
+    <div class="num">PHASE 2</div>
+    <div class="title">Manifest</div>
+    <div class="meta">SHA256 dedup</div>
+  </div>
+  <div class="timeline-step done">
+    <div class="num">LAB</div>
+    <div class="title">Chunk Lab</div>
+    <div class="meta">청크 비교 UI</div>
+  </div>
+  <div class="timeline-step done">
+    <div class="num">LAB</div>
+    <div class="title">Token Lab</div>
+    <div class="meta">토큰 비교 UI</div>
+  </div>
+  <div class="timeline-step done">
+    <div class="num">PHASE 3</div>
+    <div class="title">Text Loaders</div>
+    <div class="meta">PDF/DOCX/HTML</div>
+  </div>
+  <div class="timeline-step done">
+    <div class="num">INTEGRATE</div>
+    <div class="title">Dispatch + Upload</div>
+    <div class="meta">통합 정리</div>
+  </div>
+  <div class="timeline-step pending">
+    <div class="num">PHASE 4</div>
+    <div class="title">Clause / Heading</div>
+    <div class="meta">구조 splitter</div>
+  </div>
+  <div class="timeline-step pending">
+    <div class="num">PHASE 5+</div>
+    <div class="title">OCR / HWP / ORM</div>
+    <div class="meta">분류 2/4 + sink 분기</div>
+  </div>
+</div>
+
+<h2>1. 출발점 — 무엇이 문제였나</h2>
+
+<div class="card">
+  <p>프로젝트 처음 진단 결과 ingest layer <strong>자체가 없었다</strong>:</p>
+  <ul class="tight">
+    <li>CSV/XLSX 만 처리하는 if/else 가 <code>chat/build_vector_store.py</code> + <code>chat/management/commands/build_vectors.py</code> 두 군데에 흩어짐</li>
+    <li>같은 파일 두 번 빌드 시 Chroma 에 중복 적재 — 7행 CSV 가 <strong>88 청크</strong> 누적된 hidden bug</li>
+    <li>포맷 추가하려면 빌더 코드를 수정해야 함 (확장성 0)</li>
+    <li><code>chat_ragdata</code> 는 query 시점에만 채워지므로 query 안 돌면 0건 — 이건 진단 정정한 부분 (ingestion 문제 아님)</li>
+    <li>HWP / PDF / OCR 같은 한국 기업 문서 포맷 처리 경로 부재</li>
+  </ul>
+  <p>강의 7강의 "인제스천 4분류" 프레임이 이 빈 자리의 가이드 — 텍스트 추출형
+  / OCR 필요형 / 구조화 데이터 / 전용 포맷.</p>
+</div>
+
+<h2>2. Phase 1 — Skeleton</h2>
+
+<div class="card skel">
+  <div class="card-header">
+    <h3>플러그인 등록제 + 표준 인터페이스</h3>
+    <span class="tag done">완료</span>
+  </div>
+
+  <h4>해결한 문제</h4>
+  <p>포맷 추가가 빌더 if/else 분기 추가가 되는 구조 → loader 파일 하나 + 데코레이터 한 줄로 끝나는 구조로 갈음.</p>
+
+  <h4>핵심 인터페이스 (<code>chat/ingest/base.py</code>)</h4>
+<pre>@dataclass
+class RawDoc:
+    content: str
+    source_file: str
+    source_type: str        # "csv" | "pdf" | "hwp" | ...
+    page: int | None = None
+    section: str | None = None
+    metadata: dict = field(default_factory=dict)
+
+class BaseLoader(Protocol):
+    extensions: tuple[str, ...]
+    source_type: str
+    def load(self, path: str) -> Iterable[RawDoc]: ...
+
+class BaseSplitter(Protocol):
+    def split(self, doc: RawDoc) -> Iterable[RawDoc]: ...
+
+class BaseSink(Protocol):
+    def write(self, docs) -> WriteResult: ...
+    def delete_ids(self, ids: list[str]) -> int: ...</pre>
+
+  <h4>추가된 파일</h4>
+  <div class="files">
+<span class="added">+</span> chat/ingest/__init__.py
+<span class="added">+</span> chat/ingest/base.py                      <span class="note"># Protocol 정의</span>
+<span class="added">+</span> chat/ingest/registry.py                  <span class="note"># @register</span>
+<span class="added">+</span> chat/ingest/pipeline.py                  <span class="note"># 오케스트레이션</span>
+<span class="added">+</span> chat/ingest/loaders/structured/{csv,excel}.py
+<span class="added">+</span> chat/ingest/splitters/{recursive,row}.py
+<span class="added">+</span> chat/ingest/sinks/chroma.py
+<span class="modified">~</span> chat/management/commands/build_vectors.py  <span class="note"># 70+줄 → 35줄, pipeline 호출만</span></div>
+
+  <h4>학습 포인트</h4>
+  <ul class="tight">
+    <li><strong>Protocol vs ABC</strong> — duck typing 인터페이스. loader 가 명시적 상속 없이 통과</li>
+    <li><strong>side-effect import</strong> — <code>loaders/__init__.py</code> 가 하위 모듈 import 만 해도 <code>@register</code> 가 실행되어 registry 채움. Django app 등록과 같은 패턴</li>
+    <li>3 Protocol 만으로 RAG 인제스천 파이프라인 전체가 표현됨</li>
+  </ul>
+  <p class="small">상세: <a href="ingest_phase1_skeleton.md">ingest_phase1_skeleton.md</a></p>
+</div>
+
+<h2>3. Phase 2 — Manifest (멱등성)</h2>
+
+<div class="card manifest">
+  <div class="card-header">
+    <h3>SHA256 기반 dedup + 결정론적 청크 id</h3>
+    <span class="tag done">완료</span>
+  </div>
+
+  <h4>해결한 문제</h4>
+  <ul class="tight">
+    <li>같은 파일 두 번 빌드 시 Chroma 중복 적재 (이전의 88청크 누적)</li>
+    <li>파일 내용 바뀌어도 옛 청크가 자동 제거되지 않음 (stale 누적)</li>
+    <li>실패 추적 불가 — 재시도 여부 판단 못 함</li>
+  </ul>
+
+  <h4>핵심 구조</h4>
+<pre>IngestManifest 모델
+  source_uri    : 'file:///abs/path' 또는 'upload://name'
+  doc_sha256    : 파일 hex digest
+  loader        : 'csv' | 'pdf' | ...
+  splitter      : 'row' | 'recursive' | ...
+  chunk_count   : 7
+  chroma_ids    : ["abc...", ...]   # 삭제용
+  status        : OK | FAILED | SUPERSEDED
+  unique_together = (source_uri, doc_sha256)</pre>
+
+<pre>ChromaSink._chunk_id(chunk) = sha256(
+  chunk.source_file + chunk.section +
+  str(chunk.metadata["chunk_index"]) +
+  chunk.content
+)
+→ 같은 청크 = 같은 id = Chroma 가 upsert</pre>
+
+  <h4>Pipeline 동작</h4>
+  <ol class="tight">
+    <li>loader 결정 + SHA256 계산</li>
+    <li><code>already_ingested(uri, sha)</code> → OK 면 skip</li>
+    <li><code>previous_versions(uri, exclude=sha)</code> → 옛 chroma_ids 삭제 + SUPERSEDED 표시</li>
+    <li>실제 적재 → <code>record_success</code> / <code>record_failure</code></li>
+  </ol>
+
+  <h4>검증</h4>
+<pre>1st (fresh)        chunks=7  manifest=1
+2nd (same hash)    chunks=0  manifest=1   ← skip
+3rd (force=True)   chunks=7  manifest=1   ← update_or_create
+unknown ext        ValueError ✓
+file_sha256 stable ✓</pre>
+
+  <h4>학습 포인트</h4>
+  <ul class="tight">
+    <li><strong>멱등성이 운영 안정성의 토대</strong> — 비동기·캐싱 같은 무거운 도구 도입 전에 동기 ingest 가 idempotent 해야 함</li>
+    <li><strong><code>update_or_create</code></strong> — unique 제약과 friction 없이 force 재실행 처리</li>
+    <li><strong>결정론적 id 의 가치</strong> — Chroma 의 add 가 upsert 처럼 동작. 외부 시스템과의 정합성 자동</li>
+  </ul>
+  <p class="small">상세: <a href="ingest_phase2_manifest.md">ingest_phase2_manifest.md</a></p>
+</div>
+
+<h2>4. Lab 페이지 (학습·실험 도구)</h2>
+
+<div class="grid-2">
+  <div class="card lab">
+    <div class="card-header">
+      <h3>🧪 Chunk Lab</h3>
+      <span class="tag done">완료</span>
+    </div>
+    <p>같은 텍스트에 chunk_size/overlap/splitter 를 바꿔 청크별 결과를 나란히 비교. 7강 200/500/1000 비교의 인터랙티브 재현.</p>
+    <h4>구성</h4>
+    <ul class="tight">
+      <li><code>chat/ingest_views.py:IngestPreviewAPIView</code> — 저장·임베딩 없음</li>
+      <li><code>frontend/pages/chunk_lab.py</code> — Streamlit 페이지</li>
+      <li>POST <code>/api/v1/triple/ingest/preview/</code></li>
+    </ul>
+    <h4>실측 결과</h4>
+<pre>size=100 → 25 chunks, avg=99
+size=300 →  8 chunks, avg=267
+size=800 →  3 chunks, avg=680</pre>
+    <p class="small"><a href="chunk_lab_page.md">chunk_lab_page.md</a> · <a href="chunk_testing_page.md">chunk_testing_page.md</a></p>
+  </div>
+
+  <div class="card lab">
+    <div class="card-header">
+      <h3>📏 Token Lab</h3>
+      <span class="tag done">완료 (다른 agent)</span>
+    </div>
+    <p>같은 텍스트가 모델별 (GPT-4o / GPT-4 / Gemini / Claude / Qwen) 로 몇 토큰인지, 언어별 (한/영/일/중/코드) 차이까지 시각화. 6강 토큰화 단원의 인터랙티브 재현.</p>
+    <h4>구성</h4>
+    <ul class="tight">
+      <li><code>chat/token_utils.py</code> — tiktoken + multiplier estimate</li>
+      <li><code>chat/token_views.py</code> + <code>frontend/pages/token_lab.py</code></li>
+      <li>POST <code>/api/v1/triple/tokens/estimate/</code></li>
+      <li>오프라인 안전 (tiktoken 네트워크 실패 시 fallback)</li>
+    </ul>
+    <p class="small"><a href="token_lab_page.md">token_lab_page.md</a></p>
+  </div>
+</div>
+
+<h2>5. Phase 3 — Text Loaders (다른 agent 작업)</h2>
+
+<div class="card phase3">
+  <div class="card-header">
+    <h3>분류 1 (텍스트 추출형) loader 3종</h3>
+    <span class="tag done">완료</span>
+  </div>
+
+  <h4>추가된 파일 (다른 agent)</h4>
+  <div class="files">
+<span class="added">+</span> chat/ingest/loaders/text/pdf.py    <span class="note"># pypdf 페이지 단위</span>
+<span class="added">+</span> chat/ingest/loaders/text/docx.py   <span class="note"># docx2txt 전체</span>
+<span class="added">+</span> chat/ingest/loaders/text/html.py   <span class="note"># BeautifulSoup 본문</span>
+<span class="added">+</span> chat/ingest/loaders/text/__init__.py</div>
+
+  <h4>구조 요약</h4>
+  <table>
+    <thead><tr><th>Loader</th><th>RawDoc 단위</th><th>의존성</th></tr></thead>
+    <tbody>
+      <tr><td>PdfLoader</td><td>페이지마다 1개 (1-indexed)</td><td>pypdf</td></tr>
+      <tr><td>DocxLoader</td><td>문서 전체 1개</td><td>docx2txt</td></tr>
+      <tr><td>HtmlLoader</td><td>본문 단일 1개 (script/style 제거)</td><td>beautifulsoup4</td></tr>
+    </tbody>
+  </table>
+
+  <h4>찾은 통합 이슈 (다음 카드에서 해결됨)</h4>
+  <ul class="tight">
+    <li><span class="warnico">⚠</span> <code>build_vectors</code> 가 <code>RowSplitter()</code> 하드코딩 → PDF/DOCX/HTML 청킹 안 됨</li>
+    <li><span class="warnico">⚠</span> <code>IngestUploadAPIView</code> 가 <code>pipeline.ingest_path</code> 우회 → Phase 2 manifest 미적용</li>
+    <li><span class="warnico">⚠</span> splitter dispatch 가 두 곳 (build_vectors + ingest_views) 에 따로</li>
+  </ul>
+  <p class="small">상세: <a href="ingest_phase3_text_loaders.md">ingest_phase3_text_loaders.md</a> · <a href="ingest_upload_api.md">ingest_upload_api.md</a></p>
+</div>
+
+<h2>6. Phase 3 Integration — Dispatch + Upload Manifest</h2>
+
+<div class="card integration">
+  <div class="card-header">
+    <h3>Splitter 자동 dispatch + Upload 의 manifest 통합</h3>
+    <span class="tag done">완료</span>
+  </div>
+
+  <h4>해결한 두 이슈</h4>
+  <p>Phase 3 loader 가 들어오면서 드러난 dispatch / manifest 우회 문제를 한 PR 로 통합.</p>
+
+  <h4>적용된 변경</h4>
+  <div class="files">
+<span class="modified">~</span> chat/ingest/splitters/__init__.py   <span class="note"># default_splitter_for + splitter_by_name 신설</span>
+<span class="modified">~</span> chat/ingest/pipeline.py             <span class="note"># splitter/sink optional + source_uri_override</span>
+<span class="modified">~</span> chat/management/commands/build_vectors.py  <span class="note"># RowSplitter 하드코딩 제거</span>
+<span class="modified">~</span> chat/ingest_views.py                <span class="note"># Upload → pipeline.ingest_path 경유</span></div>
+
+  <h4>새 dispatch 로직</h4>
+<pre>DEFAULT_BY_SOURCE = {
+    "csv": "row", "excel": "row",
+    "pdf": "recursive", "docx": "recursive", "html": "recursive",
+    "txt": "recursive", "md": "recursive",
+}
+def default_splitter_for(source_type): ...
+
+# pipeline.py
+def ingest_path(path, splitter=None, sink=None, *,
+                force=False, source_uri_override=None):
+    if splitter is None:
+        splitter = default_splitter_for(loader.source_type)
+    if sink is None:
+        sink = ChromaSink()
+    source_uri = source_uri_override or f"file://{abspath(path)}"
+    ...</pre>
+
+  <h4>Upload API 변경</h4>
+<pre># 이전: ChromaSink().write(chunks)  ← manifest 우회
+# 이후:
+def _ingest_uploaded_file(tmp_path, *, original_name):
+    return ingest_path(
+        tmp_path,
+        source_uri_override=f"upload://{original_name}"
+    )
+# 효과: Phase 2 manifest 가 그대로 적용 → 중복 업로드 자동 skip</pre>
+
+  <h4>검증 (8개 시나리오)</h4>
+<pre>1. default_splitter_for         OK (csv→row, pdf/txt→recursive)
+2. splitter_by_name             OK
+3. CSV via pipeline             chunks=7 splitter=row     ← 자동
+4. TXT with override            chunks=3 splitter=recursive
+   source_uri='upload://mydoc.txt'
+5. Same upload re-attempt       chunks=0                  ← manifest skip
+6. Content changed              chunks=4, SUPERSEDED=1    ← 옛 버전 정리
+7. build_vectors path (csv)     chunks=7 splitter=row
+</pre>
+
+  <h4>학습 포인트</h4>
+  <ul class="tight">
+    <li><strong>Dispatch 한 곳에 모이기</strong> — source_type → splitter 매핑이 한 dict. Phase 4 splitter 추가가 한 줄로 끝남</li>
+    <li><strong>안정 키 (<code>upload://name</code>)</strong> — 임시 파일 경로의 변동성을 의미적 식별자로 추상화</li>
+    <li><strong>Optional 인자 + default</strong> — <code>ingest_path(path)</code> 만으로 충분, 명시 필요 시만 인자</li>
+    <li><strong>CLI / API / 향후 Celery</strong> 가 같은 함수 한 곳을 경유 → 자동 일관성</li>
+  </ul>
+  <p class="small">상세: <a href="ingest_phase3_integration.md">ingest_phase3_integration.md</a></p>
+</div>
+
+<h2>7. 현재 상태 — 어디까지 왔나</h2>
+
+<table>
+  <thead>
+    <tr><th>Phase</th><th>상태</th><th>주제</th><th>핵심 결과</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>0</td><td><span class="check">✓</span></td><td>기존 RAG 스택</td><td>Django + Celery + Redis + Streamlit + Chroma + Reranker</td></tr>
+    <tr><td>1</td><td><span class="check">✓</span></td><td>Ingest skeleton</td><td>loader/splitter/sink 추상 + registry</td></tr>
+    <tr><td>2</td><td><span class="check">✓</span></td><td>Manifest dedup</td><td>SHA256 + 결정론적 id + supersede</td></tr>
+    <tr><td>2+</td><td><span class="check">✓</span></td><td>Chunk Lab</td><td>청크 결과 비교 페이지</td></tr>
+    <tr><td>2+</td><td><span class="check">✓</span></td><td>Token Lab</td><td>토큰 비교 페이지 (다른 agent)</td></tr>
+    <tr><td>2+</td><td><span class="check">✓</span></td><td>Upload API</td><td>HTTP 업로드 — manifest 적용 (통합 후)</td></tr>
+    <tr><td>3</td><td><span class="check">✓</span></td><td>Text loader</td><td>PDF / DOCX / HTML / TXT (다른 agent + 통합)</td></tr>
+    <tr><td>3+</td><td><span class="check">✓</span></td><td>Dispatch 통합</td><td>build_vectors / Upload / 향후 Celery 가 단일 경로</td></tr>
+    <tr><td>4</td><td><span class="warnico">⏳</span></td><td>Clause/heading splitter</td><td>사규 "제 N 조" 단위 — Codex 분담</td></tr>
+    <tr><td>5</td><td><span class="warnico">⏳</span></td><td>OCR loader</td><td>분류 2 — 다른 Claude 리서치 후</td></tr>
+    <tr><td>6</td><td><span class="warnico">⏳</span></td><td>ORM sink</td><td>knowledge_product 로 분류 3 이전</td></tr>
+    <tr><td>7</td><td><span class="warnico">⏳</span></td><td>HWP / CAD</td><td>분류 4 — 변환 단계 별도</td></tr>
+    <tr><td>8</td><td><span class="warnico">⏸</span></td><td>Celery 비동기</td><td>트리거 (큰 파일 / 동시 사용자) 발생 시</td></tr>
+  </tbody>
+</table>
+
+<h2>8. Multi-agent 분담 — 누가 무엇을</h2>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>역할</th><th>실제 도구</th><th>담당</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>📝 문서화 / 통합 / 일관성</td>
+        <td>Claude Code (이 세션)</td>
+        <td>Phase 1 / 2 / Phase 3 통합 / 모든 작업 기록. cross-file 변경, Django ORM, manifest 통합</td>
+      </tr>
+      <tr>
+        <td>⚙️ 단일 파일 알고리즘</td>
+        <td>Codex CLI</td>
+        <td>Phase 3 loader 3종 + Token Lab 모듈. Phase 4 clause/heading splitter 예정</td>
+      </tr>
+      <tr>
+        <td>🎨 리서치 / UI</td>
+        <td>다른 Claude 세션</td>
+        <td>Token Lab page 추가. Phase 5 OCR 리서치 + Upload UI 예정</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small">상세: <a href="work_distribution.md">work_distribution.md</a></p>
+</div>
+
+<h2>9. 의도적으로 안 한 것 — 보류 결정</h2>
+
+<div class="card">
+  <ul class="tight">
+    <li><strong>Celery 비동기 ingest</strong> — Phase 8 보류. 트리거 없음 (CLI 단발성). 자세히는 <a href="async_ingest_plan.md">async_ingest_plan.md</a> 및 <a href="async_ingest_tradeoff.html">async_ingest_tradeoff.html</a></li>
+    <li><strong>Retrieval 캐시 / 임베딩 캐시</strong> — 트래픽 누적 후 결정. 미리 깔면 stale 만 늘림</li>
+    <li><strong>분류 3 ORM 이전</strong> — galaxy_s25_data 가 정확 조회용으로 가야 하지만 8강 라우팅과 함께</li>
+    <li><strong>Upload API permission</strong> — 정책 결정 후 IsAuthenticated + Role 추가 예정</li>
+  </ul>
+</div>
+
+<h2>10. 학습 지도 — 무엇을 손에 익혀야 하나</h2>
+
+<div class="card">
+  <p>각 phase 가 가르치는 개념을 한눈에. 자세히는 <a href="core_concepts.md">core_concepts.md</a>.</p>
+  <table>
+    <thead><tr><th>개념</th><th>어디서 보이나</th><th>강의</th></tr></thead>
+    <tbody>
+      <tr><td>토큰화 / 한국어 비효율</td><td>Token Lab</td><td>6강</td></tr>
+      <tr><td>임베딩 / 의미 공간</td><td>provider/manager.py</td><td>6강</td></tr>
+      <tr><td>컨텍스트 윈도우 제약</td><td>Token Lab chunk_recommendations</td><td>6강</td></tr>
+      <tr><td>인제스천 4분류</td><td>chat/ingest/loaders/* 디렉토리 구조</td><td>7강</td></tr>
+      <tr><td>청킹 트레이드오프</td><td>Chunk Lab</td><td>7강</td></tr>
+      <tr><td>임베딩 → 검색 → reranker</td><td>views.py + rerankers/onnx_bge.py</td><td>7강</td></tr>
+      <tr><td>평가 (recall@k)</td><td>tests/evals/run_chunk_ab.py</td><td>7강</td></tr>
+      <tr><td>멱등성 / dedup</td><td>IngestManifest + 결정론적 id</td><td>(시스템)</td></tr>
+      <tr><td>Plugin registry</td><td>@register + side-effect import</td><td>(시스템)</td></tr>
+      <tr><td>계층 분리</td><td>3 Protocol + RawDoc 표준 표현</td><td>(시스템)</td></tr>
+      <tr><td>Traceability</td><td>Chat/SearchLog/RagData 모델</td><td>(시스템)</td></tr>
+      <tr><td>Moderation 입출력 필터</td><td>moderation/ 앱</td><td>(시스템)</td></tr>
+      <tr><td>Provider abstraction</td><td>providers/manager.py</td><td>(시스템)</td></tr>
+      <tr><td>Tool Use / Routing</td><td>(아직 없음, 8강 영역)</td><td>8강 예고</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>11. 다음 자연스러운 작업</h2>
+
+<div class="verdict">
+  <p>Phase 4 (clause/heading splitter) 또는 Phase 6 (ORM sink) 가 다음 단계. <strong>핵심은 retrieval 정확도</strong>:</p>
+  <ul>
+    <li><strong>Phase 4</strong> — 사규 PDF "제 39 조" 청킹. 강사가 정답 못 찾던 사례를 우리 코드로 풀 수 있게.</li>
+    <li><strong>Phase 6</strong> — galaxy_s25_data 같은 표는 RAG 가 아닌 SQL 조회로. 8강 오케스트레이션 기반.</li>
+    <li><strong>또는</strong> — Upload UI (다른 Claude), Phase 5 OCR (다른 Claude 리서치).</li>
+  </ul>
+  <p>여러 agent 가 병렬로 들어오면 Claude Code (이 세션) 가 통합 doc 으로 받음. 같은 패턴.</p>
+</div>
+
+<p class="small" style="margin-top: 48px; text-align: center;">
+  · 본 문서는 <code>backend/chat/ingest/</code> + 관련 docs 의 한 페이지 요약 ·
+  세부는 <a href="_index.md">_index.md</a> 의 카테고리별 doc 으로 ·
+  코드 본체는 git log 가 진실의 원천
+</p>
+
+</body>
+</html>
