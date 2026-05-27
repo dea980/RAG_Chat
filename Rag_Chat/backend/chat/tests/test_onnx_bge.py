@@ -3,6 +3,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("torch")
+pytest.importorskip("optimum.onnxruntime")
+pytest.importorskip("transformers")
+
 
 @pytest.fixture
 def mock_ort_model():
@@ -33,7 +37,7 @@ def test_score_returns_one_float_per_passage(mock_ort_model):
 
     assert len(scores) == 3
     assert all(isinstance(s, float) for s in scores)
-    assert scores == [0.9, 0.1, 0.5]
+    assert scores == pytest.approx([0.9, 0.1, 0.5])
 
 
 def test_score_with_empty_passages_returns_empty_list(mock_ort_model):

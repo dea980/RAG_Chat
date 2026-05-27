@@ -64,11 +64,11 @@ class ProviderManager:
         """Return a singleton ONNX reranker, or None if disabled / unavailable.
 
         Honors:
-        - RERANKER_ENABLED (default "1"): set to "0" to disable.
+        - RERANKER_ENABLED (default "0"): set to "1" to enable.
         - RERANKER_MODEL (default "BAAI/bge-reranker-v2-m3").
         - RERANKER_DEVICE (default "cpu").
         """
-        if os.getenv("RERANKER_ENABLED", "1") != "1":
+        if os.getenv("RERANKER_ENABLED", "0") != "1":
             return None
         if self._reranker is not None:
             return self._reranker

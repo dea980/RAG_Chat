@@ -52,5 +52,6 @@ pandas>=2.1.4
 openpyxl>=3.1.2
 
 # Reranker (ONNX cross-encoder)
-optimum[onnxruntime]>=1.20.0
+# Optional for local Docker: install requirements-reranker.txt and set
+# RERANKER_ENABLED=1 when reranking is needed.
 onnxruntime>=1.17.0
