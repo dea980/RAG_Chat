@@ -1,0 +1,15 @@
+{"id": "lg01", "question": "수습 기간은 몇 개월이고 임금은 어떻게 지급되나요?", "expected_keywords": ["3개월", "90%", "수습"], "scenario": "신규 입사자 문의", "source": "synthetic_employee_rules_제5조"}
+{"id": "lg02", "question": "표준 근무 시간은 몇 시부터 몇 시까지인가요?", "expected_keywords": ["9시", "6시", "근무"], "scenario": "근무 시간 문의", "source": "synthetic_employee_rules_제6조"}
+{"id": "lg03", "question": "재택근무는 주 몇 일까지 가능한가요?", "expected_keywords": ["2일", "재택"], "scenario": "재택근무 문의", "source": "synthetic_employee_rules_제7조"}
+{"id": "lg04", "question": "입사 1년 이상 직원의 연차 일수는?", "expected_keywords": ["15일", "연차"], "scenario": "연차 문의", "source": "synthetic_employee_rules_제8조"}
+{"id": "lg05", "question": "본인 결혼 경조사 휴가 일수는?", "expected_keywords": ["5일", "결혼"], "scenario": "경조사 문의", "source": "synthetic_employee_rules_제9조"}
+{"id": "lg06", "question": "병가는 연간 최대 며칠까지 사용 가능한가?", "expected_keywords": ["60일", "병가"], "scenario": "병가 문의", "source": "synthetic_employee_rules_제10조"}
+{"id": "lg07", "question": "육아휴직은 자녀 1인당 최대 얼마나 사용 가능한가?", "expected_keywords": ["1년", "육아휴직"], "scenario": "휴직 문의", "source": "synthetic_employee_rules_제11조"}
+{"id": "lg08", "question": "임금 지급일과 정산 기간은?", "expected_keywords": ["25일", "21일", "20일"], "scenario": "급여 문의", "source": "synthetic_employee_rules_제12조"}
+{"id": "lg09", "question": "정기상여금은 언제 얼마나 지급되나?", "expected_keywords": ["설", "추석", "100%"], "scenario": "상여금 문의", "source": "synthetic_employee_rules_제13조"}
+{"id": "lg10", "question": "교육비 지원 한도는 연 얼마인가?", "expected_keywords": ["200만원", "교육"], "scenario": "복리후생 문의", "source": "synthetic_employee_rules_제16조"}
+{"id": "lg11", "question": "징계의 종류 5단계는 무엇인가?", "expected_keywords": ["경고", "견책", "감봉", "정직", "해고"], "scenario": "징계 문의", "source": "synthetic_employee_rules_제17조"}
+{"id": "lg12", "question": "근속 3년 이상 직원의 연차는 어떻게 가산되나?", "expected_keywords": ["2년", "1일", "가산", "25일"], "scenario": "연차 가산 규칙", "source": "synthetic_employee_rules_제8조"}
+{"id": "lg13", "question": "연차의 의무 사용 비율은 얼마인가?", "expected_keywords": ["70%", "연차"], "scenario": "연차 관리", "source": "synthetic_annual_leave_policy"}
+{"id": "lg14", "question": "연차를 시간 단위로 쓸 때 연간 한도는?", "expected_keywords": ["16시간", "시간 단위"], "scenario": "연차 사용 방법", "source": "synthetic_annual_leave_policy"}
+{"id": "lg15", "question": "건강검진은 얼마나 자주 제공되나?", "expected_keywords": ["연 1회", "건강검진"], "scenario": "복리후생", "source": "synthetic_employee_rules_제15조"}
