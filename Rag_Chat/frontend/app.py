@@ -7,7 +7,7 @@ import logging
 import os
 import time
 from datetime import datetime, timedelta
-from api import fetch_user_id, get_provider_selection, set_provider_combo
+from api import fetch_user_id, get_provider_selection, set_provider_combo, upload_knowledge_files
 from typing import Optional, Dict, Any
 
 # Configure logging
@@ -270,6 +270,12 @@ def determine_provider_combo(selection: Dict[str, Any]) -> str:
         return "qwen_reasoning_gemini_generation"
     if reasoning == "qwen" and generation == "qwen":
         return "qwen_only"
+    if reasoning == "openrouter" and generation == "openrouter":
+        return "openrouter_only"
+    if reasoning == "ollama" and generation == "ollama":
+        return "ollama_only"
+    if reasoning == "huggingface" and generation == "huggingface":
+        return "huggingface_only"
     return "custom"
 
 def send_chat_request(prompt):
@@ -331,6 +337,7 @@ if not st.session_state.user_id:
                 selection = info.get("selection", {})
                 st.session_state.provider_combo = determine_provider_combo(selection)
                 st.session_state.provider_selection = selection
+                st.session_state.embedding_config = info.get("embedding", {})
     except Exception as e:
         logger.error(f"Failed to initialize user session: {e}")
 
@@ -340,6 +347,7 @@ if st.session_state.user_id and "provider_combo" not in st.session_state:
         selection = info.get("selection", {})
         st.session_state.provider_combo = determine_provider_combo(selection)
         st.session_state.provider_selection = selection
+        st.session_state.embedding_config = info.get("embedding", {})
 
 # Start Redis listener in background
 thread = threading.Thread(target=listen_to_redis, daemon=True)
@@ -421,17 +429,44 @@ else:
 # Admin controls in sidebar
 st.sidebar.markdown("---")
 st.sidebar.markdown("### Admin Controls")
-if st.sidebar.button("Update Phone Data"):
-    with st.sidebar.status("Updating phone data..."):
-        if load_phone_data():
-            st.sidebar.success("Phone data updated successfully!")
+uploaded_knowledge_files = st.sidebar.file_uploader(
+    "Knowledge files",
+    type=["xlsx", "xls", "csv", "txt", "md", "pdf", "docx", "html", "hwp"],
+    accept_multiple_files=True,
+    help="Upload files to update the RAG knowledge store.",
+)
+
+if st.sidebar.button("Upload & Update Knowledge", disabled=not uploaded_knowledge_files):
+    with st.sidebar.status("Uploading knowledge files..."):
+        result = upload_knowledge_files(uploaded_knowledge_files)
+        if result:
+            processed = result.get("processed", [])
+            failed = result.get("failed", [])
+            if processed:
+                st.sidebar.success(f"Processed {len(processed)} file(s).")
+                st.sidebar.json(processed)
+            if failed:
+                st.sidebar.error(f"Failed {len(failed)} file(s).")
+                st.sidebar.json(failed)
+            if not processed and not failed:
+                st.sidebar.warning("No files were processed.")
         else:
-            st.sidebar.error("Failed to update phone data. Please try again.")
+            st.sidebar.error("Failed to upload knowledge files. Please try again.")
+
+if st.sidebar.button("Use Bundled Phone Data"):
+    with st.sidebar.status("Updating bundled phone data..."):
+        if load_phone_data():
+            st.sidebar.success("Bundled phone data updated successfully!")
+        else:
+            st.sidebar.error("Failed to update bundled phone data. Please try again.")
 
 provider_options = {
     "Gemini Only": "gemini_only",
     "Qwen Reasoning + Gemini Generation": "qwen_reasoning_gemini_generation",
     "Qwen Only": "qwen_only",
+    "OpenRouter Only": "openrouter_only",
+    "Ollama Only": "ollama_only",
+    "Hugging Face Only": "huggingface_only",
     "Custom (manual)": "custom",
 }
 
@@ -452,11 +487,16 @@ if st.session_state.user_id:
         if result:
             st.session_state.provider_combo = selected_combo
             st.session_state.provider_selection = result.get("selection", {})
+            st.session_state.embedding_config = result.get("embedding", {})
             st.sidebar.success(f"Provider updated to {selected_label}")
 
     if "provider_selection" in st.session_state:
         st.sidebar.caption("Current Providers")
         st.sidebar.json(st.session_state.provider_selection)
+    if "embedding_config" in st.session_state:
+        st.sidebar.caption("Embedding Configuration")
+        st.sidebar.json(st.session_state.embedding_config)
+        st.sidebar.caption("Embedding changes require rebuilding the vector index.")
 else:
     st.sidebar.info("Provider controls available after session starts.")
 

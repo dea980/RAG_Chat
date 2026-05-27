@@ -112,3 +112,36 @@ class SearchLog(models.Model):
 
     def __str__(self):
         return f"Search {self.search_log_id} for Question {self.question.question_id}"
+
+
+class IngestManifest(models.Model):
+    """Ingest 이력. 같은 파일을 다시 처리하면 SHA256 비교로 건너뛴다.
+
+    (source_uri, doc_sha256) 가 unique — 같은 source 라도 내용이 바뀌면 새
+    레코드가 생기고, 이전 레코드의 chroma_ids 로 옛 청크들을 정리 후 SUPERSEDED
+    상태로 표시한다.
+    """
+    class Status(models.TextChoices):
+        OK = "OK", "OK"
+        FAILED = "FAILED", "Failed"
+        SUPERSEDED = "SUPERSEDED", "Superseded"
+
+    source_uri = models.CharField(max_length=512)         # 'file:///abs/path' 또는 's3://...'
+    doc_sha256 = models.CharField(max_length=64)          # 파일 hex digest
+    loader = models.CharField(max_length=32)              # 'csv', 'pdf', ...
+    splitter = models.CharField(max_length=32, blank=True, default="")
+    chunk_count = models.IntegerField(default=0)
+    chroma_ids = models.JSONField(default=list)           # 사용된 chroma id 들 (delete 시 사용)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.OK)
+    error = models.TextField(blank=True, default="")
+    ingested_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("source_uri", "doc_sha256")]
+        indexes = [
+            models.Index(fields=["doc_sha256"], name="chat_ingest_doc_sha_idx"),
+            models.Index(fields=["source_uri"], name="chat_ingest_src_uri_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.source_uri} ({self.doc_sha256[:8]}) {self.status}"

@@ -12,6 +12,38 @@ logger = logging.getLogger(__name__)
 
 # Use consistent API URL format between frontend and backend
 API_BASE_URL = os.getenv("BACKEND_URL", "http://localhost:8000") + "/api/v1/triple"
+
+
+def upload_knowledge_files(uploaded_files):
+    """
+    Upload one or more knowledge files to the backend ingest endpoint.
+    Returns the backend JSON result, or None on failure.
+    """
+    if not uploaded_files:
+        return None
+
+    files = [
+        (
+            "files",
+            (
+                uploaded.name,
+                uploaded.getvalue(),
+                uploaded.type or "application/octet-stream",
+            ),
+        )
+        for uploaded in uploaded_files
+    ]
+
+    try:
+        response = requests.post(f"{API_BASE_URL}/ingest/upload/", files=files)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to upload knowledge files: {e}")
+        logger.error(f"Error uploading knowledge files: {e}")
+        return None
+
+
 def load_phone_data():
     """
     Call the backend to load and process the phone data from xlsx file.

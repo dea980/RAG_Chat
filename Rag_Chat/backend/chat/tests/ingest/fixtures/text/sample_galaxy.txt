@@ -1,0 +1,11 @@
+Galaxy S25 핵심 정보 요약 (출처: gsmarena.com)
+
+Galaxy S25 는 2025년 2월 7일 출시된 삼성전자 플래그십이다.
+디스플레이는 6.2인치 Dynamic LTPO AMOLED 2X, 해상도 1080 x 2340, 주사율 120Hz, 피크 밝기 2600 nits 이다.
+메인 카메라는 50MP f/1.8 (OIS), 망원은 10MP f/2.4 (3배 광학줌), 초광각은 12MP f/2.2 (120°) 이다.
+전면 카메라는 12MP f/2.2 dual pixel PDAF 이다.
+배터리 용량은 4000mAh, 25W PD3.0 유선 충전과 15W Qi2 무선 충전을 지원한다.
+프로세서는 Qualcomm Snapdragon 8 Elite for Galaxy (3nm) 이며, RAM 은 12GB, 저장은 128GB / 256GB / 512GB 옵션이다.
+크기는 146.9 x 70.5 x 7.2 mm, 무게는 162g 이다.
+색상은 Icy Blue, Mint, Navy, Silver Shadow, Pink Gold, Coral Red, Blue Black 이다.
+시작 가격은 USD 434.95 (128GB) 이다.
