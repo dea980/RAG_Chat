@@ -83,8 +83,8 @@ backend/chat/ingest/
 
   splitters/
     recursive.py       # 기본 길이 기반 (RecursiveCharacterTextSplitter)
-    heading.py         # Phase 4 예정: Markdown/HTML heading 단위
-    clause.py          # Phase 4 예정: 법규/사규 "제 N 조" 단위
+    heading.py         # ✅ Markdown heading 계층 단위 (Phase 4, opt-in)
+    clause.py          # ✅ 법규/사규 "제 N 조"/"Article N" 단위 (Phase 4, opt-in)
     row.py             # 표 1행 = 1청크
 
   sinks/
@@ -251,15 +251,17 @@ ingest 호출 시:
 - pipeline 에 dedup 분기 추가
 - `--reset` flag — 같은 source 재인덱싱 시 chroma_ids 청소
 
-### Phase 3 — Text 분류 1 (PR 3)
+### Phase 3 — Text 분류 1 (PR 3) — ✅ 완료
 - `loaders/text/pdf.py` (PyPDFLoader)
 - `loaders/text/docx.py` (Docx2txtLoader)
 - `loaders/text/txt.py`, `html.py`
-- `splitters/heading.py`
+- splitter dispatch 통합 (`default_splitter_for`, build_vectors/Upload 공유)
 
-### Phase 4 — 청킹 고도화 (PR 4)
-- `splitters/clause.py` — 사규/법규 조항 단위
-- splitter registry — source_type → splitter 매핑
+### Phase 4 — 청킹 고도화 (PR 4) — ✅ 완료
+- `splitters/clause.py` — 사규/법규 "제 N 조"/"Article N" 조항 단위
+- `splitters/heading.py` — Markdown heading 계층 (section 경로 보존)
+- splitter registry (`_BY_NAME` + `splitter_by_name`); clause/heading 은 opt-in
+  (`build_vectors --splitter` / chunk_lab), 확장자 자동매핑엔 미포함
 
 ### Phase 5 — OCR 분류 2 (PR 5)
 - `loaders/ocr/image.py` (pytesseract + 한국어 모델)
