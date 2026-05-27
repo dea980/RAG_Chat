@@ -29,7 +29,7 @@ from streamlit_extras.metric_cards import style_metric_cards
 
 st.set_page_config(page_title="Chunk Lab", layout="wide")
 
-API_BASE = os.getenv("BACKEND_URL", "http://localhost:8001") + "/api/v1/triple"
+API_BASE = os.getenv("BACKEND_URL", "http://localhost:8000") + "/api/v1/triple"
 PREVIEW_URL = f"{API_BASE}/ingest/preview/"
 
 

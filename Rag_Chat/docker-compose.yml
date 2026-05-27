@@ -38,9 +38,8 @@ services:
       - ./backend:/app
       - static_volume:/app/static
     ports:
-      # Host 8000 / 8001 are taken by other local services — expose on 8002.
-      # Container internal port stays 8000 (Streamlit talks to backend:8000).
-      - "8002:8000"
+      # Host 8000 freed (DY-ADAS uvicorn taken down 2026-05-27).
+      - "8000:8000"
     env_file:
       - .env   # All env vars from Rag_Chat/.env injected into the container
     environment:
