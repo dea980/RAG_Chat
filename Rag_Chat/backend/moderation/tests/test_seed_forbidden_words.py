@@ -24,6 +24,15 @@ class SeedForbiddenWordsTest(TestCase):
         self._run()
         self.assertGreaterEqual(ForbiddenWord.objects.count(), 15)
 
+    def test_seed_includes_regex_rules(self):
+        """C5 — at least one starter rule must use pattern_type=RE for PII."""
+        self._run()
+        from moderation.models import ForbiddenWord as FW
+        self.assertTrue(
+            FW.objects.filter(pattern_type=FW.PatternType.RE, category="PII").exists(),
+            "no regex PII rule seeded",
+        )
+
     def test_seed_covers_four_categories(self):
         self._run()
         cats = set(ForbiddenWord.objects.values_list("category", flat=True))

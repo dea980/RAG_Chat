@@ -11,6 +11,7 @@ still get caught.
 """
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import Iterable, List, Optional, Tuple
@@ -18,6 +19,8 @@ from typing import Iterable, List, Optional, Tuple
 from django.utils import timezone
 
 from .models import ForbiddenWord, ModerationLog
+
+logger = logging.getLogger(__name__)
 
 
 class BlockedByModerationError(Exception):
@@ -65,20 +68,43 @@ def _active_rules(direction_keys: Iterable[str]):
     return ForbiddenWord.objects.filter(is_active=True, direction__in=list(direction_keys))
 
 
-def _find_matches(text: str, words: Iterable[str]) -> List[Tuple[str, int, int]]:
+def _find_matches(
+    text: str,
+    rules: Iterable[Tuple[str, str]],
+) -> List[Tuple[str, int, int]]:
+    """Return (rule_word, start, end) hits.
+
+    Each rule is (word, pattern_type) where pattern_type is "KW" or "RE".
+    KW: case-insensitive literal substring (finds every occurrence).
+    RE: re.search with the operator's pattern, case-insensitive. Invalid
+    regex is logged and skipped — one bad rule must not break the whole
+    request.
+    """
     hits: List[Tuple[str, int, int]] = []
     lowered = text.lower()
-    for w in words:
-        if not w:
+    for word, kind in rules:
+        if not word:
             continue
-        needle = w.lower()
-        start = 0
-        while True:
-            idx = lowered.find(needle, start)
-            if idx == -1:
-                break
-            hits.append((w, idx, idx + len(needle)))
-            start = idx + len(needle)
+        if kind == ForbiddenWord.PatternType.RE:
+            try:
+                pattern = re.compile(word, re.IGNORECASE)
+            except re.error as exc:
+                logger.warning(
+                    "moderation: skipping invalid regex rule %r — %s", word, exc
+                )
+                continue
+            for m in pattern.finditer(text):
+                if m.end() > m.start():
+                    hits.append((word, m.start(), m.end()))
+        else:
+            needle = word.lower()
+            start = 0
+            while True:
+                idx = lowered.find(needle, start)
+                if idx == -1:
+                    break
+                hits.append((word, idx, idx + len(needle)))
+                start = idx + len(needle)
     return hits
 
 
@@ -101,7 +127,7 @@ def apply(text: str, *, source: str, user=None, chat=None, dry_run: bool = False
     mask_lookup: dict = {}
     cat_lookup: dict = {}
     for r in rules:
-        by_severity[r.severity].append(r.word)
+        by_severity[r.severity].append((r.word, r.pattern_type))
         mask_lookup[r.word.lower()] = r.mask_replacement
         cat_lookup[r.word.lower()] = r.category
 

@@ -19,7 +19,15 @@ class ForbiddenWord(models.Model):
         OUTBOUND = "OUTBOUND", "LLM 응답만"
         BOTH = "BOTH", "양방향"
 
+    class PatternType(models.TextChoices):
+        KW = "KW", "키워드 (대소문자 무시 부분 일치)"
+        RE = "RE", "정규식 (re.search)"
+
     word = models.CharField(max_length=120, unique=True)
+    pattern_type = models.CharField(
+        max_length=2, choices=PatternType.choices, default=PatternType.KW,
+        help_text="KW=리터럴 부분 일치, RE=정규식 (예: \\d{6}-\\d{7})",
+    )
     category = models.CharField(max_length=50, help_text="예: 경쟁사, 고객명, 비속어, 기밀")
     severity = models.CharField(max_length=10, choices=Severity.choices, default=Severity.WARNING)
     direction = models.CharField(max_length=10, choices=Direction.choices, default=Direction.BOTH)

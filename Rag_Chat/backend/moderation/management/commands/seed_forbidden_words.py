@@ -27,32 +27,39 @@ _BOTH, _IN, _OUT = (
     ForbiddenWord.Direction.INBOUND,
     ForbiddenWord.Direction.OUTBOUND,
 )
+_KW, _RE = (
+    ForbiddenWord.PatternType.KW,
+    ForbiddenWord.PatternType.RE,
+)
 
-# (word, category, severity, direction, mask_replacement, note)
-STARTER: list[tuple[str, str, str, str, str, str]] = [
+# (word, category, severity, direction, mask_replacement, note, pattern_type)
+STARTER: list[tuple[str, str, str, str, str, str, str]] = [
     # 대외비 — 내부 자료 유출 방지. 4경계 모두 차단.
-    ("대외비", "대외비", _BLOCK, _BOTH, "[REDACTED]", "starter: 기밀 표지 자동 차단"),
-    ("기밀", "대외비", _BLOCK, _BOTH, "[REDACTED]", "starter: 기밀 표지 자동 차단"),
-    ("내부전용", "대외비", _BLOCK, _BOTH, "[REDACTED]", "starter"),
-    ("confidential", "대외비", _BLOCK, _BOTH, "[REDACTED]", "starter"),
+    ("대외비", "대외비", _BLOCK, _BOTH, "[REDACTED]", "starter: 기밀 표지 자동 차단", _KW),
+    ("기밀", "대외비", _BLOCK, _BOTH, "[REDACTED]", "starter: 기밀 표지 자동 차단", _KW),
+    ("내부전용", "대외비", _BLOCK, _BOTH, "[REDACTED]", "starter", _KW),
+    ("confidential", "대외비", _BLOCK, _BOTH, "[REDACTED]", "starter", _KW),
 
-    # PII — 응답·검색 쪽으로 빠져나가는 것만 마스킹 (사용자 입력은 받되 LLM 응답에 그대로 나가면 안 됨).
-    ("주민번호", "PII", _MASK, _OUT, "[REDACTED]", "starter: PII 마스킹"),
-    ("전화번호", "PII", _MASK, _OUT, "[REDACTED]", "starter"),
-    ("카드번호", "PII", _MASK, _OUT, "[REDACTED]", "starter"),
-    ("이메일주소", "PII", _MASK, _OUT, "[REDACTED]", "starter"),
+    # PII — 응답·검색 쪽으로 빠져나가는 것만 마스킹.
+    ("주민번호", "PII", _MASK, _OUT, "[REDACTED]", "starter: PII 단어", _KW),
+    ("전화번호", "PII", _MASK, _OUT, "[REDACTED]", "starter", _KW),
+    ("카드번호", "PII", _MASK, _OUT, "[REDACTED]", "starter", _KW),
+    ("이메일주소", "PII", _MASK, _OUT, "[REDACTED]", "starter", _KW),
+    # C5 — regex 패턴으로 실제 번호 형식 자체를 잡는다.
+    (r"\d{6}-\d{7}", "PII", _MASK, _OUT, "[주민번호REDACTED]", "starter regex: 주민등록번호 13자리", _RE),
+    (r"\d{4}-\d{4}-\d{4}-\d{4}", "PII", _MASK, _OUT, "[카드번호REDACTED]", "starter regex: 카드 16자리", _RE),
 
     # 욕설 — 양방향 마스킹. 사내 챗봇 톤 유지.
-    ("씨발", "욕설", _MASK, _BOTH, "[삐]", "starter: 사내 욕설 마스킹"),
-    ("개새끼", "욕설", _MASK, _BOTH, "[삐]", "starter"),
-    ("좆같", "욕설", _MASK, _BOTH, "[삐]", "starter"),
-    ("fuck", "욕설", _MASK, _BOTH, "[BEEP]", "starter"),
+    ("씨발", "욕설", _MASK, _BOTH, "[삐]", "starter: 사내 욕설 마스킹", _KW),
+    ("개새끼", "욕설", _MASK, _BOTH, "[삐]", "starter", _KW),
+    ("좆같", "욕설", _MASK, _BOTH, "[삐]", "starter", _KW),
+    ("fuck", "욕설", _MASK, _BOTH, "[BEEP]", "starter", _KW),
 
     # 경쟁사 — 차단까지는 안 하고 WARN 으로 로그만 (운영자 검수용).
-    ("competitor-a", "경쟁사", _WARN, _BOTH, "[REDACTED]", "starter: 경쟁사 언급 추적"),
-    ("competitor-b", "경쟁사", _WARN, _BOTH, "[REDACTED]", "starter"),
-    ("ChatGPT", "경쟁사", _WARN, _BOTH, "[REDACTED]", "starter: 외부 LLM 언급 추적"),
-    ("Claude", "경쟁사", _WARN, _BOTH, "[REDACTED]", "starter"),
+    ("competitor-a", "경쟁사", _WARN, _BOTH, "[REDACTED]", "starter: 경쟁사 언급 추적", _KW),
+    ("competitor-b", "경쟁사", _WARN, _BOTH, "[REDACTED]", "starter", _KW),
+    ("ChatGPT", "경쟁사", _WARN, _BOTH, "[REDACTED]", "starter: 외부 LLM 언급 추적", _KW),
+    ("Claude", "경쟁사", _WARN, _BOTH, "[REDACTED]", "starter", _KW),
 ]
 
 
@@ -62,7 +69,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         created = 0
         skipped = 0
-        for word, category, severity, direction, mask, note in STARTER:
+        for word, category, severity, direction, mask, note, pattern_type in STARTER:
             _, was_created = ForbiddenWord.objects.get_or_create(
                 word=word,
                 defaults={
@@ -71,6 +78,7 @@ class Command(BaseCommand):
                     "direction": direction,
                     "mask_replacement": mask,
                     "note": note,
+                    "pattern_type": pattern_type,
                     "is_active": True,
                 },
             )

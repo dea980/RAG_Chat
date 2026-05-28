@@ -153,30 +153,33 @@ def _render_rules_section() -> None:
 
     if rules:
         for r in rules:
-            cols = st.columns([3, 2, 1, 1, 1, 1])
+            cols = st.columns([3, 1, 2, 1, 1, 1, 1])
             cols[0].markdown(
                 f'<span class="data-cell">{r["word"]}</span>'
                 f' &nbsp;<span class="label-mono">{r["category"]}</span>',
                 unsafe_allow_html=True,
             )
-            cols[1].markdown(
+            ptype = r.get("pattern_type", "KW")
+            ptype_color = "#E89B3C" if ptype == "RE" else "#8B8B93"
+            cols[1].markdown(_chip(ptype, ptype_color), unsafe_allow_html=True)
+            cols[2].markdown(
                 _chip(r["severity"], SEVERITY_COLORS.get(r["severity"], "#8B8B93")),
                 unsafe_allow_html=True,
             )
-            cols[2].markdown(
+            cols[3].markdown(
                 f'<span class="data-cell">{r["direction"]}</span>',
                 unsafe_allow_html=True,
             )
-            cols[3].markdown(
+            cols[4].markdown(
                 "✓" if r["is_active"] else "—",
                 unsafe_allow_html=True,
             )
-            cols[4].markdown(
+            cols[5].markdown(
                 f'<span class="data-cell" style="color:#5C5D63;font-size:11px;">'
                 f'{r["updated_at"][:10]}</span>',
                 unsafe_allow_html=True,
             )
-            if cols[5].button("삭제", key=f"del_{r['id']}"):
+            if cols[6].button("삭제", key=f"del_{r['id']}"):
                 if _delete_rule(r["id"]):
                     st.rerun()
                 else:
@@ -188,6 +191,15 @@ def _render_rules_section() -> None:
         with st.form("new_rule", clear_on_submit=True):
             word = st.text_input("단어 / 패턴 *")
             category = st.text_input("카테고리 *", placeholder="예: 기밀, PII, 욕설, 경쟁사")
+            pattern_type = st.radio(
+                "패턴 종류",
+                ["KW", "RE"],
+                format_func=lambda p: {
+                    "KW": "키워드 — 대소문자 무시 부분 일치 (예: '대외비')",
+                    "RE": r"정규식 — re.search (예: \d{6}-\d{7} 주민번호)",
+                }[p],
+                horizontal=True,
+            )
             col1, col2, col3 = st.columns(3)
             severity = col1.selectbox(
                 "Severity *",
@@ -219,6 +231,7 @@ def _render_rules_section() -> None:
                     ok, msg = _create_rule({
                         "word": word.strip(),
                         "category": category.strip(),
+                        "pattern_type": pattern_type,
                         "severity": severity,
                         "direction": direction,
                         "mask_replacement": mask_repl,

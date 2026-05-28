@@ -7,7 +7,7 @@ class ForbiddenWordSerializer(serializers.ModelSerializer):
     class Meta:
         model = ForbiddenWord
         fields = [
-            "id", "word", "category", "severity", "direction",
+            "id", "word", "category", "pattern_type", "severity", "direction",
             "mask_replacement", "is_active", "note",
             "created_at", "updated_at",
         ]
