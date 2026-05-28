@@ -76,10 +76,12 @@ def _find_matches(text: str, words: Iterable[str]) -> List[Tuple[str, int, int]]
     return hits
 
 
-def apply(text: str, *, source: str, user=None, chat=None) -> ModerationResult:
+def apply(text: str, *, source: str, user=None, chat=None, dry_run: bool = False) -> ModerationResult:
     """Run the forbidden-word policy on ``text``.
 
     source must be one of ``ModerationLog.Source`` values.
+    dry_run: when True, no ModerationLog rows are written (operator
+        "test panel" path — avoids polluting the audit trail).
     """
     if not text:
         return ModerationResult(sanitized=text)
@@ -102,17 +104,18 @@ def apply(text: str, *, source: str, user=None, chat=None) -> ModerationResult:
     if blocked_hits:
         words = sorted({w for w, _, _ in blocked_hits})
         categories = sorted({cat_lookup.get(w.lower(), "") for w in words if cat_lookup.get(w.lower())})
-        ModerationLog.objects.create(
-            user=user,
-            chat=chat,
-            detected_words=words,
-            matched_categories=categories,
-            action=ModerationLog.Action.BLOCKED,
-            source=source,
-            original_excerpt=text[:500],
-            sanitized_excerpt="",
-            created_at=timezone.now(),
-        )
+        if not dry_run:
+            ModerationLog.objects.create(
+                user=user,
+                chat=chat,
+                detected_words=words,
+                matched_categories=categories,
+                action=ModerationLog.Action.BLOCKED,
+                source=source,
+                original_excerpt=text[:500],
+                sanitized_excerpt="",
+                created_at=timezone.now(),
+            )
         raise BlockedByModerationError(words=words)
 
     # 2) MASK — collect intervals and substitute in one pass (right-to-left).
@@ -137,7 +140,7 @@ def apply(text: str, *, source: str, user=None, chat=None) -> ModerationResult:
         if cat and cat not in categories:
             categories.append(cat)
 
-    if masked_words:
+    if masked_words and not dry_run:
         ModerationLog.objects.create(
             user=user,
             chat=chat,
@@ -148,7 +151,7 @@ def apply(text: str, *, source: str, user=None, chat=None) -> ModerationResult:
             original_excerpt=text[:500],
             sanitized_excerpt=sanitized[:500],
         )
-    if warned_words:
+    if warned_words and not dry_run:
         ModerationLog.objects.create(
             user=user,
             chat=chat,

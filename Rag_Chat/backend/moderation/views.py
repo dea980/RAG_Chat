@@ -10,9 +10,15 @@ Why two viewsets? CLAUDE.md 의 4경계 보안 요구사항 중 "관리자가 �
 """
 from __future__ import annotations
 
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from .filter import (
+    apply as moderate_text,
+    BlockedByModerationError,
+)
 from .models import ForbiddenWord, ModerationLog
 from .permissions import IsManager, IsModerationAdmin
 from .serializers import ForbiddenWordSerializer, ModerationLogSerializer
@@ -28,3 +34,53 @@ class ModerationLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ModerationLog.objects.all().order_by("-created_at")
     serializer_class = ModerationLogSerializer
     permission_classes = [IsAuthenticated, IsManager]
+
+
+class ModerationTestAPIView(APIView):
+    """Operator dry-run — run filter.apply against {text, source} and return
+    the verdict without writing to ModerationLog. Drives the Streamlit admin
+    "real-time test panel" (CLAUDE.md — operator tunes rules without code).
+    """
+
+    permission_classes = [IsAuthenticated, IsModerationAdmin]
+
+    _VALID_SOURCES = {
+        ModerationLog.Source.INBOUND,
+        ModerationLog.Source.OUTBOUND,
+        ModerationLog.Source.UPLOAD,
+        ModerationLog.Source.RETRIEVAL,
+    }
+
+    def post(self, request):
+        text = request.data.get("text", "") or ""
+        source = request.data.get("source", "")
+        if source not in self._VALID_SOURCES:
+            return Response(
+                {"error": f"source must be one of {sorted(self._VALID_SOURCES)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            result = moderate_text(text, source=source, dry_run=True)
+        except BlockedByModerationError as exc:
+            return Response({
+                "action": "BLOCKED",
+                "sanitized": "",
+                "blocked_words": exc.words,
+                "masked_words": [],
+                "warned_words": [],
+                "categories": [],
+            })
+        if result.masked_words:
+            action = "MASKED"
+        elif result.warned_words:
+            action = "WARNED"
+        else:
+            action = "PASS"
+        return Response({
+            "action": action,
+            "sanitized": result.sanitized,
+            "blocked_words": result.blocked_words,
+            "masked_words": result.masked_words,
+            "warned_words": result.warned_words,
+            "categories": result.categories,
+        })
