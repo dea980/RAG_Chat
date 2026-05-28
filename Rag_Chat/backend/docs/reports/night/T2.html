@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T2 작업 리포트 — chunk_lab splitter selectbox에 heading/clause 옵션 노출</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #1a1a1a;
+    --muted: #666;
+    --border: #e1e1e1;
+    --accent: #2563eb;
+    --hl: #fef9c3;
+    --tip: #ecfdf5;
+    --warn: #fef3c7;
+    --note: #eff6ff;
+    --code-bg: #f3f4f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --hl: #3a2a08;
+      --tip: #0a2a1c;
+      --warn: #3a2a08;
+      --note: #0c2545;
+      --code-bg: #161b22;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+    max-width: 820px; margin: 0 auto; padding: 40px 24px;
+    line-height: 1.75; font-size: 16px;
+  }
+  h1 { font-size: 30px; margin-bottom: 4px; letter-spacing: -.5px; }
+  h2 {
+    font-size: 22px; margin-top: 56px; padding-bottom: 8px;
+    border-bottom: 3px solid var(--accent);
+  }
+  h2 .num {
+    display: inline-block; width: 36px; height: 36px;
+    background: var(--accent); color: #fff;
+    border-radius: 50%; text-align: center; line-height: 36px;
+    font-size: 16px; margin-right: 10px;
+  }
+  h3 { font-size: 18px; margin-top: 28px; color: var(--accent); }
+  h4 { font-size: 15px; margin: 16px 0 4px; color: var(--muted); }
+  p.lead { color: var(--muted); font-size: 16px; margin-top: 0; }
+
+  .toc {
+    background: var(--note); padding: 18px 24px; border-radius: 8px;
+    margin: 24px 0; font-size: 14px;
+  }
+  .toc ol { margin: 8px 0; padding-left: 20px; }
+  .toc li { margin: 3px 0; }
+  .toc a { color: var(--fg); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+
+  code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: 14px; font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre {
+    background: var(--code-bg); padding: 14px 18px; border-radius: 6px;
+    overflow-x: auto; font-size: 13px; line-height: 1.6;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre.diff .del { color: #b91c1c; }
+  pre.diff .add { color: #15803d; }
+  @media (prefers-color-scheme: dark) {
+    pre.diff .del { color: #f87171; }
+    pre.diff .add { color: #4ade80; }
+  }
+
+  .analogy {
+    background: var(--hl); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #d97706;
+  }
+  .analogy::before { content: "💡 비유 · "; font-weight: 700; color: #92400e; }
+  @media (prefers-color-scheme: dark) {
+    .analogy::before { color: #fcd34d; }
+  }
+
+  .tip {
+    background: var(--tip); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #16a34a;
+  }
+  .tip::before { content: "✅ 핵심 · "; font-weight: 700; color: #15803d; }
+  @media (prefers-color-scheme: dark) {
+    .tip::before { color: #4ade80; }
+  }
+
+  .warn {
+    background: var(--warn); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #d97706;
+  }
+  .warn::before { content: "⚠️ 주의 · "; font-weight: 700; color: #92400e; }
+
+  .exercise {
+    background: var(--note); padding: 18px 22px; border-radius: 8px;
+    margin: 24px 0; border-left: 4px solid var(--accent);
+  }
+  .exercise h4 { color: var(--accent); margin-top: 0; }
+
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14px;
+  }
+  th, td { padding: 10px 12px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); }
+
+  .keyword {
+    display: inline-block; background: var(--code-bg);
+    padding: 0 6px; border-radius: 3px;
+    font-size: 13px; font-weight: 600;
+  }
+
+  a { color: var(--accent); }
+  .small { font-size: 13px; color: var(--muted); }
+
+  /* night-specific additions */
+  .status-pill { display:inline-block; padding:2px 10px; border-radius:999px;
+    font-size:13px; font-weight:600; }
+  .status-pill.done    { background:#dcfce7; color:#166534; }
+  .status-pill.active  { background:#dbeafe; color:#1e40af; }
+  .status-pill.blocked { background:#fee2e2; color:#991b1b; }
+  .status-pill.planned { background:#f3f4f6; color:#374151; }
+  .card { border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin:14px 0; }
+  .card h3 { margin-top:0; }
+  .muted { color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+
+<p class="muted"><a href="index.html">← 대시보드</a></p>
+<h1>T2 · chunk_lab splitter selectbox에 heading/clause 옵션 노출</h1>
+<p>
+  <span class="status-pill done">done</span>
+  <span class="muted">업데이트 2026-05-28 02:30</span>
+</p>
+<p class="muted">임무: frontend/pages/chunk_lab.py splitter selectbox에 heading·clause 추가 — Phase 3/4 splitter UI 노출</p>
+<p class="muted">👉 <a href="T2-learning.html">이 작업으로 배우는 RAG 개념 →</a></p>
+<hr>
+<h2>배경 (전체 임무 한 줄)</h2>
+<p>Phase 3/4 에서 <code>HeadingSplitter</code>(markdown 헤딩 계층), <code>ClauseSplitter</code>(제N조 / Article N 조항 단위) 두 splitter 가 backend 에 추가됐는데 frontend chunk_lab 페이지의 선택 UI 가 옛 2종(<code>recursive</code>, <code>row</code>)만 노출 중이라 사용자가 신규 splitter 를 실험할 길이 없는 상태였다. T2 의 미션은 "이 노출 갭만 메우는 frontend 1줄 패치 + 검증".</p>
+<blockquote>
+<p>아래는 missions.md §T2 의 5개 임무 항목을 순서대로 처리한 기록. 각 항목마다 같은 5줄 포맷(무엇 / 왜 / 그때 상황 / 대안 &amp; 선택 이유 / 결과)으로 결정 추적을 남긴다.</p>
+</blockquote>
+<hr />
+<h3>1. splitter selectbox 옵션 리스트 현황 확인</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>Rag_Chat/frontend/pages/chunk_lab.py</code> 를 끝까지 읽고 <code>st.selectbox("전략", ...)</code> 호출 위치(214행)에서 현재 옵션이 <code>["recursive", "row"]</code> 임을 확정. help 문구·페이지 하단 expander 의 splitter 설명도 같은 상태인지 함께 확인.</li>
+<li><strong>왜</strong>: 패치 전에 "지금 frontend 가 사용자에게 무엇을 노출하고 있는가" 를 단정해야 변경 범위(=옵션 리스트 한 줄 + 그에 딸린 도움말 두 군데)가 확정된다. 추측으로 한 줄만 고치면 expander 설명이 옛 2종만 안내해 UI/문서 불일치가 남는다.</li>
+<li><strong>그때 상황</strong>: <code>chunk_lab.py</code> 학습용 메모에 "추후 조항 단위 splitter 가 더 좋다" 는 미래형 문장이 그대로 박혀 있었다 — 즉 "도입 예정" 단계에서 멈춰 있고 실제 도입(backend) 은 진작 끝났는데 frontend 가 텍스트만 옛날 상태였다.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: 대안 없음. 변경 전 현황 파악은 모든 임무의 기본 단계.</li>
+<li><strong>결과</strong>: 변경 대상 3 군데 위치 확정 — (a) selectbox options(214–218행), (b) selectbox help(218행 내), (c) bottom expander markdown(322–325행).</li>
+</ul>
+<hr />
+<h3>2. selectbox 옵션을 4종으로 확장</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>["recursive", "row"]</code> → <code>["recursive", "row", "heading", "clause"]</code> 로 한 줄 교체. help 문구를 "recursive = 길이 기반 / row = 1행 1청크 / heading = markdown heading 계층 / clause = 제N조·Article N 조항 단위" 로 4줄 설명으로 확장.</li>
+<li><strong>왜</strong>: 사용자가 chunk lab 에서 신규 splitter 를 클릭 한 번으로 실험할 수 있어야 하고, 도움말이 옛 2종만 설명하면 신규 옵션 선택 시 "이게 뭐 하는 건지" 알 수 없다.</li>
+<li><strong>그때 상황</strong>: backend <code>_BY_NAME</code> 에 4종이 이미 등록돼 있었지만 frontend 의 옵션이 두 개라 backend 능력의 절반만 노출 중. backend 변경은 임무 영역 밖이라 손대지 않음.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: (a) selectbox 정적 리스트 — 채택, 1줄 변경으로 충분. (b) backend 가 splitter 이름 목록을 돌려주는 메타 API (<code>/splitter-names/</code>) 신설 후 frontend 가 동적으로 fetch — overkill. <code>_BY_NAME</code> 갱신이 자주 일어나지 않고, 신설은 yagni. (c) splitter 별 sub-form (예: clause 의 regex pattern 입력) 노출 — 임무 범위 밖, splitter 들이 인자 없이 동작하도록 이미 디자인됨.</li>
+<li><strong>결과</strong>: <code>Rag_Chat/frontend/pages/chunk_lab.py:216</code> 한 줄 + help 문구 확장. grep 결과: <code>216: ["recursive", "row", "heading", "clause"],</code> — 의도된 한 곳에서만 매칭.</li>
+</ul>
+<hr />
+<h3>3. backend 호출 시 splitter 파라미터 전달 경로 확인 (dry-run)</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>call_preview</code> 함수(<code>chunk_lab.py:39–60</code>)가 <code>data["splitter"] = splitter</code> 로 form-data 에 그대로 실어 POST 하는지 확인. backend 쪽은 <code>chat/ingest_views.py</code> 의 preview view 가 <code>splitter_by_name(name, chunk_size=..., chunk_overlap=...)</code> 로 받아 dispatch — 그 경로가 살아있는지 grep 으로 trace.</li>
+<li><strong>왜</strong>: 옵션을 노출만 하고 backend 가 "heading" 이라는 문자열을 못 받거나 무시하면 UI 만 거짓말. 실제로 신규 옵션 선택 → splitter dispatch → 결과 JSON 까지 단절 없이 흐르는지 코드 경로를 끝까지 따라가야 한다.</li>
+<li><strong>그때 상황</strong>: <code>chat/ingest_views.py:25</code> 에 <code>from .ingest.splitters import splitter_by_name</code>, <code>:33</code> 에 <code>return splitter_by_name(name, chunk_size=chunk_size, chunk_overlap=chunk_overlap)</code> — preview API 가 splitter 이름을 dict lookup 으로 정확히 해석 중. URL 매핑(<code>chat/urls.py:20</code>)도 <code>/ingest/preview/</code> 로 살아있어 frontend 의 <code>PREVIEW_URL</code> 과 매치.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: 대안 없음 — 단순 검증 단계. 실제 HTTP 호출까지 안 가도 코드 경로가 끊김 없이 이어진 게 확인되면 충분(임무 정의도 "그대로 전달되는지 확인" 까지).</li>
+<li><strong>결과</strong>: dispatch 경로 무결성 확정. backend 변경 불필요.</li>
+</ul>
+<hr />
+<h3>4. 새 옵션 선택 시 정상 응답 시뮬 (backend splitter 매핑 파일 확인)</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>Rag_Chat/backend/chat/ingest/splitters/__init__.py</code> 의 <code>_BY_NAME</code> dict 가 <code>{"recursive", "row", "heading", "clause"}</code> 4 키를 정확히 갖고 있는지, 각 splitter 클래스가 import 되는지 확인. 동시에 <code>DEFAULT_BY_SOURCE</code> 가 heading/clause 를 의도적으로 제외했다는 주석(29–31행) 확인.</li>
+<li><strong>왜</strong>: frontend 가 <code>splitter="heading"</code> 으로 보냈을 때 backend 가 <code>RecursiveSplitter</code> 로 fallback 해버리면 사용자는 "heading 선택했는데 결과가 recursive 와 똑같다" 는 침묵 버그를 만난다. dict 키 4개 확인이 곧 "신규 옵션 클릭 시 진짜 신규 splitter 가 도는지" 의 보장.</li>
+<li><strong>그때 상황</strong>: heading/clause 가 <code>DEFAULT_BY_SOURCE</code>(확장자 자동선택) 에서 빠진 이유까지 코드 주석에 명시 — 자동 선택은 청킹을 망칠 수 있어 opt-in 만 허용. 즉 chunk_lab 의 selectbox 가 곧 그 opt-in 통로 본체. backend 디자인이 이미 "사용자가 명시 선택해야 함" 을 전제로 짜여 있었다.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: (a) splitter dispatch 동작을 실제 HTTP 호출까지 가서 검증 — django 기동 필요해 야간 단독 검증 비용↑. dict 확인으로 충분. (b) backend 단위 테스트(<code>tests/ingest/test_splitter_dispatch.py</code>) 를 새로 돌려 검증 — 이미 존재하고 검사 항목이 동일. 추가 실행 안 함.</li>
+<li><strong>결과</strong>: <code>_BY_NAME</code> 4 키 확정. <code>_BY_NAME.get(name, RecursiveSplitter)</code> 의 fallback 동작도 확인(오타 시 침묵 fallback) — 학습 노트의 연습문제 2번에 이 fallback 함정을 기록.</li>
+</ul>
+<hr />
+<h3>5. Streamlit 페이지 import / 구문 검증</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>python3 -c "import ast; ast.parse(open('Rag_Chat/frontend/pages/chunk_lab.py').read())"</code> 으로 구문 유효성 확인. 미션 정의가 "streamlit run 까지는 안 해도 됨 — ast.parse 통과면 OK" 였음.</li>
+<li><strong>왜</strong>: streamlit 페이지가 import 단계에서 SyntaxError 면 사용자가 페이지를 열자마자 에러 화면을 본다. ast.parse 는 import / 실행 없이 구문만 검증하는 가장 가벼운 단계라 야간 단독 검증에 적합.</li>
+<li><strong>그때 상황</strong>: 첫 호출 시 <code>python</code> 명령어가 없어 fail(<code>command not found: python</code>). macOS 환경의 Python 은 <code>python3</code> 로만 노출돼 있어 명령어 교체 필요.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: (a) <code>python3 -c "import ast; ast.parse(...)"</code> — 채택, 가벼움. (b) <code>streamlit run frontend/pages/chunk_lab.py</code> 실제 기동 — backend 도 같이 띄워야 의미 있는 검증이 되는데 야간 단독 실행은 부적합. (c) <code>python3 -m py_compile chunk_lab.py</code> — 동일 효과지만 .pyc 생성 부작용 있음.</li>
+<li><strong>결과</strong>: <code>ast ok</code> 출력. 구문 OK 확인. 실제 streamlit/django 기동 검증은 사용자가 깬 뒤 통합 단계에서 진행.</li>
+</ul>
+<hr />
+<h2>변경 파일 요약</h2>
+<table>
+<thead>
+<tr>
+<th>파일</th>
+<th>변경 종류</th>
+<th>범위</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Rag_Chat/frontend/pages/chunk_lab.py</code></td>
+<td>edit</td>
+<td>selectbox options(1줄) + help(1줄→3줄) + bottom expander(splitter 설명 2줄→4줄)</td>
+</tr>
+<tr>
+<td><code>Rag_Chat/backend/docs/sessions/night/T2.work.md</code></td>
+<td>new</td>
+<td>본 문서</td>
+</tr>
+<tr>
+<td><code>Rag_Chat/backend/docs/sessions/night/T2.learning.md</code></td>
+<td>new</td>
+<td>학습 노트</td>
+</tr>
+<tr>
+<td><code>Rag_Chat/backend/docs/reports/night/T2.html</code></td>
+<td>build</td>
+<td>work HTML</td>
+</tr>
+<tr>
+<td><code>Rag_Chat/backend/docs/reports/night/T2-learning.html</code></td>
+<td>build</td>
+<td>learning HTML</td>
+</tr>
+<tr>
+<td><code>Rag_Chat/backend/docs/reports/night/index.html</code></td>
+<td>build</td>
+<td>dashboard rebuild</td>
+</tr>
+</tbody>
+</table>
+<p>backend 코드/테스트/문서 변경 없음(임무 영역 외). T1/T3 영역 미접촉.</p>
+<h2>다음 세션 진입점</h2>
+<ul>
+<li>사용자 기상 후 <code>streamlit run frontend/pages/chunk_lab.py</code> + django backend 동시 기동으로 신규 옵션 실제 동작 시각 검증.</li>
+<li>시각 검증 시 heading splitter 는 <code># Heading\n본문...</code> 형태 markdown 샘플, clause splitter 는 <code>제1조 (목적) ...</code> 형태 사규 텍스트 샘플로 입력해야 의미 있는 결과가 나온다(flat 텍스트로는 두 splitter 모두 1청크만 만들 수 있음 — 학습 노트의 "자동선택의 함정" 박스 참조).</li>
+</ul>
+
+<footer class="muted" style="margin-top:60px; border-top:1px solid var(--border); padding-top:16px;">
+  생성:  · 야간 자율 멀티에이전트 wrap-up
+</footer>
+</body>
+</html>

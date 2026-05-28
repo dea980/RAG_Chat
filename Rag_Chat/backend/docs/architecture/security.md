@@ -112,7 +112,46 @@
 2. **Stage 2**: 사내 Ollama 인스턴스 PoC, 영업팀 10명 대상 베타. Gemini와 응답 품질 A/B.
 3. **Stage 3**: vLLM + 멀티 GPU. 완전 사내망. Gemini provider는 fallback only.
 
-## 5. 명시적으로 *아직 안 한 것*
+## 5. Phase 1 모더레이션의 한계 (왜 Phase 2가 필요한가)
+
+본 문서가 작성된 시점의 모더레이션(`moderation/filter.py` + `ForbiddenWord`)은 **keyword substring 매칭만** 한다. 첫 분기에 죽는 이유:
+
+- **PII 보호 불가**: "주민등록번호"란 단어를 검색하는 게 아니라 `901101-1234567` 같은 **패턴**을 잡아야 한다. 현재 모델은 못 잡는다 — 잘못된 안전감만 준다.
+- **4 boundary 표현 못 함**: CLAUDE.md 명세는 *업로드 · 질문 · 검색결과 · 답변* 4 군데에 다른 정책 적용 가능해야 한다. 현재는 INBOUND/OUTBOUND 2-방향뿐.
+- **권한 부재**: `User`가 문서·chunk의 sensitivity 라벨로 검색을 제한할 메커니즘이 없다. retrieval은 사용자 권한 무관하게 모든 chunk를 노출한다.
+- **Silent drop**: 모더레이션이 차단해도 사용자 화면에 노출되지 않는다 → "수정됨·N건"으로 가시화 필요.
+
+→ 학습 노트와 spec/plan으로 분리:
+| 문서 | 역할 |
+|--|--|
+| [features/moderation/learn.md](../features/moderation/learn.md) | 왜 3-layer label-based인가 — Fasoo · MS Purview · Presidio 비교 |
+| [features/moderation/learn.html](../features/moderation/learn.html) | 시각 학습 페이지 |
+| [features/moderation/references.md](../features/moderation/references.md) | 외부 자료 큐레이션 |
+| [superpowers/specs/2026-05-28-moderation-architecture.md](../superpowers/specs/2026-05-28-moderation-architecture.md) | Phase 2 설계 spec — schema 변경, layer별 동작 |
+| [superpowers/plans/2026-05-28-moderation-implementation.md](../superpowers/plans/2026-05-28-moderation-implementation.md) | Phase A → B → C 실행 plan |
+
+### 5.1 Phase 2 한 화면 요약 (3-layer label-based)
+
+```
+Layer 1 · 업로드 경계
+  Document.sensitivity 라벨 (public/internal/confidential/restricted)
+  restricted → vector store 진입 차단
+
+Layer 2 · retrieval 경계
+  User.access_level ≥ chunk.sensitivity 인 chunk만 반환
+  필터된 결과 → citation에 [수정됨·N건] 가시화
+
+Layer 3 · 입출력 검사
+  PII = Presidio + 한국 recognizer (KR_RRN/KR_PHONE/KR_ACCOUNT)
+  대외비/코드네임/욕설 = ModerationRule (pattern_type: KW/RE/EMB · 4 boundary)
+  inbound + outbound 양방향
+```
+
+자세한 schema·마이그레이션·rollback 계획은 위 spec/plan 참조.
+
+---
+
+## 6. 명시적으로 *아직 안 한 것*
 
 - JWT 강제 (simplejwt는 requirements에 있지만 endpoint protection은 미적용 — Phase 1에서 강제 예정)
 - 응답 스트리밍 (SSE)

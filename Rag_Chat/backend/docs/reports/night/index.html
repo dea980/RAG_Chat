@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>야간 작업 대시보드</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #1a1a1a;
+    --muted: #666;
+    --border: #e1e1e1;
+    --accent: #2563eb;
+    --hl: #fef9c3;
+    --tip: #ecfdf5;
+    --warn: #fef3c7;
+    --note: #eff6ff;
+    --code-bg: #f3f4f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --hl: #3a2a08;
+      --tip: #0a2a1c;
+      --warn: #3a2a08;
+      --note: #0c2545;
+      --code-bg: #161b22;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+    max-width: 820px; margin: 0 auto; padding: 40px 24px;
+    line-height: 1.75; font-size: 16px;
+  }
+  h1 { font-size: 30px; margin-bottom: 4px; letter-spacing: -.5px; }
+  h2 {
+    font-size: 22px; margin-top: 56px; padding-bottom: 8px;
+    border-bottom: 3px solid var(--accent);
+  }
+  h2 .num {
+    display: inline-block; width: 36px; height: 36px;
+    background: var(--accent); color: #fff;
+    border-radius: 50%; text-align: center; line-height: 36px;
+    font-size: 16px; margin-right: 10px;
+  }
+  h3 { font-size: 18px; margin-top: 28px; color: var(--accent); }
+  h4 { font-size: 15px; margin: 16px 0 4px; color: var(--muted); }
+  p.lead { color: var(--muted); font-size: 16px; margin-top: 0; }
+
+  .toc {
+    background: var(--note); padding: 18px 24px; border-radius: 8px;
+    margin: 24px 0; font-size: 14px;
+  }
+  .toc ol { margin: 8px 0; padding-left: 20px; }
+  .toc li { margin: 3px 0; }
+  .toc a { color: var(--fg); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+
+  code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: 14px; font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre {
+    background: var(--code-bg); padding: 14px 18px; border-radius: 6px;
+    overflow-x: auto; font-size: 13px; line-height: 1.6;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre.diff .del { color: #b91c1c; }
+  pre.diff .add { color: #15803d; }
+  @media (prefers-color-scheme: dark) {
+    pre.diff .del { color: #f87171; }
+    pre.diff .add { color: #4ade80; }
+  }
+
+  .analogy {
+    background: var(--hl); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #d97706;
+  }
+  .analogy::before { content: "💡 비유 · "; font-weight: 700; color: #92400e; }
+  @media (prefers-color-scheme: dark) {
+    .analogy::before { color: #fcd34d; }
+  }
+
+  .tip {
+    background: var(--tip); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #16a34a;
+  }
+  .tip::before { content: "✅ 핵심 · "; font-weight: 700; color: #15803d; }
+  @media (prefers-color-scheme: dark) {
+    .tip::before { color: #4ade80; }
+  }
+
+  .warn {
+    background: var(--warn); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #d97706;
+  }
+  .warn::before { content: "⚠️ 주의 · "; font-weight: 700; color: #92400e; }
+
+  .exercise {
+    background: var(--note); padding: 18px 22px; border-radius: 8px;
+    margin: 24px 0; border-left: 4px solid var(--accent);
+  }
+  .exercise h4 { color: var(--accent); margin-top: 0; }
+
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14px;
+  }
+  th, td { padding: 10px 12px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); }
+
+  .keyword {
+    display: inline-block; background: var(--code-bg);
+    padding: 0 6px; border-radius: 3px;
+    font-size: 13px; font-weight: 600;
+  }
+
+  a { color: var(--accent); }
+  .small { font-size: 13px; color: var(--muted); }
+
+  /* night-specific additions */
+  .status-pill { display:inline-block; padding:2px 10px; border-radius:999px;
+    font-size:13px; font-weight:600; }
+  .status-pill.done    { background:#dcfce7; color:#166534; }
+  .status-pill.active  { background:#dbeafe; color:#1e40af; }
+  .status-pill.blocked { background:#fee2e2; color:#991b1b; }
+  .status-pill.planned { background:#f3f4f6; color:#374151; }
+  .card { border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin:14px 0; }
+  .card h3 { margin-top:0; }
+  .muted { color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+
+<h1>🌙 야간 작업 대시보드</h1>
+<p class="muted">자는 동안 돌린 터미널별 작업 + 학습. 깼을 때 여기서 시작.</p>
+
+
+<div class="card">
+  <h3>T1 · Moderation Phase A — sensitivity label + access_level + retrieval filter
+    <span class="status-pill done">done</span>
+  </h3>
+  <p class="muted">임무: Moderation Phase A 구현 — sensitivity 라벨/User.access_level/retrieval 필터를 코드 변경 없이 운영자가 튜닝할 수 있는 기반으로 세움 · 업데이트 2026-05-28 02:30</p>
+  <p><a href="T1.html">작업 리포트 →</a> · <a href="T1-learning.html">학습 문서 →</a></p>
+</div>
+
+<div class="card">
+  <h3>T2 · chunk_lab splitter selectbox에 heading/clause 옵션 노출
+    <span class="status-pill done">done</span>
+  </h3>
+  <p class="muted">임무: frontend/pages/chunk_lab.py splitter selectbox에 heading·clause 추가 — Phase 3/4 splitter UI 노출 · 업데이트 2026-05-28 02:30</p>
+  <p><a href="T2.html">작업 리포트 →</a> · <a href="T2-learning.html">학습 문서 →</a></p>
+</div>
+
+<div class="card">
+  <h3>T3 · 어젯밤 4-agent 결과 통합 문서화 — _index sync + cross-link + commit_split_plan 갱신
+    <span class="status-pill done">done</span>
+  </h3>
+  <p class="muted">임무: _index.md sync + 새 doc 들 cross-link + commit-split-plan 갱신 · 업데이트 2026-05-28 02:31</p>
+  <p><a href="T3.html">작업 리포트 →</a> · <a href="T3-learning.html">학습 문서 →</a></p>
+</div>
+
+
+<footer class="muted" style="margin-top:60px; border-top:1px solid var(--border); padding-top:16px;">
+  생성: 2026-05-28 02:33 · 야간 자율 멀티에이전트 wrap-up
+</footer>
+</body>
+</html>

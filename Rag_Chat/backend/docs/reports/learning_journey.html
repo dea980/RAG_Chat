@@ -623,7 +623,132 @@ splitter = splitter_by_name("clause")   # 사용자가 의도적으로 선택</p
 </table>
 
 <!-- ============================================================ -->
-<h2 id="sec7"><span class="num">7</span>다음에 배울 것</h2>
+<h2 id="sec8"><span class="num">8</span>여러 AI 에이전트를 동시에 굴리기 (멀티 에이전트 워크플로우)</h2>
+
+<p class="lead">오늘 밤 새로 배운 것 — *한 명의 사용자가 4개의 AI 에이전트를 동시에 돌려 같은 코드베이스를 발전시키는* 흐름.</p>
+
+<h3>왜 한 명이 4개를 굴리나</h3>
+
+<p>한 에이전트에 다 시키면:</p>
+<ul>
+  <li>컨텍스트 윈도우가 넘쳐서 *앞 결정의 근거* 가 흐려짐</li>
+  <li>속도 — 4개 분야 (문서/UI/OCR/리서치) 가 순차로 진행</li>
+  <li>리뷰 부담 — 한 PR 에 다 묶이면 검토 단위가 너무 큼</li>
+</ul>
+
+<p>4개로 나누면:</p>
+<ul>
+  <li>각 에이전트가 자기 분야에 집중 → 결정 근거 보존</li>
+  <li>동시 진행 → 사용자가 자는 동안에도 4갈래 전진</li>
+  <li>리뷰 단위 = 에이전트 단위 → 머지 충돌 최소</li>
+</ul>
+
+<h3>핵심 원리 — 수직 격리 (Vertical Isolation)</h3>
+
+<div class="analogy">
+  🏢 <strong>비유 — 아파트 평면도</strong>: 한 동 안에서 401·402·403·404 호가 동시에 인테리어 공사를 해도 충돌 안 함. 왜? 각자 자기 호수 안만 만지니까. <br><br>
+  공용 부분(엘리베이터, 계단)에 한 명만 손대고, 나머진 자기 집 문 안만 만지면 평행 작업 OK. <br><br>
+  여기 4개 에이전트가 그 401~404 호.
+</div>
+
+<table>
+  <thead>
+    <tr><th>에이전트</th><th>전용 디렉토리/파일 (자기 집)</th><th>공용 (엘리베이터)</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>T1 (이 글 쓴 에이전트)</strong></td>
+      <td><code>backend/docs/**</code> — 문서, 메모리</td>
+      <td><code>_index.md</code> 인덱스 1줄</td>
+    </tr>
+    <tr>
+      <td><strong>T2 (Embedding Lab UI)</strong></td>
+      <td><code>embedding_views.py</code> (신규)<br><code>frontend/pages/embedding_lab.py</code> (신규)</td>
+      <td><code>urls.py</code> 라우트 1줄<br><code>requirements.txt</code> deps 1줄</td>
+    </tr>
+    <tr>
+      <td><strong>T3 (OCR loader)</strong></td>
+      <td><code>loaders/text/ocr.py</code> (신규)<br><code>test_ocr_loader.py</code> (신규)</td>
+      <td><code>loaders/__init__.py</code> import 1줄<br><code>requirements.txt</code> deps 1줄</td>
+    </tr>
+    <tr>
+      <td><strong>T4 (HWP 리서치)</strong></td>
+      <td><code>phase7a_hwp_research.md</code> (신규)</td>
+      <td>(공유 0)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>그런데 — 충돌은 *어디서* 나나</h3>
+
+<div class="callout warn">
+  ⚠️ <strong>주의 — 공유 파일</strong>: <code>requirements.txt</code> 는 T2, T3 둘 다 줄 추가. 둘 다 *끝줄에 append* 라 머지는 거의 항상 깔끔. 그래도 reality check 필수.
+</div>
+
+<h3>핵심 규칙 — 어느 에이전트도 commit 하지 않는다</h3>
+
+<p>왜?</p>
+<ol>
+  <li><strong>HEAD 이동 위험</strong> — 한 에이전트가 commit 하면 다른 에이전트의 <code>git status</code> 가 어긋남</li>
+  <li><strong>사람이 통합자 (Integration Node)</strong> — 4개 결과를 *사용자 한 명이* 보고 순서대로 commit. 그래야 충돌이 시각화됨</li>
+  <li><strong>취소가 자유로움</strong> — uncommitted 면 <code>git checkout -- &lt;path&gt;</code> 한 줄로 폐기 가능</li>
+</ol>
+
+<h3>리서치 에이전트의 가치</h3>
+
+<p>T4 는 <strong>코드 0줄</strong>. 라이브러리 4~5개 비교만. 그런데 이게 다음 세션의 시간을 가장 많이 절약함:</p>
+
+<ul>
+  <li>다음 세션 구현 에이전트는 *결정* 부분을 건너뛰고 *적용* 으로 직진</li>
+  <li>"조사하다 만 채로 코드 박는" 함정 회피 — 사고 모드가 다르기 때문</li>
+</ul>
+
+<div class="tip">
+  💡 <strong>응용 패턴</strong>: 다음에 새로운 라이브러리/포맷 도입할 때마다 *리서치 에이전트* 를 분리하세요. 코드 작성 에이전트는 *결정된 라이브러리만* 적용. 사고 분업 = 시간 절약.
+</div>
+
+<h3>실습 6 · 본인의 4-에이전트 워크플로우 설계</h3>
+
+<p>다음 phase 6 (ORM sink) 진입할 때 4개로 나눠보세요. 빈 칸 채우기:</p>
+
+<table>
+  <thead><tr><th>에이전트</th><th>맡을 일</th><th>전용 영역</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>T1 (문서)</td><td>?</td><td><code>backend/docs/features/ingest/phase6_orm_sink.md</code></td>
+    </tr>
+    <tr>
+      <td>T2 (?)</td><td>knowledge_product 모델 + 마이그레이션</td><td>?</td>
+    </tr>
+    <tr>
+      <td>T3 (?)</td><td>CSV → knowledge_product 이전 스크립트</td><td>?</td>
+    </tr>
+    <tr>
+      <td>T4 (?)</td><td>SQL 라우팅 정책 리서치 (LangChain SQL Agent vs 직접)</td><td><code>...sql_routing_research.md</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>지금 이 표를 채울 수 있다면, *분배 설계* 가 손에 잡힌 겁니다.</p>
+
+<h3>학습 메모 — 사람이 진짜 하는 일</h3>
+
+<div class="callout note">
+  📝 <strong>다섯 가지 인사이트</strong>:
+  <ol>
+    <li><strong>분배는 인터페이스 설계</strong> — 누가 무엇을 안 만지는지까지 정하는 일</li>
+    <li><strong>병렬에도 한계</strong> — 사람이 검토 가능한 동시 에이전트 ≒ 4. 그 이상은 순차</li>
+    <li><strong>문서는 시간 인터페이스</strong> — 한 시점의 결정을 다른 시점의 에이전트가 읽음</li>
+    <li><strong>사용자 = 통합 노드</strong> — commit 권한은 사람만. 그게 안전 장치</li>
+    <li><strong>"안 합치는 것" 도 결정</strong> — stash, untracked, IDE-only 변경분 — 무엇을 *건드리지 말지* 정하는 게 더 중요할 때 있음</li>
+  </ol>
+</div>
+
+<p>본 세션의 상세 narrative + 각 에이전트의 시작 prompt 는
+<a href="../sessions/2026-05-27-night-parallel.md">2026-05-27-night-parallel.md</a> 에 있습니다.</p>
+
+<!-- ============================================================ -->
+<h2 id="sec7"><span class="num">9</span>다음에 배울 것</h2>
 
 <p>오늘은 RAG 의 "데이터 → 청킹 → 검색 가능 상태로 만들기" 까지 완성. 다음 단계:</p>
 

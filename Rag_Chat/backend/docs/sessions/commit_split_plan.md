@@ -1,86 +1,177 @@
-# 커밋 분할 계획 (다음 세션 핸드오프)
+# 커밋 분할 계획 (2026-05-28 야간 통합 시점 핸드오프)
 
-`feature/onnx-reranker` 브랜치에 admin upload 커밋(`bc73020`) 이후 남은 변경분을 정리하기 위한 문서입니다. 다음 세션에서 이 문서대로 작은 단위 커밋으로 쪼개 진행합니다.
+`feature/onnx-reranker` 브랜치에 누적된 미커밋 변경분을 정리하기 위한 문서. 다음 세션에서 이 문서대로 작은 단위 커밋으로 쪼개 진행한다.
 
-> **주의 — 이 문서 작성 후 두 가지가 더 일어났음**
-> 1. 다른 agent 가 `ae308c9`(env 통합) / `b74e28e`(docs 인덱스) / `e333fa4`(test fix) / `f328f1d`(Phase 4 splitter) 4개 추가 커밋. 일부 변경분은 이미 흡수됐을 수 있으니 진행 전 `git diff` 로 재확인.
-> 2. `backend/docs/` 가 그룹별 디렉토리로 재구조화됨. 본문에 적힌 평평한 경로(예: `backend/docs/model_provider_switching_result.md`) 는 이제 `backend/docs/features/providers/switching_result.md` 등으로 이동. 현재 위치는 [_index.md](../_index.md) 참고.
+> **재작성 이력**
+> - 2026-05-27 초안: provider switching / token_lab / chunk_lab / chore / docs 5묶음 기준.
+> - 2026-05-27 저녁: phase 5 OCR + phase 6 ORM sink 추가.
+> - **2026-05-28 02:10 (T3 야간)**: 어젯밤 4-agent 결과 + 오늘 야간 4-agent 결과를 흡수해 전면 재작성. 아래 분류는 *현재 `git status` 스냅샷* 과 직접 매칭.
+>
+> 작성 시점 `git status --short` 가 본 문서의 진실. 다른 agent 가 새 파일을 만들면 본 문서가 그만큼 stale 해진다. *진행 직전 다시 sync*.
 
-## 1. feat: model provider switching (openrouter / ollama / huggingface)
+---
 
-핵심 — `ProviderConfigAPIView`, `ProviderManager`에 3개 provider 조합 추가.
+## 0. 현재 `git status` 스냅샷 (2026-05-28 02:10)
 
-- `Rag_Chat/backend/chat/views.py` — `PROVIDER_PRESETS` 확장, `VALID_PROVIDERS` 갱신
-- `Rag_Chat/backend/chat/providers/manager.py` — `get_embedding_config()` 추가
-- `Rag_Chat/backend/chat/tests/test_views.py` — 신규 조합 테스트가 포함되면 같이
-- `Rag_Chat/backend/chat/tests/test_provider_manager.py` (untracked)
-- `Rag_Chat/.env.example` — 새 env 키
-- `Rag_Chat/backend/requirements.txt` — 새 의존성
-- `Rag_Chat/backend/docs/model_provider_switching_result.md`
-- `docs/superpowers/plans/2026-05-27-model-provider-switching.md`
-- `docs/superpowers/specs/2026-05-27-model-provider-switching-design.md`
+```
+M  .gitignore
+M  README.md
+M  Rag_Chat/backend/chat/ingest/loaders/__init__.py
+D  Rag_Chat/backend/chat/ingest/loaders/ocr/__init__.py
+D  Rag_Chat/backend/chat/ingest/loaders/ocr/image.py
+M  Rag_Chat/backend/chat/ingest/loaders/text/__init__.py
+M  Rag_Chat/backend/docs/_index.md
+M  Rag_Chat/backend/docs/architecture/security.md
+M  Rag_Chat/backend/docs/reports/learning_journey.html
+M  Rag_Chat/backend/docs/superpowers/specs/2026-05-27-night-autonomous-multiagent-design.md
+M  Rag_Chat/backend/requirements.txt
+M  Rag_Chat/docs/_layouts/concept.html
+M  Rag_Chat/docs/_layouts/index.html
+M  Rag_Chat/frontend/pages/chunk_lab.py
+?? CLAUDE.md
+?? DESIGN.md
+?? Rag_Chat/backend/chat/ingest/loaders/text/ocr.py
+?? Rag_Chat/backend/docs/features/embedding_lab/page.md
+?? Rag_Chat/backend/docs/features/ingest/phase5_ocr.md
+?? Rag_Chat/backend/docs/features/ingest/phase7a_hwp.md
+?? Rag_Chat/backend/docs/features/ingest/phase7a_hwp_research.md
+?? Rag_Chat/backend/docs/features/moderation/
+?? Rag_Chat/backend/docs/reports/night/
+?? Rag_Chat/backend/docs/sessions/2026-05-27-night-parallel.md
+?? Rag_Chat/backend/docs/sessions/night/T2.learning.md
+?? Rag_Chat/backend/docs/sessions/night/T2.work.md
+?? Rag_Chat/backend/docs/sessions/night/T3.work.md
+?? Rag_Chat/backend/docs/superpowers/plans/2026-05-28-moderation-implementation.md
+?? Rag_Chat/backend/docs/superpowers/specs/2026-05-28-moderation-architecture.md
+?? Rag_Chat/backend/moderation/levels.py
+?? Rag_Chat/backend/moderation/tests/
+?? Rag_Chat/docs/design/
+?? "파수 대외비 문서 관리 및 보안 _ Fasoo 기밀 문서 암호화 및 추적.html"
+```
 
-## 2. feat: Token Lab (token counting API + page)
+(T1·T3 작업이 진행 중이면 추가 untracked 가 더 생긴다. 진행 직전 `git status --short` 재확인.)
 
-- `Rag_Chat/backend/chat/token_utils.py` (untracked)
-- `Rag_Chat/backend/chat/token_views.py` (untracked)
-- `Rag_Chat/backend/chat/tests/test_token_utils.py` (untracked)
-- `Rag_Chat/backend/chat/tests/test_token_views.py` (untracked)
-- `Rag_Chat/backend/chat/tests/test_utils.py` — token 관련 변경이면 함께, 아니면 4번
-- `Rag_Chat/frontend/pages/token_lab.py` (untracked)
-- `Rag_Chat/backend/docs/token_lab_page.md`
+---
 
-참고 — `urls.py` 의 `tokens/estimate/` 라우트는 이미 admin upload 커밋에 포함됨.
+## 1. chore: 정리 — 루트 잡파일 + OCR 중복 제거
 
-## 3. feat: Chunk Lab page
+가장 먼저, 신호잡음 줄이려 *정리만 하는 커밋* 부터.
 
-- `Rag_Chat/frontend/pages/chunk_lab.py` (untracked)
-- `Rag_Chat/backend/docs/chunk_lab_page.md` (untracked)
-- `Rag_Chat/backend/docs/chunk_testing_page.md` (untracked)
+- **`D  Rag_Chat/backend/chat/ingest/loaders/ocr/__init__.py`** — OCR loader 위치 정리 (yesterday night handoff §12 "정리할 잔재")
+- **`D  Rag_Chat/backend/chat/ingest/loaders/ocr/image.py`** — 같이 삭제. `text/ocr.py` 가 올바른 위치
+- **`M  Rag_Chat/backend/chat/ingest/loaders/__init__.py`** — `ocr/` 패키지 import 제거 (해당이라면)
+- **`M  Rag_Chat/backend/chat/ingest/loaders/text/__init__.py`** — `text/ocr.py` 사이드이펙트 import 정리
+- **`M  .gitignore`** — DownSub txt 패턴 추가했다면 함께
+- **루트 DownSub HTML 삭제**: `파수 대외비 문서 관리 및 보안 _ Fasoo ...html` — 저장소에 들어가면 안 됨. 본 commit 직전 `rm` 또는 `.gitignore`
 
-참고 — `ingest/preview/` 백엔드 API는 admin upload 커밋에 포함됨.
+→ 단일 commit. 메시지: `chore: dedupe OCR loader location and clean root junk`
 
-## 4. chore: reranker / build_vectors tweaks + eval datasets
+---
 
-- `Rag_Chat/backend/chat/rerankers/onnx_bge.py`
-- `Rag_Chat/backend/chat/tests/test_rerank.py`
-- `Rag_Chat/backend/chat/management/commands/build_vectors.py`
-- `Rag_Chat/backend/chat/tests/evals/dataset_galaxy_full.jsonl` (untracked)
-- `Rag_Chat/backend/chat/tests/evals/dataset_legal.jsonl` (untracked)
-- `Rag_Chat/backend/scripts/build_ocr_fixtures.py` (untracked) — fixture 빌드 스크립트면 여기
+## 2. feat: phase 5 OCR loader 통합
 
-## 5. docs: project status / architecture / concepts
+- **`?? Rag_Chat/backend/chat/ingest/loaders/text/ocr.py`** — OCR loader (text/ 하위 정상 위치)
+- (1번에서 처리되지 않았다면) `text/__init__.py` 의 OCR import 한 줄
+- **`M  Rag_Chat/backend/requirements.txt`** — `pytesseract` 라인만 cherry-pick (sentence-transformers 라인은 따로)
+- **`?? Rag_Chat/backend/docs/features/ingest/phase5_ocr.md`** — yesterday T1 이 만든 통합 노트 (skeleton 상태. 본 commit 직전 5분 실측으로 채워두면 좋음)
 
-- `README.md`
-- `Rag_Chat/ARCHITECTURE.md`
-- `Rag_Chat/backend/README.md`
-- `Rag_Chat/프로젝트현황.md`
-- `Rag_Chat/backend/docs/_index.md` (untracked)
-- `Rag_Chat/backend/docs/core_concepts.md` (untracked)
-- `Rag_Chat/backend/docs/async_ingest_plan.md` (untracked)
-- `Rag_Chat/backend/docs/async_ingest_tradeoff.html` (untracked)
-- `Rag_Chat/backend/docs/ingest_phase3_integration.md` (untracked) — 1번 커밋에 함께 묻혀야 했지만 누락. 여기 또는 별도 docs 커밋
-- `Rag_Chat/backend/docs/project_journey.html` (untracked)
-- `Rag_Chat/backend/docs/python_file_guide.html` (untracked)
-- `Rag_Chat/docs/` (untracked, `_layouts/`, `build/`, `concepts/`)
-- `Rag_Chat/project_status.html` (untracked)
-- `Rag_Chat/scripts/build_concepts.py` (untracked) — concepts 빌드 스크립트
-- `Rag_Chat/backend/data/samples/` (untracked) — 내용 확인 필요
+부분 stage 필요 (`requirements.txt` 의 pytesseract 줄만). 메시지: `feat(ingest): phase 5 OCR loader (pytesseract)`
+
+---
+
+## 3. feat: phase 7-a HWP research (코드 0줄, 리서치 doc 만)
+
+- **`?? Rag_Chat/backend/docs/features/ingest/phase7a_hwp_research.md`** — T4 가 어젯밤 작성한 실측 리서치 (pyhwp 권고 + libhwp 패닉 / hwp-extract 부적합 등)
+- **`?? Rag_Chat/backend/docs/features/ingest/phase7a_hwp.md`** — 부모 phase 통합 노트 skeleton (구현은 다음 세션)
+
+메시지: `docs(ingest): phase 7-a HWP loader research and skeleton`
+
+---
+
+## 4. feat: embedding lab Mode A
+
+- **`?? Rag_Chat/backend/docs/features/embedding_lab/page.md`** — T2 통합 노트 skeleton (yesterday)
+- T2 가 어젯밤 만든 backend/frontend 변경분이 *현 status 에 안 보임* — embedding_views.py / urls.py / embedding_lab.py 모두 흔적 없음. 어제 yesterday T2 가 *Mode A 구현* 까지 가지 않고 doc skeleton 만 남긴 상태로 보인다. 다음 세션이 진행하거나 status 재점검.
+
+메시지: `docs(embedding-lab): Phase A skeleton doc` 또는 코드 추가 후 `feat`.
+
+---
+
+## 5. feat(chunk-lab): heading/clause splitter 옵션 노출 (T2 야간 ✅)
+
+- **`M  Rag_Chat/frontend/pages/chunk_lab.py`** — T2 가 오늘 야간에 splitter selectbox 에 `heading`, `clause` 추가
+- **`?? Rag_Chat/backend/docs/sessions/night/T2.work.md` / `T2.learning.md`** — T2 야간 작업 로그·학습
+
+메시지: `feat(chunk-lab): expose heading and clause splitter options`
+
+---
+
+## 6. feat(moderation): Phase A — sensitivity label + ACL retrieval filter (T1 야간 진행 중)
+
+- **`?? Rag_Chat/backend/moderation/levels.py`** — `SENSITIVITY_LEVEL` ladder + `can_access()` (T1)
+- **`?? Rag_Chat/backend/moderation/tests/`** — `test_acl.py` 등
+- *(상태에 안 보이지만 T1 mission 이 요구)* — `knowledge/models.py` Document.sensitivity, `chat/models.py` User.access_level, migrations 2종, retrieval ACL 필터, redacted_count 응답 추가. status 에 안 잡혀 있다면 T1 미완료 가능 — 진행 직전 확인.
+- **`M  Rag_Chat/backend/docs/architecture/security.md`** — 4경계 방어 텍스트 갱신
+- **`?? Rag_Chat/backend/docs/superpowers/plans/2026-05-28-moderation-implementation.md`** — Phase A→B→C 실행 plan
+- **`?? Rag_Chat/backend/docs/superpowers/specs/2026-05-28-moderation-architecture.md`** — 3-layer 아키텍처 spec
+- **`?? Rag_Chat/backend/docs/features/moderation/`** — `learn.md`, `references.md`, `refs/`
+
+메시지: `feat(moderation): phase A label-based access filter`
+
+---
+
+## 7. docs(design-system): DESIGN.md 단일 출처 + 정적 사이트 레이아웃 동기화
+
+- **`?? DESIGN.md`** (루트) — design system 단일 출처
+- **`?? Rag_Chat/docs/design/`** — preview 페이지 + tokens.css 등
+- **`M  Rag_Chat/docs/_layouts/concept.html`** — design system 토큰 반영
+- **`M  Rag_Chat/docs/_layouts/index.html`** — 동일
+- **`M  README.md`** — design system link 추가했다면 함께
+
+메시지: `docs(design): introduce DESIGN.md as single source of truth`
+
+---
+
+## 8. docs(meta): CLAUDE.md + _index.md 갱신
+
+- **`?? CLAUDE.md`** (루트) — 프로젝트 메모리 (Triple Chat / Moderation / DESIGN.md)
+- **`M  Rag_Chat/backend/docs/_index.md`** — T3 야간이 §3.6/3.7 모더레이션·night_autonomous 추가, §9.2 superpowers 표 확장
+- **`?? Rag_Chat/backend/docs/sessions/2026-05-27-night-parallel.md`** — yesterday 4-agent narrative
+- **`?? Rag_Chat/backend/docs/sessions/night/T3.work.md`** + T3.learning.md — 본 세션 작업 로그
+- **`?? Rag_Chat/backend/docs/reports/night/`** — `build_night_report.py` 산출 HTML
+- **`M  Rag_Chat/backend/docs/reports/learning_journey.html`** — §8 멀티에이전트 워크플로우 학습 섹션 추가분
+- **`M  Rag_Chat/backend/docs/superpowers/specs/2026-05-27-night-autonomous-multiagent-design.md`** — 야간 spec 갱신
+
+메시지: `docs: refresh _index + night session narrative + CLAUDE.md`
+
+---
 
 ## 커밋하지 말 것 (정리)
 
-루트에 떨어진 DownSub 자막 다운로드 — 저장소에 들어가면 안 됨.
+- `"파수 대외비 문서 관리 및 보안 _ Fasoo 기밀 문서 암호화 및 추적.html"` — DownSub HTML, 1번 commit 전에 `rm` 또는 gitignore.
 
-- `[Korean (auto-generated)-Korean (auto-generated)] Code  )  GPT,        & AX   [DownSub.com].txt`
-- `[Korean (auto-generated)]    4  RAG       , AX   [DownSub.com].txt`
-
-처리 옵션:
-- 그냥 삭제 (`rm '[Korean...].txt'`)
-- 혹은 루트 `.gitignore` 에 `*[DownSub.com]*.txt` 추가
+---
 
 ## 작업 순서 제안
 
-1. DownSub txt 정리 (삭제 or gitignore)
-2. 각 그룹 stage → diff 확인 → commit
-3. provider switching → Token Lab → Chunk Lab → chore → docs 순 권장 (아키텍처 영향도 → UI → docs)
-4. 마지막에 `git status` 가 깨끗한지 확인
+> 충돌 표면을 줄이려고 *정리 → 구현 → 통합 doc* 순. 각 commit 직전 `git diff` reality check.
+
+1. **정리 (1번)** — OCR 중복 제거 + 루트 잡파일. 신호잡음 down.
+2. **OCR loader (2번)** — `text/ocr.py` 가 단독으로 살아남게.
+3. **HWP research (3번)** — 다음 세션 구현 결정 근거 확정.
+4. **chunk_lab UI (5번)** — T2 1줄짜리 quick win.
+5. **moderation Phase A (6번)** — T1 결과 통합. 가장 큰 commit, *별도* PR 권장 (코드 + 마이그레이션 + 테스트).
+6. **embedding lab (4번)** — T2 yesterday skeleton (코드 결과는 status 에 안 보임 — 확인 후).
+7. **design system (7번)** — 시각 자산 + tokens.
+8. **meta docs (8번)** — `_index` / `CLAUDE.md` / night narrative. 마지막에 인덱스 sync.
+
+각 commit 전 `--no-verify` 절대 X. pre-commit 실패 시 *수정* 후 *새 commit* (amend 금지 — 본 프로젝트 규약).
+
+---
+
+## 관련 문서
+
+- [handoff.md](handoff.md) — env/provider 현재 상태 + 다음 세션 진입점
+- [2026-05-27-night-parallel.md](2026-05-27-night-parallel.md) — 어젯밤 4-agent narrative
+- [missions.md](missions.md) — 오늘 야간 4-agent 임무판
+- [../_index.md](../_index.md) — 전체 문서 인덱스

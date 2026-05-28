@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T1 작업 리포트 — Moderation Phase A — sensitivity label + access_level + retrieval filter</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #1a1a1a;
+    --muted: #666;
+    --border: #e1e1e1;
+    --accent: #2563eb;
+    --hl: #fef9c3;
+    --tip: #ecfdf5;
+    --warn: #fef3c7;
+    --note: #eff6ff;
+    --code-bg: #f3f4f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --hl: #3a2a08;
+      --tip: #0a2a1c;
+      --warn: #3a2a08;
+      --note: #0c2545;
+      --code-bg: #161b22;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+    max-width: 820px; margin: 0 auto; padding: 40px 24px;
+    line-height: 1.75; font-size: 16px;
+  }
+  h1 { font-size: 30px; margin-bottom: 4px; letter-spacing: -.5px; }
+  h2 {
+    font-size: 22px; margin-top: 56px; padding-bottom: 8px;
+    border-bottom: 3px solid var(--accent);
+  }
+  h2 .num {
+    display: inline-block; width: 36px; height: 36px;
+    background: var(--accent); color: #fff;
+    border-radius: 50%; text-align: center; line-height: 36px;
+    font-size: 16px; margin-right: 10px;
+  }
+  h3 { font-size: 18px; margin-top: 28px; color: var(--accent); }
+  h4 { font-size: 15px; margin: 16px 0 4px; color: var(--muted); }
+  p.lead { color: var(--muted); font-size: 16px; margin-top: 0; }
+
+  .toc {
+    background: var(--note); padding: 18px 24px; border-radius: 8px;
+    margin: 24px 0; font-size: 14px;
+  }
+  .toc ol { margin: 8px 0; padding-left: 20px; }
+  .toc li { margin: 3px 0; }
+  .toc a { color: var(--fg); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+
+  code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: 14px; font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre {
+    background: var(--code-bg); padding: 14px 18px; border-radius: 6px;
+    overflow-x: auto; font-size: 13px; line-height: 1.6;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre.diff .del { color: #b91c1c; }
+  pre.diff .add { color: #15803d; }
+  @media (prefers-color-scheme: dark) {
+    pre.diff .del { color: #f87171; }
+    pre.diff .add { color: #4ade80; }
+  }
+
+  .analogy {
+    background: var(--hl); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #d97706;
+  }
+  .analogy::before { content: "💡 비유 · "; font-weight: 700; color: #92400e; }
+  @media (prefers-color-scheme: dark) {
+    .analogy::before { color: #fcd34d; }
+  }
+
+  .tip {
+    background: var(--tip); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #16a34a;
+  }
+  .tip::before { content: "✅ 핵심 · "; font-weight: 700; color: #15803d; }
+  @media (prefers-color-scheme: dark) {
+    .tip::before { color: #4ade80; }
+  }
+
+  .warn {
+    background: var(--warn); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #d97706;
+  }
+  .warn::before { content: "⚠️ 주의 · "; font-weight: 700; color: #92400e; }
+
+  .exercise {
+    background: var(--note); padding: 18px 22px; border-radius: 8px;
+    margin: 24px 0; border-left: 4px solid var(--accent);
+  }
+  .exercise h4 { color: var(--accent); margin-top: 0; }
+
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14px;
+  }
+  th, td { padding: 10px 12px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); }
+
+  .keyword {
+    display: inline-block; background: var(--code-bg);
+    padding: 0 6px; border-radius: 3px;
+    font-size: 13px; font-weight: 600;
+  }
+
+  a { color: var(--accent); }
+  .small { font-size: 13px; color: var(--muted); }
+
+  /* night-specific additions */
+  .status-pill { display:inline-block; padding:2px 10px; border-radius:999px;
+    font-size:13px; font-weight:600; }
+  .status-pill.done    { background:#dcfce7; color:#166534; }
+  .status-pill.active  { background:#dbeafe; color:#1e40af; }
+  .status-pill.blocked { background:#fee2e2; color:#991b1b; }
+  .status-pill.planned { background:#f3f4f6; color:#374151; }
+  .card { border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin:14px 0; }
+  .card h3 { margin-top:0; }
+  .muted { color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+
+<p class="muted"><a href="index.html">← 대시보드</a></p>
+<h1>T1 · Moderation Phase A — sensitivity label + access_level + retrieval filter</h1>
+<p>
+  <span class="status-pill done">done</span>
+  <span class="muted">업데이트 2026-05-28 02:30</span>
+</p>
+<p class="muted">임무: Moderation Phase A 구현 — sensitivity 라벨/User.access_level/retrieval 필터를 코드 변경 없이 운영자가 튜닝할 수 있는 기반으로 세움</p>
+<p class="muted">👉 <a href="T1-learning.html">이 작업으로 배우는 RAG 개념 →</a></p>
+<hr>
+<h3>moderation/levels.py 신규 — sensitivity ladder + 헬퍼 함수</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>Rag_Chat/backend/moderation/levels.py</code> 를 새로 만들고 세 함수 + 두 상수를 두었다. (<code>SENSITIVITY_LEVEL</code> dict, <code>DEFAULT_LEVEL="internal"</code>, <code>can_access(user, content)</code>, <code>should_index(level)</code>, <code>apply_acl_filter(hits, user_level)</code>.)</li>
+<li><strong>왜</strong>: Phase A 의 1차 신호는 "라벨 한 줄". 라벨끼리 비교만 하면 끝나는 순수 함수를 ORM/Django 의존 없이 분리해 두어야, 4 boundary(업로드·질문·검색결과·답변) 가 모두 같은 ladder 를 공유한다. spec §3.2 "권한 매칭은 단조함수" 조항을 코드로 그대로 옮긴 것.</li>
+<li><strong>그때 상황</strong>: 시작 시 <code>moderation/</code> 에는 <code>filter.py</code> (단방향 키워드 필터) + <code>models.py</code> (ForbiddenWord, ModerationLog) 만 있었음. ladder/ACL 개념이 코드에 한 줄도 없었다. spec/plan 문서는 이미 박혀있었지만, retrieval 함수(<code>chat/utils.py:RAGUtils.get_rag_context</code>) 는 chunk 의 메타데이터를 보지 않고 전체 결과를 그대로 반환하던 상태였다.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: (a) <code>moderation/levels.py</code> 로 분리 — 채택. ORM 비의존 + 4 boundary 가 import 만 하면 끝남. (b) <code>moderation/filter.py</code> 안에 ladder 헬퍼를 두기 — 거절. filter.py 는 ForbiddenWord 패턴 매칭/로깅에 묶여 있어 ACL 까지 합치면 책임이 비대해진다. (c) <code>knowledge/models.py</code> 에 두기 — 거절. knowledge 는 데이터(Document·Department) 도메인, 권한 정책을 도메인 모델 옆에 두는 건 SRP 위반.</li>
+<li><strong>결과</strong>:</li>
+<li>신규 파일: <code>Rag_Chat/backend/moderation/levels.py</code></li>
+<li>검증: <code>python manage.py test moderation.tests.test_acl.AclLevelTest</code> → 5 ok / <code>ShouldIndexTest</code> → 2 ok / <code>RetrievalAclTest</code> → 4 ok</li>
+</ul>
+<h3>moderation/tests/ 패키지 + test_acl.py — TDD RED 단계</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>moderation/tests/__init__.py</code> 빈 파일 + <code>moderation/tests/test_acl.py</code> 를 만들어 12 개 TestCase 작성. 카테고리: <code>AclLevelTest</code> (5), <code>ShouldIndexTest</code> (2), <code>RetrievalAclTest</code> (4), <code>GetRagContextRedactedCountTest</code> (1).</li>
+<li><strong>왜</strong>: superpowers:test-driven-development 스킬의 Iron Law — "production code 전에 failing test 가 먼저". 12 개를 한 번 다 깨뜨려 본 뒤(<code>ModuleNotFoundError: moderation.levels</code>) 구현을 시작해야, 테스트가 "구현된 동작" 이 아니라 "원하는 동작" 을 잡고 있음이 보장된다.</li>
+<li><strong>그때 상황</strong>: moderation 앱에 <code>tests.py</code> 도 <code>tests/</code> 도 없었다. <code>chat/</code> 은 <code>tests.py</code> + <code>tests/</code> 둘 다 있어서 <code>manage.py test chat</code> 이 <code>ImportError: tests module incorrectly imported</code> 로 실패하는 상태 — 이 충돌은 만들지 않게 처음부터 <code>tests/</code> 패키지 하나로 갔다. unknown_level 케이스(<code>can_access("god", "public")</code>) 가 KeyError 를 던질지 silent False 를 반환할지 결정해야 했는데, "라벨 오타는 운영 사고이므로 시끄럽게 죽는 게 안전" 으로 KeyError 채택.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: (a) Django TestCase 사용 — 채택, ORM/migration 의존 셋업이 자동. (b) pure unittest — 거절, <code>RetrievalAclTest</code> 가 LangChain Document 흉내를 위해 작은 Doc 클래스를 inline 정의하는데, 향후 Document ORM 검증을 같은 파일에 붙이려면 TestCase 가 편함. (c) pytest — 거절, repo 에 pytest 설정 없음. Django 의 manage.py test 가 표준.</li>
+<li><strong>결과</strong>:</li>
+<li>신규 파일: <code>Rag_Chat/backend/moderation/tests/__init__.py</code>, <code>Rag_Chat/backend/moderation/tests/test_acl.py</code></li>
+<li>RED 확인: 12 errors (모듈 부재) → GREEN 확인: 12 ok / 0.002s</li>
+</ul>
+<h3>knowledge.Document 신규 + Sensitivity TextChoices</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>Rag_Chat/backend/knowledge/models.py</code> 에 <code>Sensitivity(TextChoices)</code> enum 과 <code>Document</code> 모델(<code>name</code>, <code>source_uri</code>, <code>sensitivity</code>, <code>sensitivity_set_by</code> FK→chat.User, <code>sensitivity_set_at</code>, <code>uploaded_at</code>) 을 추가.</li>
+<li><strong>왜</strong>: spec §4.2 가 Document.sensitivity 를 Layer 1 의 1차 분류 신호로 못 박았다. 라벨이 메모리/JSON 만이 아니라 DB row 로 살아있어야 Django Admin 에서 운영자가 코드 변경 없이 수정 가능하다 (CLAUDE.md "관리자가 코드 없이 튜닝" 요구).</li>
+<li><strong>그때 상황</strong>: 시작 시 knowledge 앱에는 Department·Contact·Product 만 있었음. "Document" 추상화 자체가 없었다 — 업로드 파일 추적은 <code>chat.IngestManifest</code> (sha256/source_uri 기반 dedup 용) 가 담당. 둘은 역할이 다르다 — Manifest 는 ingest 이력, Document 는 분류·소유 정보. spec 은 명시적으로 <code>knowledge.Document</code> 라고 지정.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: (a) Document 신규 — 채택. spec/plan 그대로. 라벨 도메인이 knowledge(=무엇을 알고 있나) 에 속함. (b) <code>IngestManifest</code> 에 sensitivity 컬럼만 붙이기 — 거절. Manifest 는 <code>chat</code> 앱 소속, "이 파일은 무슨 등급?" 은 도메인이 다름. 또 같은 source_uri 가 새 hash 로 재인덱싱될 때 Manifest 가 SUPERSEDED 처리되므로 sensitivity 가 row 따라 유실/재기록되는 복잡성이 생긴다. (c) Document 와 IngestManifest 를 한 줄로 묶기 (FK) — 임무 범위 밖. Phase B 에서 ingest 파이프라인이 Document.get_or_create 를 호출하게 할 때 자연스레 처리.</li>
+<li><strong>결과</strong>:</li>
+<li>변경 파일: <code>Rag_Chat/backend/knowledge/models.py</code></li>
+<li>마이그레이션 생성: <code>knowledge/migrations/0002_document.py</code> (auto)</li>
+<li>검증: <code>python -c "from knowledge.models import Document; print(Document(name='probe').sensitivity)"</code> → <code>internal</code></li>
+</ul>
+<h3>chat.User.access_level</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>Rag_Chat/backend/chat/models.py</code> 의 <code>User</code> 에 <code>access_level = CharField(choices=[(public/internal/confidential/restricted)], default="internal")</code> 추가.</li>
+<li><strong>왜</strong>: spec §4.3 — Layer 2 retrieval 필터의 입력 변수. User 는 자기 access_level 이상 sensitivity 의 chunk 만 retrieve 한다. default=internal 인 이유는 부트캠프 사내 챗봇이 "사내 공유" 기본 권한을 가정하기 때문.</li>
+<li><strong>그때 상황</strong>: <code>User</code> 모델은 이미 role(USER/MANAGER/ADMIN) 컬럼이 있었다. role 과 access_level 은 다른 차원 — role 은 Django Admin 권한, access_level 은 retrieval 필터. 두 차원을 합치자는 유혹이 있었지만, role 변경(=Admin 페이지 권한)과 sensitivity 라벨 변경은 운영 절차가 다르다 (HR 결재 vs 보안 결재) — 별도 컬럼이 정답.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: (a) 별도 access_level 컬럼 — 채택. (b) role 에 confidential/restricted 단계 추가 — 거절. 의미가 섞임. (c) <code>knowledge.Sensitivity</code> 를 import 해서 choices 인자로 — 거절. import 순환 가능성. choices 리스트만 inline 으로 적었다 — 값은 같지만 의존성은 분리.</li>
+<li><strong>결과</strong>:</li>
+<li>변경 파일: <code>Rag_Chat/backend/chat/models.py</code></li>
+<li>마이그레이션 생성: <code>chat/migrations/0007_user_access_level_alter_ingestmanifest_id.py</code> (auto — ingestmanifest.id 의 BigAutoField alter 는 Django 4.2 DEFAULT_AUTO_FIELD 누적 noise 로, 데이터 손실 없음)</li>
+</ul>
+<h3>makemigrations + migrate</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>python manage.py makemigrations knowledge chat</code> → <code>python manage.py migrate</code> 실행.</li>
+<li><strong>왜</strong>: 모델 변경을 SQLite dev DB 에 반영해야 Document.objects.first() / User.objects.filter(access_level=...) 같은 ORM 호출이 통한다. Phase A Exit Criteria 첫 항목.</li>
+<li><strong>그때 상황</strong>: 기존 마이그레이션 chain — chat 0001~0006, knowledge 0001, moderation 0001 까지. 새 마이그레이션은 chain 끝에 깔끔하게 붙음.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: 없음 (Django 표준 절차).</li>
+<li><strong>결과</strong>:</li>
+<li>신규 파일: <code>chat/migrations/0007_user_access_level_alter_ingestmanifest_id.py</code>, <code>knowledge/migrations/0002_document.py</code></li>
+<li>명령: <code>Applying chat.0007_user_access_level_alter_ingestmanifest_id... OK</code> / <code>Applying knowledge.0002_document... OK</code></li>
+</ul>
+<h3>ingest 파이프라인 — should_index 게이트 + chunk metadata sensitivity 복사</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>Rag_Chat/backend/chat/ingest/pipeline.py:ingest_path()</code> 에 <code>sensitivity="internal"</code> 키워드 인자 추가. 함수 시작에서 <code>should_index(sensitivity)</code> 가 False 면 즉시 return 0 + log. loader/splitter 통과 후 각 raw_doc / chunk 의 <code>metadata.setdefault("sensitivity", sensitivity)</code> 로 라벨 복사.</li>
+<li><strong>왜</strong>: spec §5.1 Layer 1 — restricted 문서는 벡터 스토어에 진입조차 못 한다. 그리고 §5.2 Layer 2 — chunk 의 메타데이터에 sensitivity 가 있어야 retrieval 필터가 작동. 두 동작을 한 함수 안에서 처리하는 게 데이터 흐름상 가장 결정적이고 디버깅 가능.</li>
+<li><strong>그때 상황</strong>: <code>ingest_path</code> 는 manifest 체크 → loader → splitter → sink 의 4단 파이프. 기존엔 모든 chunk 가 sensitivity 메타 없이 흘러갔고, restricted 든 internal 이든 똑같이 Chroma 에 들어갔다. raw_docs / chunks 의 메타데이터에 <code>doc_sha256</code> 만 자동 부여하던 자리에 sensitivity 한 줄 더 끼워넣음.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: (a) <code>ingest_path</code> 시그너처에 sensitivity 추가 — 채택. CLI/Upload/Celery 모두 같은 함수를 호출하므로 한 곳만 손대면 4 진입점이 다 커버됨. (b) sink (<code>ChromaSink.write</code>) 안에서 처리 — 거절. sink 는 "받은 chunk 를 저장" 이 책임. sensitivity 판단은 정책이라 pipeline 단계가 맞다. (c) loader 가 file path 에서 Document.objects.filter(source_uri=...).first().sensitivity 를 자동 lookup — Phase B 작업. Phase A 는 caller(=upload handler) 가 sensitivity 를 명시 전달하게 두는 게 단순.</li>
+<li><strong>결과</strong>:</li>
+<li>변경 파일: <code>Rag_Chat/backend/chat/ingest/pipeline.py</code> (시그너처 + restricted 가드 + metadata setdefault 2곳)</li>
+<li>단위 검증: <code>should_index("restricted")</code> False, 그 외 True — <code>ShouldIndexTest</code> 2 ok</li>
+</ul>
+<h3>RAGUtils.process_search_results / get_rag_context — ACL 필터 + redacted_count</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>Rag_Chat/backend/chat/utils.py:RAGUtils.process_search_results(search_results, user_access_level="internal")</code> 시그너처 확장. 함수 내부에서 <code>apply_acl_filter(...)</code> 호출 → kept/redacted 분리 → 반환 dict 에 <code>redacted_count</code> 키 추가. <code>get_rag_context</code> 도 동일 인자를 forward.</li>
+<li><strong>왜</strong>: spec §5.2 — retrieval response 가 redacted_count 를 노출해야 frontend 가 citation ribbon 에 <code>[수정됨·N건]</code> 배지를 그릴 수 있다. CLAUDE.md "무성 드롭 금지" 의 코드 표현.</li>
+<li><strong>그때 상황</strong>: 기존 <code>process_search_results</code> 는 받은 docs 전부를 그대로 join 해서 context 문자열을 만들었다. ACL 개념이 없었고, frontend 가 결과 누락 사실을 알 길도 없었다. 호출처(<code>chat/views.py:43,45,517</code>, <code>chat/vector_metadata.py:295,327</code>, <code>chat/pipeline/modules.py:27</code>) 가 모두 user 객체에 접근 가능하므로 매개변수 추가는 점진적 마이그레이션이 가능 — 기본값을 internal 로 두어 기존 호출처는 한 줄 변경 없이 동작.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: (a) <code>process_search_results</code> 시그너처 확장 + default — 채택. backward compatible. (b) 별도 <code>process_search_results_for_user(user)</code> 신규 함수 — 거절. 호출처가 5군데라 wrapper 만 늘어나고 결국 둘 다 유지해야 함. (c) RAGUtils 를 클래스 인스턴스로 바꿔 user 를 생성자 인자로 — 임무 범위 밖, 큰 리팩터. (d) views.py 의 <code>get_rag_context</code> wrapper 도 함께 user 인자 전달 — 미루는 게 안전. Phase A 는 "redacted_count 키가 반환된다" 까지가 exit criteria. caller 통합은 Phase D(UI) 와 함께.</li>
+<li><strong>결과</strong>:</li>
+<li>변경 파일: <code>Rag_Chat/backend/chat/utils.py</code></li>
+<li>검증: <code>GetRagContextRedactedCountTest.test_process_search_results_contains_redacted_count</code> ok — confidential chunk 가 internal user 에게서 redact 되어 context 에서 사라지고 redacted_count==1 반환.</li>
+<li>전체: <code>python manage.py test moderation -v 1</code> → Ran 12 tests in 0.002s OK</li>
+</ul>
+<h3>Phase A Exit Criteria 검토</h3>
+<ul>
+<li><strong>무엇을</strong>: plan §A.6 의 7 개 체크박스를 실제 상태로 검증.</li>
+<li><strong>왜</strong>: "구현 끝났다고 자가선언" 금지 — 명문화된 exit criteria 에 하나씩 매핑.</li>
+<li><strong>그때 상황</strong>: 시작 전 0/7, 종료 후 7/7 (frontend 통합은 Phase D 로 명시 제외됨).</li>
+<li><strong>대안 &amp; 선택 이유</strong>: 없음 (체크리스트는 기존 plan 의 결정).</li>
+<li><strong>결과</strong>:</li>
+<li>[x] migration 적용 성공 (<code>Applying ... OK</code> 2회)</li>
+<li>[x] 기존 ForbiddenWord 데이터 손실 없음 (ForbiddenWord 테이블/마이그레이션은 손대지 않음 — Phase B 작업)</li>
+<li>[x] AclLevelTest 통과 (5/5)</li>
+<li>[x] retrieval response 에 <code>redacted_count</code> 키 포함 (process_search_results 단위 테스트로 검증)</li>
+<li>[x] <code>internal</code> 사용자가 <code>confidential</code> chunk 못 봄 (<code>test_internal_user_filters_confidential</code> ok)</li>
+<li>[x] frontend 미통합 — Phase D 로 명시 미룸</li>
+<li>[ ] commit 은 <strong>하지 않음</strong> (mission 규칙: 야간 세션 commit 금지, 사용자가 깨서 통합)</li>
+</ul>
+
+<footer class="muted" style="margin-top:60px; border-top:1px solid var(--border); padding-top:16px;">
+  생성:  · 야간 자율 멀티에이전트 wrap-up
+</footer>
+</body>
+</html>

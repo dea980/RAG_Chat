@@ -8,6 +8,7 @@
 > 👉 **다음 세션 진입점**: [sessions/handoff.md](sessions/handoff.md) — env/provider 현재 상태 + 즉시 처리할 것
 > 🔧 **커밋 분할 핸드오프**: [sessions/commit_split_plan.md](sessions/commit_split_plan.md)
 > 🌙 **2026-05-27 밤 (4-에이전트 병렬)**: [sessions/2026-05-27-night-parallel.md](sessions/2026-05-27-night-parallel.md) — 깨어났을 때 1페이지 요약은 [sessions/handoff_night.md](sessions/handoff_night.md)
+> 🎨 **Design system 단일 출처**: [../../../DESIGN.md](../../../DESIGN.md) — 모든 UI·시각 결정은 여기. 챗·docs site·포트폴리오 공용 토큰. 짝꿍 문서: [architecture/security.md](architecture/security.md)(4경계 방어·운영자 설정).
 
 상태 범례 — ✅ done · 🟢 active · ⏳ planned · ⏸ paused · 📝 reference
 
@@ -96,6 +97,23 @@
 | [design.md](features/embedding_lab/design.md) | ✅ 설계 | 임베딩 모델/언어 비교 페이지 — 강사가 짚은 "한국어 약점" 검증 |
 | [page.md](features/embedding_lab/page.md) | 🟢 | T2 야간 병렬 결과 통합 노트 (Mode A 만, 골격) |
 
+### 3.6 Moderation — [`features/moderation/`](features/moderation/)
+
+대외비·PII·금칙어 4경계 방어. 운영자가 코드 없이 튜닝 가능해야 함 (CLAUDE.md).
+
+| 문서 | 상태 | 역할 |
+|---|---|---|
+| [learn.md](features/moderation/learn.md) | 🟢 | 사내 RAG 모더레이션 학습 — Fasoo · MS Purview · Presidio 벤치 + 3-layer label-based 결론 |
+| [references.md](features/moderation/references.md) | 📝 | 외부 문서 큐레이션 (Fasoo · MS Purview · Presidio · NeMo 링크) |
+
+### 3.7 Night Autonomous — [`features/night_autonomous/`](features/night_autonomous/)
+
+야간 4-agent 병렬 자율 루프. missions.md → 각 T 가 자기 영역만 진행 → 사용자가 통합 commit.
+
+| 문서 | 상태 | 역할 |
+|---|---|---|
+| [setup_learning.md](features/night_autonomous/setup_learning.md) | 🟢 | 야간 멀티에이전트 셋업 학습 노트 — 무엇이 왜 필요했나 |
+
 ---
 
 ## 4. 세션 / 핸드오프 — [`sessions/`](sessions/)
@@ -107,6 +125,8 @@
 | [commit_split_plan.md](sessions/commit_split_plan.md) | 🟢 | `feature/onnx-reranker` 잔여 변경분 커밋 분할 계획 |
 | [2026-05-27.md](sessions/2026-05-27.md) | 📝 | 2026-05-27 낮 작업 로그 |
 | [2026-05-27-night-parallel.md](sessions/2026-05-27-night-parallel.md) | 🟢 | 2026-05-27 밤 — 4-에이전트 병렬 작업 narrative + 학습 포인트 |
+| [missions.md](sessions/missions.md) | 🟢 | 야간 병렬 세션 공유 임무판. `/nightwork <Tn>` 진입점 |
+| `night/<Tn>.work.md` · `<Tn>.learning.md` | 🟢 | 야간 작업 로그 + 학습 노트 (frontmatter + body). `build_night_report.py` 가 HTML 빌드 |
 
 ---
 
@@ -210,6 +230,18 @@ python scripts/build_concepts.py --watch    # 파일 변경 시 재빌드
 - `backend/docs/` = **프로젝트 진행 narrative + 통합 노트** (이 인덱스가 다루는 영역)
 - `Rag_Chat/docs/` = **재사용 가능 컨셉 사전** (Hybrid Search, Reranker 등 — 정적 학습 페이지)
 
-### 9.2 기타
-- `docs/superpowers/` — superpowers plans/specs (`2026-05-19-onnx-reranker`, `2026-05-27-model-provider-switching`)
+### 9.2 Superpowers plans/specs — [`superpowers/`](superpowers/)
+
+| 문서 | 상태 | 역할 |
+|---|---|---|
+| [plans/2026-05-27-night-autonomous-multiagent.md](superpowers/plans/2026-05-27-night-autonomous-multiagent.md) | 🟢 | 야간 4-agent 자율 루프 실행 plan |
+| [specs/2026-05-27-night-autonomous-multiagent-design.md](superpowers/specs/2026-05-27-night-autonomous-multiagent-design.md) | 🟢 | 야간 멀티에이전트 디자인 spec |
+| [plans/2026-05-28-moderation-implementation.md](superpowers/plans/2026-05-28-moderation-implementation.md) | 🟢 | Moderation Phase A→B→C 실행 plan (T1 작업 entry) |
+| [specs/2026-05-28-moderation-architecture.md](superpowers/specs/2026-05-28-moderation-architecture.md) | 🟢 | 3-layer label-based 모더레이션 아키텍처 spec |
+
+기존 superpowers 자산:
+- `2026-05-19-onnx-reranker` — ONNX reranker plan/spec
+- `2026-05-27-model-provider-switching` — 5-provider 추상 plan/spec
+
+### 9.3 기타
 - `Rag_Chat/backend/TestsReadme.md`, `Rag_Chat/frontend/README.md`, `Rag_Chat/triple_chat_pjt/testReadme.md` — 모듈별 readme (이동하지 않음)

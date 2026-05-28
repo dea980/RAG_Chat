@@ -146,6 +146,7 @@ missions.md ──(읽기)──> /nightwork Tn (루프)
 - **STOP 파일 잔존**: wrap-up 후 STOP 삭제 안 함(다른 터미널도 봐야 함). 사용자가 새 세션 시작 전 수동 삭제. (missions.md 에 명시.)
 - **권한 프롬프트로 새벽에 정지**: settings.local.json allow 로 예방. 빠진 명령 발견 시 추가.
 - **두 터미널이 같은 공유 파일(requirements.txt) append**: 끝줄 append + 출처 주석, commit 금지로 충돌 최소화 (기존 night-parallel 3.2 규칙).
+- **`.omc/state` 를 조율에 쓰지 말 것**: OMC 세션별 로컬 기계 상태(`subagent-tracking`/`idle-notif-cooldown` 등)이며 gitignored. 별도 터미널은 여기 안 잡히고, 여러 세션이 동시에 덮어쓰므로 신뢰 불가. 야간 조율은 오직 파일 규칙(`missions.md` + `night/` + `STOP`)으로 한다.
 
 ## 7. 테스트 전략
 

@@ -288,10 +288,66 @@ frontend/pages/chunk_lab.py                          # M (기본 포트 8001 →
 
 ---
 
+## 13. 2026-05-28 (야간 4-agent 통합) — Moderation Phase A + chunk_lab UI + 통합 docs
+
+오늘 야간에 또 한 번의 4-agent 병렬 세션. yesterday (2026-05-27 night) 와 *다른 구성*:
+
+| 터미널 | 목표 | 결과 위치 |
+|---|---|---|
+| **T1** | Moderation Phase A — sensitivity label + access_level + retrieval ACL | `backend/moderation/levels.py`, `tests/`, knowledge/chat models migrations, retrieval `redacted_count` |
+| **T2** | `frontend/pages/chunk_lab.py` splitter selectbox 에 `heading`, `clause` 노출 | `frontend/pages/chunk_lab.py` (M) + `night/T2.work.md`·`T2.learning.md` |
+| **T3** | 어젯밤 4-agent 결과 통합 문서화 — `_index` sync · cross-link · commit_split_plan 재작성 | `_index.md` (M, §3.6/§3.7/§9.2 확장), `sessions/commit_split_plan.md` (rewritten), 본 handoff §13 |
+
+T3 = 이 섹션을 쓴 터미널. T1·T2 는 코드 작업, T3 는 doc 작업.
+
+### 13.1 즉시 처리할 것 (다음 세션 첫 5분)
+
+1. **T1·T2·T3 결과를 [commit_split_plan.md](commit_split_plan.md) 의 8묶음 순서대로 커밋**
+   - 1번 chore 정리 (OCR 중복 제거 + 루트 DownSub HTML 삭제) 부터 시작
+   - 6번 moderation Phase A 는 *별도 PR* 권장 (코드+마이그레이션+테스트 규모)
+2. **`git diff` reality check** — embedding_lab 의 backend 코드가 status 에 안 보임. yesterday T2 가 Mode A 구현까지 갔는지 재확인. 안 갔으면 commit_split_plan §4 = doc only commit.
+3. **`build_night_report.py` 산출 HTML** (`backend/docs/reports/night/index.html`) 확인 — T1·T2·T3 work/learning 가 dashboard 에 정상 표시되는지.
+4. **moderation Phase A Exit Criteria** ([plans/2026-05-28-moderation-implementation.md](../superpowers/plans/2026-05-28-moderation-implementation.md) §A.6) 체크 — `python -m pytest moderation/tests/test_acl.py -v` 전수 pass, `Document.objects.first().sensitivity == 'internal'`, retrieval response 에 `redacted_count` 포함.
+
+### 13.2 야간 작업 산출물 위치
+
+```
+backend/docs/sessions/missions.md                       # 야간 임무판 (T1/T2/T3 섹션)
+backend/docs/sessions/night/T2.work.md  T2.learning.md  # T2 야간 로그·학습
+backend/docs/sessions/night/T3.work.md  T3.learning.md  # T3 야간 로그·학습 (T3 = 본 섹션 작성자)
+backend/docs/reports/night/index.html                   # build_night_report.py 산출 dashboard
+backend/docs/reports/night/T*.html  T*-learning.html    # 각 T 의 work/learning HTML
+```
+
+T1 도 work.md/learning.md 가 있어야 dashboard 에 등장. T1 이 wrap-up 없이 빠진 상태라면 dashboard 의 T1 row 가 missing — 다음 세션이 T1 결과 보고 수동 작성하거나, T1 다시 깨워서 wrap-up.
+
+### 13.3 OCR 중복 잔재 정리 (§12 의 카운트다운)
+
+`chat/ingest/loaders/ocr/{__init__,image}.py` 가 **삭제됨** (status 의 `D` 행) → 카운트다운 ✅. `chat/ingest/loaders/text/ocr.py` 만 남음. `loaders/__init__.py` 와 `loaders/text/__init__.py` 의 import 도 정리됨 (M 행). 커밋 시점에 한 번 더 `loader_for(".png")` 가 단일 클래스를 반환하는지 sanity 체크.
+
+### 13.4 design system 등장
+
+- 루트에 `CLAUDE.md` + `DESIGN.md` 신설 (untracked). DESIGN.md = 모든 UI·시각 결정의 단일 출처 (Pretendard + Geist Mono + `#E89B3C` accent + citation ribbon).
+- `Rag_Chat/docs/_layouts/{concept,index}.html` 가 새 토큰 반영하도록 수정됨 (M).
+- `Rag_Chat/docs/design/` (untracked) — preview 페이지 + tokens.css.
+- 이 묶음은 [commit_split_plan.md](commit_split_plan.md) §7 으로.
+
+### 13.5 다음 phase 진입 순서 제안
+
+1. Moderation **Phase A** commit 완료 → **Phase B** spec 검토 (boundary expansion, ModerationRule 모델)
+2. Phase 7-a HWP loader *구현* (T4 리서치 권고 = pyhwp, six 동반 설치 필요)
+3. Embedding Lab Mode B (n×n matrix) — yesterday T2 의 Mode A 가 실제로 구현됐는지 확인 후
+4. `chunk_lab` heading/clause 옵션 → 실 backend 로 dry-run 검증
+
+---
+
 ## 관련 문서
 - [project_status.html](../reports/project_status.html) — provider/env 시각화
 - [project_journey.html](../reports/project_journey.html) — Ingest Phase 1~3+ 시각 요약
-- [2026-05-27.md](2026-05-27.md) — 오늘 작업 상세 로그
-- [commit_split_plan.md](commit_split_plan.md) — `feature/onnx-reranker` 잔여 변경분 커밋 분할 계획
+- [reports/night/index.html](../reports/night/index.html) — **야간 4-agent dashboard** (오늘 야간 결과)
+- [2026-05-27.md](2026-05-27.md) — yesterday 작업 상세 로그
+- [2026-05-27-night-parallel.md](2026-05-27-night-parallel.md) — yesterday 4-agent narrative
+- [missions.md](missions.md) — 오늘 야간 임무판
+- [commit_split_plan.md](commit_split_plan.md) — `feature/onnx-reranker` 잔여 변경분 커밋 분할 계획 (2026-05-28 02:10 재작성)
 - [_index.md](../_index.md) — 전체 문서/Phase 인덱스
 - [프로젝트현황.md](../../../프로젝트현황.md) — 한국어 진행 현황
