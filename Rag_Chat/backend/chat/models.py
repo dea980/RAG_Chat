@@ -1,8 +1,46 @@
+from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.models import PermissionsMixin
 from django.db import models
 from django.utils.timezone import now
 import uuid
 import random
 import json
+
+
+class UserManager(BaseUserManager):
+    """Manager for the custom AbstractBaseUser-based chat.User.
+
+    USERNAME_FIELD = "email" — but user_id (U0000... format) remains the PK
+    so existing FKs (Chat, SearchLog, Document.sensitivity_set_by, etc.)
+    don't need to be rewritten.
+    """
+
+    use_in_migrations = True
+
+    def _create_user(self, email: str, password: str | None, **extra):
+        if not email:
+            raise ValueError("email is required")
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_user(self, email: str, password: str | None = None, **extra):
+        extra.setdefault("is_staff", False)
+        extra.setdefault("is_superuser", False)
+        return self._create_user(email, password, **extra)
+
+    def create_superuser(self, email: str, password: str | None = None, **extra):
+        extra.setdefault("is_staff", True)
+        extra.setdefault("is_superuser", True)
+        extra.setdefault("role", "ADMIN")
+        extra.setdefault("access_level", "restricted")
+        if extra.get("is_staff") is not True:
+            raise ValueError("superuser must have is_staff=True")
+        if extra.get("is_superuser") is not True:
+            raise ValueError("superuser must have is_superuser=True")
+        return self._create_user(email, password, **extra)
 
 class MetaData(models.Model):
     key = models.CharField(max_length=50, primary_key=True)
@@ -42,7 +80,7 @@ class MetaData(models.Model):
         return f"{self.key}: {self.get_value()}"
 
 
-class User(models.Model):
+class User(AbstractBaseUser, PermissionsMixin):
     # Role-based access for the internal sales-team rollout.
     # Django Admin uses these to gate the moderation / knowledge pages.
     class Role(models.TextChoices):
@@ -52,8 +90,23 @@ class User(models.Model):
 
     user_id = models.CharField(max_length=16, primary_key=True, editable=False)
     uuid = models.UUIDField(unique=True, editable=False)
-    email = models.EmailField(blank=True, default="")
+    email = models.EmailField(unique=True)
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.USER)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    # Phase A moderation: chunk-level retrieval is gated on this ladder.
+    # See moderation/levels.py — values must stay in sync with knowledge.Sensitivity.
+    access_level = models.CharField(
+        max_length=20,
+        choices=[
+            ("public", "공개"),
+            ("internal", "사내 공유"),
+            ("confidential", "대외비"),
+            ("restricted", "기밀"),
+        ],
+        default="internal",
+        help_text="이 레벨 이하 sensitivity 의 chunk 만 retrieve 가능",
+    )
     department = models.ForeignKey(
         "knowledge.Department",
         on_delete=models.SET_NULL,
@@ -63,6 +116,11 @@ class User(models.Model):
     created_datetime = models.DateTimeField(auto_now_add=True)  # SQLite time is incorrect
     last_activity = models.DateTimeField(auto_now=True, null=True)  # 활동 시간 추적을 위한 필드 추가
     expired_datetime = models.DateTimeField(null=True, blank=True)
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS: list[str] = []
+
+    objects = UserManager()
 
     def save(self, *args, **kwargs):
         if not self.uuid:

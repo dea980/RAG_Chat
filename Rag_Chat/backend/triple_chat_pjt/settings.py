@@ -92,6 +92,10 @@ INSTALLED_APPS = [
     "audit",
 ]
 
+# Custom auth user — chat.User inherits AbstractBaseUser + PermissionsMixin.
+# Set BEFORE any migration that references settings.AUTH_USER_MODEL.
+AUTH_USER_MODEL = "chat.User"
+
 # Redis + Celery settings
 CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ["json"]
