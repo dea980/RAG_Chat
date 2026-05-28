@@ -9,6 +9,7 @@ import time
 from datetime import datetime, timedelta
 from api import fetch_user_id, get_provider_selection, set_provider_combo, upload_knowledge_files
 from typing import Optional, Dict, Any
+import auth as auth_mod  # B5 — session-based login
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -295,14 +296,15 @@ def send_chat_request(prompt):
         request_url = f"{API_BASE_URL}/chat/"
         logger.info(f"Making request to: {request_url}")
         
-        response = requests.post(
+        # B5 — use the authenticated requests.Session so the Django sessionid
+        # cookie is sent. user_id is no longer sent in the payload; the backend
+        # reads request.user from the session (B4).
+        sess = auth_mod.get_session()
+        response = sess.post(
             request_url,
-            json={
-                "question": prompt,
-                "user_id": st.session_state.get("user_id", None)  # Include user_id in JSON payload
-            },
+            json={"question": prompt},
             headers={"Content-Type": "application/json"},
-            timeout=10
+            timeout=10,
         )
         response.raise_for_status()
         return response.json()
@@ -323,23 +325,25 @@ def send_chat_request(prompt):
 # Initialize session state
 init_session()
 
-# Initialize or get user ID if not in session state yet
+# B5 — auth gate. No more silent fetch_user_id; user must sign in.
+if not auth_mod.is_authenticated():
+    st.title("Triple Chat — Sign in")
+    auth_mod.render_login_form()
+    st.stop()
+
+# After login the backend session carries user_id; mirror it locally for the
+# existing Redis-session tracking code.
 if not st.session_state.user_id:
-    try:
-        # Call the api.py function to get a user ID
-        user_id = fetch_user_id(None)  # Pass None for new session
-        if user_id:
-            st.session_state.user_id = user_id
-            st.session_state.last_activity = time.time()
-            logger.info(f"Initialized new user session: {user_id}")
-            info = get_provider_selection(user_id)
-            if info:
-                selection = info.get("selection", {})
-                st.session_state.provider_combo = determine_provider_combo(selection)
-                st.session_state.provider_selection = selection
-                st.session_state.embedding_config = info.get("embedding", {})
-    except Exception as e:
-        logger.error(f"Failed to initialize user session: {e}")
+    user = auth_mod.current_user()
+    if user:
+        st.session_state.user_id = user["user_id"]
+        st.session_state.last_activity = time.time()
+        info = get_provider_selection(user["user_id"])
+        if info:
+            selection = info.get("selection", {})
+            st.session_state.provider_combo = determine_provider_combo(selection)
+            st.session_state.provider_selection = selection
+            st.session_state.embedding_config = info.get("embedding", {})
 
 if st.session_state.user_id and "provider_combo" not in st.session_state:
     info = get_provider_selection(st.session_state.user_id)
@@ -421,10 +425,9 @@ def load_phone_data():
 st.title("Samsung Galaxy 25 Phone Chat Assistant")
 
 # Session status indicator
+auth_mod.render_user_chip()
 if st.session_state.user_id:
     st.sidebar.success(f"Session active: {st.session_state.user_id}")
-else:
-    st.sidebar.warning("No active session")
 
 # Admin controls in sidebar
 st.sidebar.markdown("---")
@@ -542,17 +545,25 @@ if not st.session_state.session_expired and st.session_state.user_id and is_sess
                 if response_data := send_chat_request(prompt):
                     response = response_data.get("response", "Sorry, I couldn't process that.")
                     images = response_data.get("images", [])
-            
+                    redacted_count = response_data.get("redacted_count", 0)
+
                     # Response Text
                     st.write(response)
-                    
+
+                    # Phase A — redacted ribbon (silent drop 금지).
+                    if redacted_count > 0:
+                        st.warning(
+                            f"[수정됨·{redacted_count}건] 권한 외 chunk 가 검색결과에서 가려졌습니다. "
+                            "접근 권한 확장은 관리자에게 문의하세요."
+                        )
+
                     # Response Image
                     if images:
                         st.write("🔹 Related Images:")
                         for image in images:
                             image_url = STATIC_IMAGE_URL + image + ".png"
                             st.image(image_url, use_container_width=True)
-                    
+
                     st.session_state.messages.append({"role": "assistant", "content": response})
 
 else:
@@ -562,10 +573,7 @@ else:
         st.session_state.messages = []
         st.rerun()
 
-# New session button in sidebar
+# New session button in sidebar (forces re-login)
 if st.sidebar.button("Start New Session"):
-    st.session_state.session_expired = False
-    st.session_state.messages = []
-    st.session_state.user_id = None
-    st.session_state.last_activity = None
+    auth_mod.logout()
     st.rerun()
