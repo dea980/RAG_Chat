@@ -20,8 +20,6 @@ whitenoise>=6.5.0
 # Utils
 requests>=2.31.0
 redis>=5.0.1
-celery>=5.3.6
-django-celery-beat>=2.5.0
 python-jose>=3.3.0
 tiktoken>=0.7.0
 
@@ -54,8 +52,14 @@ openpyxl>=3.1.2
 pypdf>=4.0.0
 docx2txt>=0.8
 beautifulsoup4>=4.12.0
+pytesseract>=0.3.10
 
 # Reranker (ONNX cross-encoder)
 # Optional for local Docker: install requirements-reranker.txt and set
 # RERANKER_ENABLED=1 when reranking is needed.
 onnxruntime>=1.17.0
+
+# Embedding Lab — Pair Compare 의 sentence-transformers 모델 (bge-m3, e5-large 등).
+# 첫 호출 시 모델 ~2GB 자동 다운로드. 사내 폐쇄망이면 SENTENCE_TRANSFORMERS_HOME 으로
+# 미리 다운받은 캐시를 가리키게 한다.
+sentence-transformers>=2.7.0

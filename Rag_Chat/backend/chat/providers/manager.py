@@ -205,6 +205,79 @@ class ProviderManager:
             return self._create_huggingface_chat_model(purpose)
         raise ValueError(f"Unsupported chat provider: {provider}")
 
+    def build_chat_model_explicit(
+        self, provider: str, model: Optional[str] = None,
+        purpose: str = "GENERATION",
+    ):
+        """Build a chat model with an optional explicit model name.
+
+        Used by the side-by-side chat-compare lab endpoint where the caller
+        specifies provider + model at runtime (e.g., ``ollama:gpt-oss`` vs
+        ``ollama:qwen3.6``). Not cached — comparison runs need fresh
+        instances since (provider, model) is the key not (provider, purpose).
+        Falls back to the env-based factory when ``model`` is None.
+        """
+        provider = provider.lower()
+        if model is None:
+            return self._create_chat_model(provider, purpose)
+
+        temperature = float(os.getenv(f"{purpose}_TEMPERATURE", "0.7"))
+
+        if provider == "ollama":
+            if ChatOpenAI is None:
+                raise ImportError("langchain-openai required for Ollama")
+            return ChatOpenAI(
+                api_key=os.getenv("OLLAMA_API_KEY", "ollama"),
+                base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
+                model=model,
+                temperature=temperature,
+            )
+        if provider == "qwen":
+            if ChatOpenAI is None:
+                raise ImportError("langchain-openai required for Qwen")
+            api_key = os.getenv("QWEN_API_KEY")
+            base_url = os.getenv("QWEN_API_BASE")
+            if not api_key or not base_url:
+                raise RuntimeError("QWEN_API_KEY and QWEN_API_BASE required")
+            return ChatOpenAI(
+                api_key=api_key, base_url=base_url,
+                model=model, temperature=temperature,
+            )
+        if provider == "openrouter":
+            if ChatOpenAI is None:
+                raise ImportError("langchain-openai required for OpenRouter")
+            api_key = os.getenv("OPENROUTER_API_KEY")
+            if not api_key:
+                raise RuntimeError("OPENROUTER_API_KEY required")
+            return ChatOpenAI(
+                api_key=api_key,
+                base_url=self._openrouter_base_url(),
+                model=model,
+                temperature=temperature,
+                default_headers=self._openrouter_headers() or None,
+            )
+        if provider == "huggingface":
+            if ChatOpenAI is None:
+                raise ImportError("langchain-openai required for HuggingFace")
+            api_key = os.getenv("HUGGINGFACE_API_KEY")
+            base_url = os.getenv("HUGGINGFACE_BASE_URL")
+            if not api_key or not base_url:
+                raise RuntimeError("HUGGINGFACE_API_KEY and HUGGINGFACE_BASE_URL required")
+            return ChatOpenAI(
+                api_key=api_key, base_url=base_url,
+                model=model, temperature=temperature,
+            )
+        if provider == "gemini":
+            if ChatGoogleGenerativeAI is None:
+                raise ImportError("langchain-google-genai required for Gemini")
+            api_key = self._resolve_google_api_key()
+            max_tokens = int(os.getenv(f"{purpose}_MAX_OUTPUT_TOKENS", "2048"))
+            return ChatGoogleGenerativeAI(
+                model=model, google_api_key=api_key,
+                temperature=temperature, max_output_tokens=max_tokens,
+            )
+        raise ValueError(f"Unsupported chat provider: {provider}")
+
     def _create_gemini_chat_model(self, purpose: str):
         if ChatGoogleGenerativeAI is None:
             raise ImportError(
