@@ -162,8 +162,27 @@ class RAGUtils:
         `[수정됨·N건]` ribbon (CLAUDE.md — no silent drop).
         """
         from moderation.levels import apply_acl_filter
+        from moderation.filter import (
+            apply as moderate_text,
+            BlockedByModerationError,
+        )
+        from moderation.models import ModerationLog
 
-        kept, redacted_count = apply_acl_filter(search_results, user_access_level)
+        kept_acl, redacted_count = apply_acl_filter(search_results, user_access_level)
+        # Layer 3 — keyword scan on each retained chunk (CLAUDE.md 4경계).
+        kept: List = []
+        for doc in kept_acl:
+            try:
+                mod = moderate_text(
+                    doc.page_content,
+                    source=ModerationLog.Source.RETRIEVAL,
+                )
+            except BlockedByModerationError:
+                redacted_count += 1
+                continue
+            if mod.sanitized != doc.page_content:
+                doc.page_content = mod.sanitized
+            kept.append(doc)
         context = "\n".join([doc.page_content for doc in kept])
         image_paths = [
             doc.metadata["image_path"]

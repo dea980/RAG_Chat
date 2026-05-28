@@ -101,6 +101,29 @@ def ingest_path(
     # 3) 실제 적재
     try:
         raw_docs = list(loader.load(path))
+
+        # Layer 3 (upload boundary) — keyword scan each raw doc against
+        # INBOUND/BOTH rules under Source.UPLOAD. BLOCK drops the doc;
+        # MASK rewrites content before chunking; WARN logs only.
+        from moderation.filter import (
+            apply as moderate_text,
+            BlockedByModerationError,
+        )
+        from moderation.models import ModerationLog as _ML
+        filtered: list[RawDoc] = []
+        for d in raw_docs:
+            try:
+                mod = moderate_text(d.content, source=_ML.Source.UPLOAD)
+            except BlockedByModerationError:
+                logger.info(
+                    f"upload-block: dropped doc from {d.source_file} (keyword rule)"
+                )
+                continue
+            if mod.sanitized != d.content:
+                d.content = mod.sanitized
+            filtered.append(d)
+        raw_docs = filtered
+
         chunks: list[RawDoc] = []
         for d in raw_docs:
             # 모든 청크에 doc_sha256 메타데이터를 자동 부여 — Chroma 에서도 추적 가능

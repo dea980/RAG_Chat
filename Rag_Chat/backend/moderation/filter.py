@@ -43,6 +43,18 @@ class ModerationResult:
         return bool(self.masked_words or self.warned_words or self.blocked_words)
 
 
+_SOURCE_TO_DIRECTIONS: dict[str, Tuple[str, ...]] = {
+    "INBOUND":   ("BOTH", "INBOUND"),
+    "UPLOAD":    ("BOTH", "INBOUND"),
+    "OUTBOUND":  ("BOTH", "OUTBOUND"),
+    "RETRIEVAL": ("BOTH", "OUTBOUND"),
+}
+
+
+def _directions_for(source: str) -> Tuple[str, ...]:
+    return _SOURCE_TO_DIRECTIONS.get(source, ("BOTH", "OUTBOUND"))
+
+
 def _active_rules(direction_keys: Iterable[str]):
     return ForbiddenWord.objects.filter(is_active=True, direction__in=list(direction_keys))
 
@@ -72,7 +84,7 @@ def apply(text: str, *, source: str, user=None, chat=None) -> ModerationResult:
     if not text:
         return ModerationResult(sanitized=text)
 
-    direction_filter = ("BOTH", "INBOUND" if source == ModerationLog.Source.INBOUND else "OUTBOUND")
+    direction_filter = _directions_for(source)
     rules = list(_active_rules(direction_filter))
     if not rules:
         return ModerationResult(sanitized=text)

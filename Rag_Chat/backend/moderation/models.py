@@ -49,6 +49,8 @@ class ModerationLog(models.Model):
     class Source(models.TextChoices):
         INBOUND = "INBOUND", "사용자 입력"
         OUTBOUND = "OUTBOUND", "LLM 응답"
+        UPLOAD = "UPLOAD", "문서 업로드"
+        RETRIEVAL = "RETRIEVAL", "벡터 검색 결과"
 
     user = models.ForeignKey(
         "chat.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="moderation_events"
