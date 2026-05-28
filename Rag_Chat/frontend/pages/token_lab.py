@@ -75,6 +75,7 @@ with st.sidebar:
             ("gemini_estimate", "Gemini estimate"),
             ("claude_estimate", "Claude estimate"),
             ("qwen_estimate", "Qwen estimate"),
+            ("gpt_oss_estimate", "gpt-oss estimate"),
         ],
         format_func=lambda item: item[1],
     )[0]
@@ -132,7 +133,7 @@ if run:
         st.markdown(
             "- 기본 동작은 네트워크 없는 byte 기반 fallback 계산이다.\n"
             "- 서버에서 `TOKENLAB_ENABLE_TIKTOKEN=1` 을 켜고 encoding cache 가 준비되어 있으면 OpenAI 계열은 `tiktoken` exact 계산을 사용한다.\n"
-            "- Gemini, Claude, Qwen 은 실제 tokenizer 가 달라 estimate 로 표시한다.\n"
+            "- Gemini, Claude, Qwen, gpt-oss 는 실제 tokenizer 가 달라 estimate 로 표시한다. gpt-oss 는 o200k_harmony (o200k_base 와 동일 vocab + harmony chat format) 라 multiplier 1.00 이다.\n"
             "- RAG chunk 추천은 `openai_cl100k` 기준 토큰 수를 250/500/1000/2000으로 나눈 값이다."
         )
 else:

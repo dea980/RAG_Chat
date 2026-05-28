@@ -61,6 +61,14 @@ ESTIMATE_PROFILES = [
         "multiplier": 1.08,
         "note": "Approximation based on OpenAI cl100k token count.",
     },
+    {
+        "id": "gpt_oss_estimate",
+        "label": "gpt-oss estimate",
+        "basis": "openai_o200k",
+        "multiplier": 1.00,
+        "note": "gpt-oss uses o200k_harmony (same base vocab as o200k_base, "
+                "+ harmony chat format). Estimate via o200k_base token count.",
+    },
 ]
 
 
