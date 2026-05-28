@@ -40,9 +40,9 @@ from .utils import RAGUtils
 from .providers import provider_manager
 
 # For backward compatibility
-def get_rag_context(question: str) -> Dict[str, Any]:
+def get_rag_context(question: str, user_access_level: str = "internal") -> Dict[str, Any]:
     """Backwards compatibility wrapper for the RAGUtils class method"""
-    return RAGUtils.get_rag_context(question)
+    return RAGUtils.get_rag_context(question, user_access_level=user_access_level)
 
 class RedisMessageHistory(BaseChatMessageHistory):
     def __init__(self, user_id: str):
@@ -92,11 +92,16 @@ def history_session_handler(session_id: str) -> BaseChatMessageHistory:
 class ChatRateThrottle(UserRateThrottle):
     rate = '60/minute'  # Increased for development
 
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 class ChatAPIView(APIView):
     throttle_classes = [ChatRateThrottle]
-        
+    # B4 — chat requires authentication. user identity + access_level come
+    # from the session (`request.user`), not from request payload. This is
+    # the boundary that makes Phase A ACL meaningful — without it, any
+    # client could forge user_id and bypass the sensitivity filter.
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         try:
             question = request.data.get("question")
@@ -106,14 +111,11 @@ class ChatAPIView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Get user_id from JSON payload instead of cookies
-            user_id = request.data.get('user_id')
-            if not user_id:
-                return Response(
-                    {"error": "사용자 ID가 필요합니다."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-                
+            # Authoritative user identity — session, not payload.
+            # Any `user_id` in request.data is silently ignored.
+            user_obj = request.user
+            user_id = user_obj.user_id
+
             # Question Data Save
             chat_data = {
                 "user": user_id,
@@ -126,9 +128,6 @@ class ChatAPIView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             chat_instance = chat_serializer.save()
-
-            # Resolve user for moderation/audit attribution (best-effort).
-            user_obj = User.objects.filter(user_id=user_id).first()
 
             # Inbound forbidden-word filter — runs BEFORE the LLM sees the text.
             # BLOCK short-circuits; MASK rewrites the question; WARN is logged.
@@ -159,6 +158,7 @@ class ChatAPIView(APIView):
                 user_id=user_id,
                 history_handler=history_session_handler,
                 history=history,
+                user_access_level=getattr(user_obj, "access_level", "internal") or "internal",
             )
 
             pipeline = PipelineRunner(
@@ -223,7 +223,9 @@ class ChatAPIView(APIView):
             return Response({
                 "response": response_text,
                 "chat_id": chat_instance.question_id,
-                "images": pipeline_context.images
+                "images": pipeline_context.images,
+                # Layer 2 ACL — frontend uses this to render `[수정됨·N건]`.
+                "redacted_count": rag_metadata.get("redacted_count", 0),
             }, status=status.HTTP_200_OK)
                 
         except Exception as e:
@@ -514,7 +516,7 @@ class ChatRagAPIView(APIView):
             search_results = vector_store.similarity_search(query, k=3)
             
             # Process results using the utility class
-            rag_context = RAGUtils.process_search_results(search_results)
+            rag_context = RAGUtils.process_search_results(search_results, user_access_level="internal")
             
             # Format response with images
             response_data = []
