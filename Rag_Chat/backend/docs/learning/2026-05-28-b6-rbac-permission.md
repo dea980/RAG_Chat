@@ -109,7 +109,7 @@ curl -b /tmp/u.jar http://localhost:8000/api/v1/triple/moderation/rules/
 # 2) 운영자 로그인 → rule 생성 성공
 curl -c /tmp/a.jar -X POST http://localhost:8000/api/v1/triple/auth/login/ \
   -H 'Content-Type: application/json' \
-  -d '{"email":"admin.root@triplechat.test","password":"Triple!23"}'
+  -d '{"email":"admin@triplechat.test","password":"Triple!23"}'
 curl -b /tmp/a.jar -X POST http://localhost:8000/api/v1/triple/moderation/rules/ \
   -H 'Content-Type: application/json' \
   -d '{"word":"대외비","category":"기밀","severity":"BLOCK"}'

@@ -123,7 +123,7 @@ venv/bin/python manage.py test chat.tests.test_auth chat.tests.test_chat_auth_ga
 # 1) ADMIN 으로 로그인 후 BLOCK rule 추가
 curl -c /tmp/a.jar -X POST http://localhost:8000/api/v1/triple/auth/login/ \
   -H 'Content-Type: application/json' \
-  -d '{"email":"admin.root@triplechat.test","password":"Triple!23"}'
+  -d '{"email":"admin@triplechat.test","password":"Triple!23"}'
 curl -b /tmp/a.jar -X POST http://localhost:8000/api/v1/triple/moderation/rules/ \
   -H 'Content-Type: application/json' \
   -d '{"word":"대외비","severity":"BLOCK","direction":"BOTH","category":"기밀"}'

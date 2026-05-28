@@ -93,7 +93,7 @@ cd Rag_Chat/backend && venv/bin/python manage.py runserver &
 cd Rag_Chat/frontend && streamlit run app.py
 ```
 2. 브라우저 `http://localhost:8501`
-3. 로그인 — `admin.root@triplechat.test` / `Triple!23` (시드 사용자)
+3. 로그인 — `admin@triplechat.test` / `Triple!23` (시드 사용자)
 4. 좌측 사이드바에서 **moderation_admin** 페이지 이동
 5. **Rules 탭** — "규칙 추가" 펼침 → `대외비` / `기밀` / `BLOCK` / `BOTH` 입력 → "추가". 표에 즉시 행 추가
 6. **Test panel 탭** — `이건 대외비 문서입니다` 입력, source = `INBOUND` → `실행`
