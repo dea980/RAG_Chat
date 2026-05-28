@@ -139,12 +139,15 @@ class ChatAPIView(APIView):
                     chat=chat_instance,
                 )
             except BlockedByModerationError as exc:
+                from moderation.messages import next_steps_for
                 chat_instance.response_text = "[BLOCKED] 요청에 차단 단어가 포함되어 있습니다."
                 chat_instance.save(update_fields=["response_text"])
                 return Response(
                     {
-                        "error": "요청에 차단된 단어가 포함되어 있습니다. 관리자에게 문의하세요.",
+                        "error": "요청에 차단된 단어가 포함되어 있습니다.",
                         "blocked_words": exc.words,
+                        "categories": exc.categories,
+                        "next_steps": next_steps_for(exc.categories),
                         "chat_id": chat_instance.question_id,
                     },
                     status=status.HTTP_403_FORBIDDEN,

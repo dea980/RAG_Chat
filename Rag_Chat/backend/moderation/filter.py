@@ -21,11 +21,17 @@ from .models import ForbiddenWord, ModerationLog
 
 
 class BlockedByModerationError(Exception):
-    """Raised when an INBOUND message hits a BLOCK rule."""
+    """Raised when an INBOUND/UPLOAD/RETRIEVAL message hits a BLOCK rule."""
 
-    def __init__(self, words: List[str], message: str = "요청에 차단된 단어가 포함되어 있습니다."):
+    def __init__(
+        self,
+        words: List[str],
+        categories: List[str] | None = None,
+        message: str = "요청에 차단된 단어가 포함되어 있습니다.",
+    ):
         super().__init__(message)
         self.words = words
+        self.categories = categories or []
         self.message = message
 
 
@@ -116,7 +122,7 @@ def apply(text: str, *, source: str, user=None, chat=None, dry_run: bool = False
                 sanitized_excerpt="",
                 created_at=timezone.now(),
             )
-        raise BlockedByModerationError(words=words)
+        raise BlockedByModerationError(words=words, categories=categories)
 
     # 2) MASK — collect intervals and substitute in one pass (right-to-left).
     sanitized = text

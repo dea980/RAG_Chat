@@ -306,6 +306,15 @@ def send_chat_request(prompt):
             headers={"Content-Type": "application/json"},
             timeout=10,
         )
+        # C7 — surface 403 (moderation block) to the caller instead of
+        # raising. Body holds blocked_words/categories/next_steps.
+        if response.status_code == 403:
+            try:
+                payload = response.json()
+            except ValueError:
+                payload = {}
+            payload["blocked"] = True
+            return payload
         response.raise_for_status()
         return response.json()
     except requests.Timeout:
@@ -543,28 +552,68 @@ if not st.session_state.session_expired and st.session_state.user_id and is_sess
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 if response_data := send_chat_request(prompt):
-                    response = response_data.get("response", "Sorry, I couldn't process that.")
-                    images = response_data.get("images", [])
-                    redacted_count = response_data.get("redacted_count", 0)
-
-                    # Response Text
-                    st.write(response)
-
-                    # Phase A — redacted ribbon (silent drop 금지).
-                    if redacted_count > 0:
-                        st.warning(
-                            f"[수정됨·{redacted_count}건] 권한 외 chunk 가 검색결과에서 가려졌습니다. "
-                            "접근 권한 확장은 관리자에게 문의하세요."
+                    # C7 — moderation block: amber border + reason + next steps
+                    # (CLAUDE.md 거절 패턴, 빨강 배너 금지).
+                    if response_data.get("blocked"):
+                        blocked_words = response_data.get("blocked_words", [])
+                        categories = response_data.get("categories", [])
+                        next_steps = response_data.get("next_steps", [])
+                        words_chip = " · ".join(f"`{w}`" for w in blocked_words) or "—"
+                        cat_chip = " · ".join(categories) or "—"
+                        steps_md = "\n".join(f"- {s}" for s in next_steps)
+                        block_html = f"""
+<div style="
+    border:1px solid #D9A441;
+    background:rgba(217,164,65,0.08);
+    border-radius:6px;
+    padding:12px 16px;
+    margin:8px 0;
+    font-family:-apple-system,'Pretendard Variable',sans-serif;
+">
+  <div style="font-weight:500;color:#D9A441;
+              font-family:'Geist Mono',monospace;font-size:11px;
+              letter-spacing:0.09em;text-transform:uppercase;">
+    BLOCKED · MODERATION
+  </div>
+  <div style="margin-top:6px;color:#F3F2EE;">
+    질문에 차단된 표현이 포함되어 답변이 중단되었습니다.
+  </div>
+  <div style="margin-top:8px;color:#8B8B93;font-family:'Geist Mono',monospace;
+              font-size:12px;">
+    Words: {words_chip} &nbsp;·&nbsp; Categories: {cat_chip}
+  </div>
+</div>
+"""
+                        st.markdown(block_html, unsafe_allow_html=True)
+                        if next_steps:
+                            st.markdown("**다음 단계**")
+                            st.markdown(steps_md)
+                        st.session_state.messages.append(
+                            {"role": "assistant", "content": "[BLOCKED — moderation]"}
                         )
+                    else:
+                        response = response_data.get("response", "Sorry, I couldn't process that.")
+                        images = response_data.get("images", [])
+                        redacted_count = response_data.get("redacted_count", 0)
 
-                    # Response Image
-                    if images:
-                        st.write("🔹 Related Images:")
-                        for image in images:
-                            image_url = STATIC_IMAGE_URL + image + ".png"
-                            st.image(image_url, use_container_width=True)
+                        # Response Text
+                        st.write(response)
 
-                    st.session_state.messages.append({"role": "assistant", "content": response})
+                        # Phase A — redacted ribbon (silent drop 금지).
+                        if redacted_count > 0:
+                            st.warning(
+                                f"[수정됨·{redacted_count}건] 권한 외 chunk 가 검색결과에서 가려졌습니다. "
+                                "접근 권한 확장은 관리자에게 문의하세요."
+                            )
+
+                        # Response Image
+                        if images:
+                            st.write("🔹 Related Images:")
+                            for image in images:
+                                image_url = STATIC_IMAGE_URL + image + ".png"
+                                st.image(image_url, use_container_width=True)
+
+                        st.session_state.messages.append({"role": "assistant", "content": response})
 
 else:
     st.warning("Your session has expired. Please refresh the page to start a new session.")
