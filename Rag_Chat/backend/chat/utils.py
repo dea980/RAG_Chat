@@ -153,32 +153,48 @@ class RAGUtils:
             raise
     
     @staticmethod
-    def process_search_results(search_results):
-        """Process search results into legacy fields plus raw docs."""
-        context = "\n".join([doc.page_content for doc in search_results])
+    def process_search_results(search_results, user_access_level: str = "internal"):
+        """Process search results into legacy fields plus raw docs.
+
+        Layer 2 ACL — chunks whose `metadata["sensitivity"]` exceeds the
+        caller's `user_access_level` are filtered out and counted into
+        `redacted_count`. Frontend uses that count to render the
+        `[수정됨·N건]` ribbon (CLAUDE.md — no silent drop).
+        """
+        from moderation.levels import apply_acl_filter
+
+        kept, redacted_count = apply_acl_filter(search_results, user_access_level)
+        context = "\n".join([doc.page_content for doc in kept])
         image_paths = [
             doc.metadata["image_path"]
-            for doc in search_results
+            for doc in kept
             if "image_path" in doc.metadata
         ]
         return {
             "context": context,
             "image_paths": image_paths,
-            "docs": list(search_results),
+            "docs": list(kept),
+            "redacted_count": redacted_count,
         }
 
     @staticmethod
-    def get_rag_context(question: str, k: int | None = None) -> Dict[str, Any]:
-        """Retrieve RAG context (top-k raw docs + merged text)."""
+    def get_rag_context(
+        question: str,
+        k: int | None = None,
+        user_access_level: str = "internal",
+    ) -> Dict[str, Any]:
+        """Retrieve RAG context (top-k raw docs + merged text) with ACL filter."""
         if k is None:
             k = int(os.getenv("RERANKER_TOP_N", "20"))
         try:
             vector_store = RAGUtils.get_vector_store()
             search_results = vector_store.similarity_search(question, k=k)
-            return RAGUtils.process_search_results(search_results)
+            return RAGUtils.process_search_results(
+                search_results, user_access_level=user_access_level
+            )
         except Exception as e:
             logger.error(f"Error in get_rag_context: {str(e)}")
-            return {"context": "", "image_paths": [], "docs": []}
+            return {"context": "", "image_paths": [], "docs": [], "redacted_count": 0}
     
     @staticmethod
     def create_vector_store_from_documents(documents: List[Document]):

@@ -4,9 +4,25 @@ Why this app exists: sales reps were burning time tracking down "who owns
 this product?" / "which department supports it?". The chatbot uses these
 tables to resolve those questions deterministically (no LLM hallucination
 on org structure).
+
+Phase A (moderation 3-layer): adds `Sensitivity` ladder + `Document` model
+so each ingested source file carries an admin-tunable classification.
 """
 from django.conf import settings
 from django.db import models
+
+
+class Sensitivity(models.TextChoices):
+    """4-rung sensitivity ladder shared by Document and User.access_level.
+
+    Mirrors `moderation.levels.SENSITIVITY_LEVEL` (string -> integer).
+    `restricted` documents are blocked from vector indexing (Layer 1).
+    """
+
+    PUBLIC = "public", "공개"
+    INTERNAL = "internal", "사내 공유"
+    CONFIDENTIAL = "confidential", "대외비"
+    RESTRICTED = "restricted", "기밀 (인덱싱 차단)"
 
 
 class Department(models.Model):
@@ -65,3 +81,44 @@ class Product(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name} [{self.get_category_display()}]"
+
+
+class Document(models.Model):
+    """Source file ingested into the vector store.
+
+    One row per uploaded file (PDF, CSV, HWP, ...). The `sensitivity` column
+    drives all four moderation boundaries — restricted skips indexing, every
+    other level is replicated into chunk metadata so retrieval can filter by
+    `User.access_level`.
+    """
+
+    name = models.CharField(max_length=240, help_text="원본 파일명 (확장자 포함)")
+    source_uri = models.CharField(
+        max_length=512, blank=True, default="",
+        help_text="file:// 또는 upload:// 키 — IngestManifest 와 연결",
+    )
+    sensitivity = models.CharField(
+        max_length=20,
+        choices=Sensitivity.choices,
+        default=Sensitivity.INTERNAL,
+        db_index=True,
+        help_text="업로드 시 부여. restricted = 벡터 스토어 진입 차단",
+    )
+    sensitivity_set_by = models.ForeignKey(
+        "chat.User",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="docs_classified",
+    )
+    sensitivity_set_at = models.DateTimeField(auto_now=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-uploaded_at"]
+        indexes = [
+            models.Index(fields=["sensitivity"]),
+            models.Index(fields=["source_uri"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} [{self.sensitivity}]"

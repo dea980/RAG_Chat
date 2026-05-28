@@ -33,6 +33,7 @@ def ingest_path(
     *,
     force: bool = False,
     source_uri_override: str | None = None,
+    sensitivity: str = "internal",
 ) -> int:
     """파일 1개를 ingest. 기록된 청크 수 반환 (skip 되면 0).
 
@@ -51,6 +52,15 @@ def ingest_path(
         4) loader.load() → splitter.split() → sink.write()
         5) manifest 에 성공/실패 기록
     """
+    # Layer 1 — restricted documents never enter the vector store.
+    # See moderation/levels.py and 2026-05-28-moderation-architecture spec §5.1.
+    from moderation.levels import should_index
+    if not should_index(sensitivity):
+        logger.info(
+            f"skip (restricted): {path} — sensitivity={sensitivity} blocked from indexing"
+        )
+        return 0
+
     loader = loader_for(path)
     if loader is None:
         raise ValueError(f"No loader registered for: {path}")
@@ -95,7 +105,11 @@ def ingest_path(
         for d in raw_docs:
             # 모든 청크에 doc_sha256 메타데이터를 자동 부여 — Chroma 에서도 추적 가능
             d.metadata.setdefault("doc_sha256", doc_sha)
-            chunks.extend(splitter.split(d))
+            # Layer 2 — chunk metadata 의 sensitivity 가 retrieval 필터의 기준.
+            d.metadata.setdefault("sensitivity", sensitivity)
+            for chunk in splitter.split(d):
+                chunk.metadata.setdefault("sensitivity", sensitivity)
+                chunks.append(chunk)
 
         result = sink.write(chunks)
     except Exception as exc:
@@ -131,12 +145,13 @@ def ingest_paths(
     sink: BaseSink | None = None,
     *,
     force: bool = False,
+    sensitivity: str = "internal",
 ) -> int:
     """여러 파일을 순차 ingest. 총 청크 수 반환. 개별 실패는 건너뜀."""
     total = 0
     for path in paths:
         try:
-            total += ingest_path(path, splitter, sink, force=force)
+            total += ingest_path(path, splitter, sink, force=force, sensitivity=sensitivity)
         except ValueError as exc:
             # registry 에 없는 확장자 — 단일 파일 실패가 전체를 막지 않게
             logger.warning(f"skipped {path}: {exc}")

@@ -24,7 +24,10 @@ class RetrieveModule(PipelineModule):
 
     def run(self, context: ModuleContext) -> ModuleContext:
         try:
-            rag_context = RAGUtils.get_rag_context(context.question)
+            rag_context = RAGUtils.get_rag_context(
+                context.question,
+                user_access_level=context.user_access_level,
+            )
         except Exception as exc:  # pragma: no cover - defensive guard
             raise ModuleError(f"Failed to retrieve context: {exc}") from exc
 
