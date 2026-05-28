@@ -11,7 +11,7 @@ class RAGUtilsTestCase(TestCase):
     Test case for the RAGUtils utility class
     """
     
-    @patch('backend.chat.utils.provider_manager.get_vector_store')
+    @patch('chat.utils.provider_manager.get_vector_store')
     def test_get_vector_store(self, mock_get_vector_store):
         """Test the get_vector_store method"""
         mock_vector_store = MagicMock()
@@ -43,7 +43,7 @@ class RAGUtilsTestCase(TestCase):
         self.assertEqual(result["context"], expected_context)
         self.assertEqual(result["image_paths"], expected_image_paths)
     
-    @patch('backend.chat.utils.RAGUtils.get_vector_store')
+    @patch('chat.utils.RAGUtils.get_vector_store')
     def test_get_rag_context(self, mock_get_vector_store):
         """Test the get_rag_context method"""
         # Setup mocks
@@ -63,7 +63,7 @@ class RAGUtilsTestCase(TestCase):
         self.assertEqual(result["context"], "Test content 1")
         self.assertEqual(result["image_paths"], ["image1.png"])
     
-    @patch('backend.chat.utils.provider_manager.create_vector_store_from_documents')
+    @patch('chat.utils.provider_manager.create_vector_store_from_documents')
     def test_create_vector_store_from_documents(self, mock_create_vector_store):
         """Test the create_vector_store_from_documents method"""
         mock_vector_store = MagicMock()

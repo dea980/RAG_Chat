@@ -1,11 +1,22 @@
-"""Unit tests for OnnxBgeReranker — model is mocked to avoid HF download."""
+"""Unit tests for OnnxBgeReranker — model is mocked to avoid HF download.
+
+The reranker is opt-in (`feature/onnx-reranker` branch) and torch/optimum/
+transformers are heavy deps not installed in the default dev venv. Skip the
+whole module cleanly when any of them is missing so `manage.py test` doesn't
+treat it as an ERROR. (pytest.importorskip raises pytest's own Skipped,
+which the Django/unittest loader does not recognise.)
+"""
+import importlib
+import unittest
 from unittest.mock import MagicMock, patch
 
-import pytest
+for _mod in ("torch", "optimum.onnxruntime", "transformers"):
+    try:
+        importlib.import_module(_mod)
+    except ImportError:
+        raise unittest.SkipTest(f"{_mod} not installed — onnx reranker tests skipped")
 
-pytest.importorskip("torch")
-pytest.importorskip("optimum.onnxruntime")
-pytest.importorskip("transformers")
+import pytest  # noqa: E402  — re-imported so fixture-based tests can still run via pytest
 
 
 @pytest.fixture
