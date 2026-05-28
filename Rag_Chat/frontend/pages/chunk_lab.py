@@ -213,8 +213,12 @@ with st.sidebar:
     st.subheader("Splitter")
     splitter_name = st.selectbox(
         "전략",
-        ["recursive", "row"],
-        help="recursive = 길이 기반 / row = 1행 1청크 (표 전용)",
+        ["recursive", "row", "heading", "clause"],
+        help=(
+            "recursive = 길이 기반 / row = 1행 1청크 (표 전용) / "
+            "heading = markdown heading 계층 (구조화 md) / "
+            "clause = 제N조·Article N 조항 단위 (사규·법규)"
+        ),
     )
 
     st.divider()
@@ -320,7 +324,8 @@ else:
             "- **chunk_overlap**: 인접 청크 간 겹침. 너무 크면 중복 검색·"
             "비용↑, 너무 작으면 경계에서 맥락 끊김.\n"
             "- **splitter**: `recursive` = 단락/문장/단어 우선순위로 자름. "
-            "`row` = 표 1행 1청크.\n"
-            "- 사규 같은 구조 문서는 추후 **조항 단위 splitter** 가 더 좋다 "
-            "(7강 강사가 39조 정답 못 찾다 조항 단위로 바꾸고 찾은 사례)."
+            "`row` = 표 1행 1청크. `heading` = markdown `#`~`######` 계층 "
+            "단위로 자름(구조화된 md). `clause` = `제N조`/`Article N` 조항 "
+            "단위(사규·법규 — 7강 강사가 39조 정답 못 찾다 조항 단위로 "
+            "바꾸고 찾은 그 케이스)."
         )
