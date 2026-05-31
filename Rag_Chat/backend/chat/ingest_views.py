@@ -70,16 +70,25 @@ def _chunks_from_file(tmp_path: str, splitter) -> list[dict[str, Any]]:
     return out
 
 
-def _ingest_uploaded_file(tmp_path: str, *, original_name: str) -> int:
+def _ingest_uploaded_file(
+    tmp_path: str, *, original_name: str,
+    sensitivity: str = "internal", collection: str = "policy",
+) -> int:
     """Load + split + persist an uploaded file via the unified pipeline.
 
     - splitter 는 `pipeline.ingest_path` 가 source_type 별 자동 dispatch
     - source_uri 는 `upload://<original_name>` 안정 키 — 같은 이름 재업로드 시
       Phase 2 manifest 가 SHA256 비교로 dedup 처리
+    - collection / sensitivity 는 chunk metadata + VectorChunk 컬럼에 박힘
     - 결과: 중복 적재 차단 + 옛 버전 청크 자동 제거 + manifest 기록
     """
     source_uri = f"upload://{original_name}"
-    return ingest_path(tmp_path, source_uri_override=source_uri)
+    return ingest_path(
+        tmp_path,
+        source_uri_override=source_uri,
+        sensitivity=sensitivity,
+        collection=collection,
+    )
 
 
 class IngestPreviewAPIView(APIView):
@@ -160,6 +169,9 @@ class IngestUploadAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        collection = request.data.get("collection", "policy")
+        sensitivity = request.data.get("sensitivity", "internal")
+
         processed = []
         failed = []
 
@@ -180,7 +192,8 @@ class IngestUploadAPIView(APIView):
                     tmp_path = tmp.name
 
                 chunk_count = _ingest_uploaded_file(
-                    tmp_path, original_name=upload.name
+                    tmp_path, original_name=upload.name,
+                    sensitivity=sensitivity, collection=collection,
                 )
                 processed.append({
                     "filename": upload.name,

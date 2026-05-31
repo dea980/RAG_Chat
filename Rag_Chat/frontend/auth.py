@@ -104,3 +104,36 @@ def render_user_chip(container=None) -> None:
     if target.button("Sign out", key="auth_logout_btn"):
         logout()
         st.rerun()
+
+
+def render_topbar() -> None:
+    """Top-right chip + Sign out button on the main page (not just sidebar).
+
+    Sidebar can be collapsed by default on first load, hiding the only logout
+    affordance. Render the same chip + button at the top of the main column
+    so every authenticated page has a visible exit even when sidebar is hidden.
+    """
+    user = current_user()
+    if not user:
+        return
+    role = user.get("role", "")
+    access = user.get("access_level", "")
+    email = user.get("email", "")
+    col_info, col_btn = st.columns([6, 1])
+    with col_info:
+        st.markdown(
+            f"<div style='display:flex;gap:8px;align-items:center;"
+            f"font-family:Geist Mono,ui-monospace,monospace;font-size:12px;"
+            f"color:#9aa0a6;'>"
+            f"<span>{email}</span>"
+            f"<span style='background:#2A2D33;color:#E89B3C;padding:1px 8px;"
+            f"border-radius:10px;font-size:10px;'>role: {role}</span>"
+            f"<span style='background:#2A2D33;color:#9aa0a6;padding:1px 8px;"
+            f"border-radius:10px;font-size:10px;'>access: {access}</span>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+    with col_btn:
+        if st.button("Sign out", key="auth_logout_topbar_btn", use_container_width=True):
+            logout()
+            st.rerun()

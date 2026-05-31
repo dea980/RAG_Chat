@@ -1,0 +1,60 @@
+{"id": "sf01", "question": "Galaxy Z Fold6 메인 디스플레이 크기 알려줘", "expected_keywords": ["Z Fold6", "7.6"], "scenario": "폴더블 메인 디스플레이", "source": "foldable_handbook.md"}
+{"id": "sf02", "question": "Z Fold6 커버 디스플레이 사이즈는?", "expected_keywords": ["Z Fold6", "6.3"], "scenario": "폴더블 커버 화면", "source": "foldable_lineup.csv"}
+{"id": "sf03", "question": "Z Fold6 칩셋이 뭐야", "expected_keywords": ["Z Fold6", "Snapdragon 8 Gen 3"], "scenario": "폴더블 SoC", "source": "foldable_lineup.csv"}
+{"id": "sf04", "question": "Galaxy Z Flip6 메인 카메라 화소", "expected_keywords": ["Z Flip6", "50MP"], "scenario": "플립 카메라", "source": "foldable_handbook.md"}
+{"id": "sf05", "question": "Z Fold5 와 Z Fold6 차이점은", "expected_keywords": ["Z Fold5", "Z Fold6"], "scenario": "세대 비교", "source": "foldable_handbook.md"}
+{"id": "sf06", "question": "폴더블 폰 방수 등급 어떻게 돼", "expected_keywords": ["Z Fold6", "IP48"], "scenario": "폴더블 IP", "source": "foldable_handbook.md"}
+{"id": "sf07", "question": "Galaxy A55 카메라 OIS 지원해?", "expected_keywords": ["A55", "OIS"], "scenario": "중급 카메라 기능", "source": "a_series_handbook.md"}
+{"id": "sf08", "question": "A35 5G 디스플레이 크기 알려줘", "expected_keywords": ["A35", "6.6"], "scenario": "A 시리즈 디스플레이", "source": "a_series_lineup.csv"}
+{"id": "sf09", "question": "Galaxy A25 충전 속도 몇 W", "expected_keywords": ["A25", "25W"], "scenario": "A 시리즈 충전", "source": "a_series_handbook.md"}
+{"id": "sf10", "question": "A16 5G 칩셋 뭐 들어가나요", "expected_keywords": ["A16", "Exynos"], "scenario": "엔트리 SoC (caveat: Exynos/Dimensity 변형)", "source": "a_series_lineup.csv"}
+{"id": "sf11", "question": "A 시리즈 무선 충전 되나", "expected_keywords": ["A55", "무선"], "scenario": "다운그레이드 항목 확인", "source": "a_series_handbook.md"}
+{"id": "sf12", "question": "S25 와 A55 카메라 차이는?", "expected_keywords": ["S25", "A55"], "scenario": "플래그십 vs 중급 비교", "source": "a_series_handbook.md"}
+{"id": "sf13", "question": "Galaxy Tab S10 Ultra DeX 지원해?", "expected_keywords": ["Tab S10 Ultra", "DeX"], "scenario": "B2B 생산성", "source": "tab_handbook.md"}
+{"id": "sf14", "question": "Tab S10+ 디스플레이 사이즈", "expected_keywords": ["Tab S10+", "12.4"], "scenario": "태블릿 디스플레이", "source": "tab_lineup.csv"}
+{"id": "sf15", "question": "Tab S9 FE S Pen 기본 포함되나", "expected_keywords": ["Tab S9 FE", "S Pen"], "scenario": "액세서리 포함 여부", "source": "tab_handbook.md"}
+{"id": "sf16", "question": "Galaxy Tab A9+ 가격", "expected_keywords": ["Tab A9+"], "scenario": "엔트리 태블릿 가격 (caveat: USD N/A)", "source": "tab_lineup.csv"}
+{"id": "sf17", "question": "갤럭시 탭 무선 DeX 가능한 모델", "expected_keywords": ["Tab S10 Ultra", "무선 DeX"], "scenario": "무선 DeX 매핑", "source": "tab_handbook.md"}
+{"id": "sf18", "question": "Tab S10 Ultra 와 S10+ 차이가 뭐야", "expected_keywords": ["Tab S10 Ultra", "S10+"], "scenario": "태블릿 모델 비교", "source": "tab_handbook.md"}
+{"id": "sf19", "question": "Galaxy Buds3 Pro ANC 되나", "expected_keywords": ["Buds3 Pro", "ANC"], "scenario": "이어버드 ANC", "source": "buds_lineup.csv"}
+{"id": "sf20", "question": "Buds3 코덱 뭐 지원해", "expected_keywords": ["Buds3"], "scenario": "오디오 코덱", "source": "buds_lineup.csv"}
+{"id": "sf21", "question": "Galaxy Buds FE 무선 충전 되나", "expected_keywords": ["Buds FE"], "scenario": "FE 충전 옵션", "source": "buds_lineup.csv"}
+{"id": "sf22", "question": "Galaxy Watch7 디스플레이 크기", "expected_keywords": ["Watch7", "40mm"], "scenario": "워치 디스플레이", "source": "watch_lineup.csv"}
+{"id": "sf23", "question": "Watch Ultra 배터리 용량 얼마야", "expected_keywords": ["Watch Ultra", "590"], "scenario": "워치 배터리", "source": "watch_lineup.csv"}
+{"id": "sf24", "question": "Galaxy Watch FE 가격", "expected_keywords": ["Watch FE"], "scenario": "엔트리 워치 가격", "source": "watch_lineup.csv"}
+{"id": "sf25", "question": "S25 Ultra 랑 같이 추천할 액세서리 번들", "expected_keywords": ["S25 Ultra", "Watch Ultra"], "scenario": "번들 시나리오", "source": "accessories_handbook.md"}
+{"id": "sf26", "question": "Buds3 Pro 가 Galaxy 외에 iPhone 에서도 동작해?", "expected_keywords": ["Buds3 Pro"], "scenario": "타 OS 호환", "source": "accessories_handbook.md"}
+{"id": "sf27", "question": "Galaxy S30 출시일", "expected_keywords": [], "scenario": "N/A — 존재하지 않는 모델 (LLM 이 모른다 답해야 함)", "source": "n/a"}
+{"id": "sf28", "question": "Galaxy Z Flip6 가격 한국 출고가", "expected_keywords": ["Z Flip6"], "scenario": "N/A — caveat USD 가격 미확인", "source": "foldable_handbook.md"}
+{"id": "sf29", "question": "삼성 폴더블이랑 일반 폰 중 어떤 게 영업팀 시연용으로 적합", "expected_keywords": ["폴더블", "Fold"], "scenario": "추천 — 의미 검색", "source": "foldable_handbook.md"}
+{"id": "sf30", "question": "B2B 제안서에 쓰기 좋은 태블릿 추천해줘", "expected_keywords": ["Tab S10", "B2B"], "scenario": "B2B 추천 — 의미 검색", "source": "tab_handbook.md"}
+{"id": "sf31", "question": "폴드6 얼마야", "expected_keywords": ["Z Fold6"], "scenario": "줄임말 — Z Fold6 가격", "source": "foldable_handbook.md"}
+{"id": "sf32", "question": "z fold 6 칩셋", "expected_keywords": ["Z Fold6", "Snapdragon"], "scenario": "소문자 + 공백 변형", "source": "foldable_lineup.csv"}
+{"id": "sf33", "question": "S25울트라 카메라", "expected_keywords": ["S25 Ultra", "200MP"], "scenario": "오타 — 띄어쓰기 없음", "source": "galaxy_handbook.md"}
+{"id": "sf34", "question": "탭 S10플 무게", "expected_keywords": ["Tab S10+"], "scenario": "오타 — 'Plus' 줄임", "source": "tab_lineup.csv"}
+{"id": "sf35", "question": "버즈3 프로 노이즈 캔슬링", "expected_keywords": ["Buds3 Pro", "ANC"], "scenario": "한국어 synonym (ANC = 노이즈 캔슬링)", "source": "buds_lineup.csv"}
+{"id": "sf36", "question": "S25 Ultra 와 Z Fold6 중 어떤 게 카메라 더 좋아", "expected_keywords": ["S25 Ultra", "Z Fold6"], "scenario": "Cross-category 비교", "source": "galaxy_handbook.md"}
+{"id": "sf37", "question": "Galaxy A 시리즈 중에 OIS 없는 모델 알려줘", "expected_keywords": ["A16"], "scenario": "부정 매칭 — 다운그레이드 검색", "source": "a_series_handbook.md"}
+{"id": "sf38", "question": "Tab 라인업 중 5G 안 되는 모델", "expected_keywords": ["Tab"], "scenario": "부정 매칭 — 5G 비지원", "source": "tab_handbook.md"}
+{"id": "sf39", "question": "Watch7 과 Watch Ultra 차이가 뭐야", "expected_keywords": ["Watch7", "Watch Ultra"], "scenario": "워치 라인업 비교", "source": "accessories_handbook.md"}
+{"id": "sf40", "question": "삼성 폰 중에 가장 가벼운 폴더블 모델", "expected_keywords": ["Z Flip6"], "scenario": "Multi-fact — 카테고리+속성 최소값", "source": "foldable_lineup.csv"}
+{"id": "sf41", "question": "12GB RAM 이상이고 256GB 저장공간 가지는 모델 알려줘", "expected_keywords": ["12GB", "256GB"], "scenario": "Multi-fact — 두 조건 AND", "source": "galaxy_lineup.csv"}
+{"id": "sf42", "question": "Galaxy A55 무선 충전 되나요", "expected_keywords": ["A55", "무선"], "scenario": "기능 부재 확인 (handbook 에 '무선 충전 미지원' 명시)", "source": "a_series_handbook.md"}
+{"id": "sf43", "question": "A16 5G 망원 카메라 화소수", "expected_keywords": ["A16"], "scenario": "기능 부재 — A16 에는 망원 카메라 없음", "source": "a_series_handbook.md"}
+{"id": "sf44", "question": "Z Flip 시리즈에 S Pen 지원돼?", "expected_keywords": ["Z Flip"], "scenario": "기능 부재 — Flip 은 S Pen 미지원", "source": "foldable_handbook.md"}
+{"id": "sf45", "question": "Tab A9+ 와 Tab S9 FE 중 키보드 별매 어느 게 더 비싸", "expected_keywords": ["Tab"], "scenario": "비교 + 가격 (caveat: USD N/A)", "source": "tab_handbook.md"}
+{"id": "sf46", "question": "Snapdragon 8 Elite 들어간 모델 전체 리스트", "expected_keywords": ["Snapdragon 8 Elite", "S25"], "scenario": "Multi-fact — 칩셋별 라인업", "source": "galaxy_handbook.md"}
+{"id": "sf47", "question": "1TB 저장공간 옵션 있는 모델은?", "expected_keywords": ["1TB"], "scenario": "Spec 옵션 필터", "source": "foldable_lineup.csv"}
+{"id": "sf48", "question": "200MP 메인 카메라 있는 모델 다 알려줘", "expected_keywords": ["200MP"], "scenario": "센서 사양 필터", "source": "galaxy_lineup.csv"}
+{"id": "sf49", "question": "7년 OS 업데이트 보장하는 라인업", "expected_keywords": ["7 years", "S25"], "scenario": "정책 사양 검색", "source": "galaxy_handbook.md"}
+{"id": "sf50", "question": "IP68 방수 등급 안 되는 폴더블", "expected_keywords": ["IP48", "Z Fold"], "scenario": "부정 매칭 — 폴더블 IP 등급 차이", "source": "foldable_handbook.md"}
+{"id": "sf51", "question": "Galaxy Ring 1세대 출시일", "expected_keywords": [], "scenario": "N/A — Ring 은 코퍼스에 없음 (LLM 모른다 답해야)", "source": "n/a"}
+{"id": "sf52", "question": "Galaxy S26 시리즈 스펙", "expected_keywords": [], "scenario": "N/A — 미출시 모델", "source": "n/a"}
+{"id": "sf53", "question": "Buds Pro 4세대 정보", "expected_keywords": [], "scenario": "N/A — Buds4 는 코퍼스에 없음", "source": "n/a"}
+{"id": "sf54", "question": "Galaxy Fold7 출시 일정", "expected_keywords": [], "scenario": "N/A — Fold7 은 아직 미출시", "source": "n/a"}
+{"id": "sf55", "question": "Galaxy A07 가격", "expected_keywords": [], "scenario": "N/A — 코퍼스 외 모델", "source": "n/a"}
+{"id": "sf56", "question": "갤럭시 워치 울트라 충전 방식", "expected_keywords": ["Watch Ultra"], "scenario": "한국어 표현 + 워치 액세서리", "source": "watch_lineup.csv"}
+{"id": "sf57", "question": "주력 영업 시연용 추천 폰", "expected_keywords": ["S25", "Fold"], "scenario": "Semantic — 추천 의미 검색", "source": "galaxy_handbook.md"}
+{"id": "sf58", "question": "발열 적은 칩셋 들어간 갤럭시", "expected_keywords": ["Snapdragon"], "scenario": "Semantic — 칩셋 특성 검색", "source": "galaxy_handbook.md"}
+{"id": "sf59", "question": "보호필름 기본 부착된 모델", "expected_keywords": [], "scenario": "N/A — 코퍼스에 보호필름 정보 없음", "source": "n/a"}
+{"id": "sf60", "question": "갤럭시 폰 OS 보안 패치 기간", "expected_keywords": ["7 years", "security"], "scenario": "정책 검색 — 한국어 paraphrase", "source": "galaxy_handbook.md"}

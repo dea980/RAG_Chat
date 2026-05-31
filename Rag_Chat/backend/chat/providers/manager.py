@@ -97,6 +97,8 @@ class ProviderManager:
                 self._embedding_model = self._create_gemini_embeddings()
             elif self.embedding_provider_name == "openrouter":
                 self._embedding_model = self._create_openrouter_embeddings()
+            elif self.embedding_provider_name == "ollama":
+                self._embedding_model = self._create_ollama_embeddings()
             else:
                 raise ValueError(
                     f"Unsupported embedding provider: {self.embedding_provider_name}"
@@ -153,6 +155,21 @@ class ProviderManager:
             model=model,
             google_api_key=api_key,
         )
+
+    def _create_ollama_embeddings(self):
+        """Local Ollama embeddings (quota-free, requires `ollama serve`).
+
+        모델: OLLAMA_EMBEDDING_MODEL (default = nomic-embed-text, 274MB).
+        다국어 옵션: bge-m3, mxbai-embed-large 등 `ollama pull` 로 추가.
+        """
+        from langchain_community.embeddings import OllamaEmbeddings
+
+        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+        # OllamaEmbeddings 는 /api/embeddings 만 쓰므로 /v1 suffix 제거
+        if base_url.endswith("/v1"):
+            base_url = base_url[:-3]
+        model = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
+        return OllamaEmbeddings(base_url=base_url, model=model)
 
     # ------------------------------------------------------------------
     # Reasoning / generation models

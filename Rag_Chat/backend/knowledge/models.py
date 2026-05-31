@@ -7,9 +7,13 @@ on org structure).
 
 Phase A (moderation 3-layer): adds `Sensitivity` ladder + `Document` model
 so each ingested source file carries an admin-tunable classification.
+
+Phase B (pgvector): `VectorChunk` stores embeddings + metadata in PostgreSQL
+so vector search, ACL filtering, and relational queries share one DB.
 """
 from django.conf import settings
 from django.db import models
+from pgvector.django import VectorField
 
 
 class Sensitivity(models.TextChoices):
@@ -23,6 +27,22 @@ class Sensitivity(models.TextChoices):
     INTERNAL = "internal", "사내 공유"
     CONFIDENTIAL = "confidential", "대외비"
     RESTRICTED = "restricted", "기밀 (인덱싱 차단)"
+
+
+class DocCollection(models.TextChoices):
+    """Domain classification — orthogonal to Sensitivity.
+
+    `Sensitivity` answers "누가 볼 수 있나" (ACL ladder).
+    `DocCollection` answers "어떤 종류의 데이터인가" (domain bucket).
+
+    Same chunk has both — e.g. sales report = collection=sales, sensitivity=confidential.
+    Default `policy` = 가장 흔한 first-upload 케이스 (사규/매뉴얼 운영팀 적재).
+    """
+
+    TRAINING = "training", "학습 자료"
+    POLICY = "policy", "사규·정책"
+    SALES = "sales", "영업 데이터"
+    USER = "user", "유저 추가"
 
 
 class Department(models.Model):
@@ -104,6 +124,13 @@ class Document(models.Model):
         db_index=True,
         help_text="업로드 시 부여. restricted = 벡터 스토어 진입 차단",
     )
+    collection = models.CharField(
+        max_length=20,
+        choices=DocCollection.choices,
+        default=DocCollection.POLICY,
+        db_index=True,
+        help_text="도메인 분류 — 검색 시 namespace 필터로 사용",
+    )
     sensitivity_set_by = models.ForeignKey(
         "chat.User",
         on_delete=models.SET_NULL,
@@ -117,8 +144,60 @@ class Document(models.Model):
         ordering = ["-uploaded_at"]
         indexes = [
             models.Index(fields=["sensitivity"]),
+            models.Index(fields=["collection"]),
             models.Index(fields=["source_uri"]),
         ]
 
     def __str__(self) -> str:
         return f"{self.name} [{self.sensitivity}]"
+
+
+class VectorChunk(models.Model):
+    """Embedded chunk stored in PostgreSQL via pgvector.
+
+    Replaces Chroma as the vector store. Each row = one chunk with its
+    embedding, content, and metadata. ACL filtering happens via SQL WHERE
+    on the sensitivity column — no Python post-processing needed.
+    """
+
+    chunk_id = models.CharField(
+        max_length=64, unique=True, db_index=True,
+        help_text="Deterministic SHA256 id (same as ChromaSink)",
+    )
+    content = models.TextField(help_text="Chunk text used for retrieval")
+    embedding = VectorField(
+        dimensions=3072,
+        help_text="Gemini text-embedding-004 vector",
+    )
+
+    # Metadata — flattened for SQL filtering
+    source_file = models.CharField(max_length=512, blank=True, default="")
+    source_type = models.CharField(max_length=40, blank=True, default="")
+    sensitivity = models.CharField(
+        max_length=20,
+        choices=Sensitivity.choices,
+        default=Sensitivity.INTERNAL,
+        db_index=True,
+    )
+    collection = models.CharField(
+        max_length=20,
+        choices=DocCollection.choices,
+        default=DocCollection.POLICY,
+        db_index=True,
+    )
+    page = models.IntegerField(null=True, blank=True)
+    section = models.CharField(max_length=200, blank=True, default="")
+    doc_sha256 = models.CharField(max_length=64, blank=True, default="")
+    extra_metadata = models.JSONField(default=dict, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["sensitivity"]),
+            models.Index(fields=["collection"]),
+            models.Index(fields=["source_file"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"VectorChunk({self.chunk_id[:8]}… {self.source_type})"

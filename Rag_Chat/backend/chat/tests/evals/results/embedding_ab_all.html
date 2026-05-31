@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Embedding A/B Report — recall@3</title>
+<style>
+  :root { --bg:#0A0B0D; --surface:#141519; --border:#2a2b30; --text:#e0e0e0;
+           --accent:#E89B3C; --mono:'Geist Mono','SF Mono',monospace; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font:15px/1.6 'Pretendard',sans-serif;
+          padding:2rem; max-width:960px; margin:0 auto; }
+  h1 { color:var(--accent); font-size:1.4rem; margin-bottom:.3rem; }
+  h2 { color:var(--accent); font-size:1.1rem; margin:1.5rem 0 .5rem;
+        border-bottom:1px solid var(--border); padding-bottom:.2rem; }
+  .subtitle { color:#888; font-size:.85rem; margin-bottom:1.5rem; }
+  table { width:100%; border-collapse:collapse; margin:.8rem 0; font-size:.85rem; }
+  th,td { padding:.5rem .6rem; border:1px solid var(--border); }
+  th { background:var(--surface); color:var(--accent); font-weight:600; }
+  td { background:var(--bg); }
+  .metric { font-family:var(--mono); text-align:right; }
+  .verdict { background:var(--surface); border-left:4px solid var(--accent);
+              padding:.8rem 1rem; margin:1rem 0; border-radius:0 6px 6px 0; }
+</style>
+</head>
+<body>
+<h1>Embedding Model A/B — recall@3</h1>
+<p class="subtitle">FAISS IndexFlatIP / keyword recall + MRR</p>
+
+<h2>Summary</h2>
+<table>
+<tr><th>Model</th><th>Dim</th><th>Recall@3</th><th>MRR</th><th>Latency(ms)</th><th>Index(MB)</th></tr>
+<tr>
+            <td><strong>minilm</strong></td>
+            <td class="metric">384</td>
+            <td class="metric">0.963</td>
+            <td class="metric">0.805</td>
+            <td class="metric">34.2</td>
+            <td class="metric">0.01</td>
+        </tr><tr>
+            <td><strong>gemini</strong></td>
+            <td class="metric">3072</td>
+            <td class="metric">0.917</td>
+            <td class="metric">0.917</td>
+            <td class="metric">422.5</td>
+            <td class="metric">0.08</td>
+        </tr><tr>
+            <td><strong>bge-m3</strong></td>
+            <td class="metric">1024</td>
+            <td class="metric">0.911</td>
+            <td class="metric">0.903</td>
+            <td class="metric">54.9</td>
+            <td class="metric">0.03</td>
+        </tr>
+</table>
+
+<h2>Per-Question Recall Heatmap</h2>
+<table>
+<tr><th>Q</th><th>minilm</th><th>bge-m3</th><th>gemini</th></tr>
+<tr><td>q01</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td></tr><tr><td>q02</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td></tr><tr><td>q03</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td></tr><tr><td>q04</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td></tr><tr><td>q05</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td></tr><tr><td>q06</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(248,113,113,0.3);text-align:center">0.00</td></tr><tr><td>q07</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td></tr><tr><td>q08</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td></tr><tr><td>q09</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,0.333);text-align:center">0.33</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td></tr><tr><td>q10</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td></tr><tr><td>q11</td><td style="background:rgba(74,222,128,0.75);text-align:center">0.75</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td></tr><tr><td>q12</td><td style="background:rgba(74,222,128,0.8);text-align:center">0.80</td><td style="background:rgba(74,222,128,0.6);text-align:center">0.60</td><td style="background:rgba(74,222,128,1.0);text-align:center">1.00</td></tr>
+</table>
+
+<div class="verdict">
+  상단 모델이 recall@3 기준 최고 성능. MRR과 latency를 함께 고려하여 결정.
+</div>
+</body>
+</html>

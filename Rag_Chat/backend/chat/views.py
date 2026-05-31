@@ -45,16 +45,25 @@ def get_rag_context(question: str, user_access_level: str = "internal") -> Dict[
     return RAGUtils.get_rag_context(question, user_access_level=user_access_level)
 
 class RedisMessageHistory(BaseChatMessageHistory):
-    def __init__(self, user_id: str):
+    def __init__(self, user_id: str, history_limit: int | None = None):
+        """history_limit = last N messages to return (None = all).
+
+        Truncating history caps prompt size — each retained turn becomes
+        prefix tokens fed to the LLM on every subsequent call.
+        """
         self.user_id = user_id
-    
+        self.history_limit = history_limit
+
     @property
     def messages(self) -> List[BaseMessage]:
-        """Return a list of messages from Redis"""
+        """Return a list of messages from Redis (newest-last)."""
         try:
             message_store = get_message_store()
             raw_messages = message_store.get_messages(self.user_id)
-            
+
+            if self.history_limit is not None and self.history_limit >= 0:
+                raw_messages = raw_messages[-self.history_limit:]
+
             # Convert raw messages to LangChain BaseMessage objects
             result = []
             for msg in raw_messages:
@@ -62,7 +71,7 @@ class RedisMessageHistory(BaseChatMessageHistory):
                     result.append(AIMessage(content=msg.get("content", "")))
                 else:
                     result.append(HumanMessage(content=msg.get("content", "")))
-            
+
             return result
         except Exception as e:
             logger.error(f"Error retrieving messages from history: {str(e)}")
@@ -86,8 +95,9 @@ class RedisMessageHistory(BaseChatMessageHistory):
         except Exception as e:
             logger.error(f"Error clearing message history: {str(e)}")
 
-def history_session_handler(session_id: str) -> BaseChatMessageHistory:
-    return RedisMessageHistory(session_id)
+def history_session_handler(session_id: str, history_limit: int | None = None) -> BaseChatMessageHistory:
+    """If `history_limit` is set, only the last N messages are exposed to the LLM."""
+    return RedisMessageHistory(session_id, history_limit=history_limit)
 
 class ChatRateThrottle(UserRateThrottle):
     rate = '60/minute'  # Increased for development
@@ -155,6 +165,8 @@ class ChatAPIView(APIView):
             sanitized_question = mod_in.sanitized
 
             history = history_session_handler(user_id)
+            # Persona × audience_tier ACL — view 가 User.persona 를 컨텍스트에 주입.
+            # null 이면 RetrieveModule 이 가장 보수적 fallback (public + retail) 사용.
             pipeline_context = ModuleContext(
                 question=sanitized_question,
                 session_id=user_id,
@@ -162,6 +174,7 @@ class ChatAPIView(APIView):
                 history_handler=history_session_handler,
                 history=history,
                 user_access_level=getattr(user_obj, "access_level", "internal") or "internal",
+                extra={"persona": getattr(user_obj, "persona", None)},
             )
 
             pipeline = PipelineRunner(

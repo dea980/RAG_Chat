@@ -12,8 +12,6 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os
 from pathlib import Path
 from urllib.parse import urlparse
-from celery.schedules import crontab
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -83,8 +81,6 @@ INSTALLED_APPS = [
     # Third-Party
     "rest_framework",
     "corsheaders",
-    "django_celery_beat",
-
     # Triple
     "chat",
     "knowledge",
@@ -96,11 +92,7 @@ INSTALLED_APPS = [
 # Set BEFORE any migration that references settings.AUTH_USER_MODEL.
 AUTH_USER_MODEL = "chat.User"
 
-# Redis + Celery settings
-CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-
+# Redis settings
 # Get Redis host and port from environment
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
 REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
@@ -111,14 +103,6 @@ REDIS_MESSAGE_TTL = 60 * 60 * 24 * 7  # 7 days in seconds
 
 # Session settings
 SESSION_TIMEOUT = int(os.getenv('SESSION_TIMEOUT', '300'))  # Default: 5 minutes
-
-# Celery Beat settings
-CELERY_BEAT_SCHEDULE = {
-    'check-session-expiry-every-minute': {
-        'task': 'chat.tasks.check_session_expiry',
-        'schedule': crontab(minute='*/5'),  # Update chat data every 5 minutes
-    },
-}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -243,6 +227,10 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
+
+# User-uploaded chat attachments. Layout: media/uploads/<conv_uuid>/<msg_uuid>/<name>
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

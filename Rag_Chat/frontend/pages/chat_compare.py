@@ -14,6 +14,11 @@ import streamlit as st
 
 st.set_page_config(page_title="Chat Compare", layout="wide")
 
+import sys as _sys
+_sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from role_gate import require_manager  # noqa: E402
+require_manager()
+
 API_BASE = os.getenv("BACKEND_URL", "http://localhost:8000") + "/api/v1/triple"
 COMPARE_URL = f"{API_BASE}/chat/compare/"
 

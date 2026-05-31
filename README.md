@@ -44,6 +44,8 @@ Traceability: who asked what, with which data, and when.
 - Redis: session cache + Pub/Sub.
 - Celery: keeps logging/vector tasks off the request path.
 - Provider abstraction (`chat/providers/manager.py`): env-driven embedding/reasoning/generation across 5 providers, each role configurable independently.
+- **Design system**: 모든 시각·UI 결정의 단일 출처는 [DESIGN.md](./DESIGN.md) — Quiet Utilitarian 다크 우선, Pretendard + Geist Mono, 액센트 = molten amber `#E89B3C`. 시그니쳐 = answer 밑 horizontal **citation chip ribbon**(출처 추적 가시화). Streamlit · 포트폴리오 · 미래 Next.js 세 표면 공용 토큰. 새 UI 만들기 전 반드시 참조.
+- **Moderation 운영자 권한**: 욕설·대외비·PII 필터는 **운영자가 코드 없이 튜닝**(`/admin/moderation/` 카테고리·임계값·실시간 테스트 패널). 4경계(업로드·질문·검색·답변) 동일 스키마 감사 로그.
 
 ## 6) Implemented
 - Session-based RAG chat (Streamlit + Django)

@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>페르소나 × 기능 × 보안 통합 설계</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+<style>
+  :root {
+    --bg: #0A0B0D;
+    --surface: #14151A;
+    --surface-2: #1C1E26;
+    --fg: #E8E9EC;
+    --muted: #8B8F99;
+    --border: #2A2D36;
+    --accent: #E89B3C;
+    --accent-soft: rgba(232,155,60,.12);
+    --code-bg: #1C1E26;
+    --note: #161821;
+    --p1: #60A5FA;
+    --p2: #34D399;
+    --p3: #A78BFA;
+    --p4: #F472B6;
+    --tier-public: #6EE7B7;
+    --tier-retail: #60A5FA;
+    --tier-b2b: #A78BFA;
+    --tier-comp: #FBBF24;
+    --tier-carrier: #F472B6;
+    --tier-internal: #F87171;
+    --layer-auth: #60A5FA;
+    --layer-mod: #FBBF24;
+    --layer-intent: #A78BFA;
+    --layer-acl: #34D399;
+    --layer-gen: #E89B3C;
+    --layer-redact: #F87171;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+    max-width: 980px; margin: 0 auto; padding: 56px 28px 120px;
+    line-height: 1.75; font-size: 15.5px;
+    font-feature-settings: "tnum" on;
+  }
+  h1 { font-size: 32px; margin: 0 0 8px; letter-spacing: -.6px; font-weight: 700; }
+  p.lead {
+    color: var(--muted); margin: 0 0 32px; font-size: 15px;
+    border-left: 3px solid var(--accent); padding: 4px 0 4px 14px;
+  }
+  h2 {
+    font-size: 22px; margin: 64px 0 16px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border); font-weight: 600;
+  }
+  h2 .num {
+    display: inline-block; min-width: 30px; height: 30px; padding: 0 10px;
+    background: var(--accent); color: #14151A; border-radius: 6px;
+    text-align: center; line-height: 30px; font-size: 13px;
+    margin-right: 10px; font-weight: 700;
+    font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  }
+  h3 { font-size: 17px; margin: 32px 0 12px; color: var(--accent); font-weight: 600; }
+  h4 { font-size: 14px; margin: 16px 0 6px; color: var(--muted); font-weight: 500; }
+  p { margin: 12px 0; }
+  strong { color: #fff; font-weight: 600; }
+  em { color: var(--accent); font-style: normal; font-weight: 500; }
+  code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: 13.5px;
+    font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+    color: #F4D7A9;
+  }
+  pre {
+    background: var(--code-bg); padding: 16px 18px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.65;
+    border: 1px solid var(--border);
+    font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre code { background: transparent; padding: 0; color: var(--fg); }
+  blockquote {
+    margin: 14px 0; padding: 8px 16px; border-left: 3px solid var(--accent);
+    background: var(--surface); color: var(--fg); border-radius: 0 6px 6px 0;
+  }
+  table {
+    border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 13.5px;
+    border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+  }
+  th, td {
+    border-top: 1px solid var(--border); border-right: 1px solid var(--border);
+    padding: 10px 14px; text-align: left; vertical-align: top;
+  }
+  th:last-child, td:last-child { border-right: none; }
+  thead th { background: var(--surface-2); font-weight: 600; color: var(--accent); border-top: none; }
+  tbody tr:first-child td { border-top: 1px solid var(--border); }
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .analogy {
+    background: var(--note); padding: 16px 20px; border-radius: 8px;
+    border-left: 3px solid var(--accent); margin: 18px 0;
+  }
+  .analogy strong { color: var(--accent); }
+  .warn-banner {
+    background: rgba(248,113,113,.08);
+    border: 1px solid rgba(248,113,113,.4);
+    color: #F87171;
+    padding: 14px 20px; border-radius: 8px;
+    margin: 24px 0; font-size: 13.5px;
+  }
+  .warn-banner strong { color: #F87171; }
+  .meta {
+    display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px;
+    color: var(--muted); margin: 4px 0 32px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+  }
+  .meta span::before { content: "·"; margin-right: 16px; color: var(--border); }
+  .meta span:first-child::before { content: none; }
+  .toc {
+    background: var(--surface); padding: 18px 24px; border-radius: 10px;
+    margin: 32px 0; font-size: 14px; border: 1px solid var(--border);
+  }
+  .toc h4 { margin: 0 0 8px; color: var(--accent); font-size: 12px;
+            letter-spacing: 0.1em; text-transform: uppercase; }
+  .toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 24px; }
+  .toc li { margin: 2px 0; }
+  .toc a { color: var(--fg); }
+
+  /* Tier pills */
+  .tier-pill {
+    display: inline-block; padding: 2px 10px; border-radius: 999px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    margin-right: 4px;
+  }
+  .tier-public { background: rgba(110,231,183,.18); color: var(--tier-public); }
+  .tier-retail { background: rgba(96,165,250,.18); color: var(--tier-retail); }
+  .tier-b2b { background: rgba(167,139,250,.18); color: var(--tier-b2b); }
+  .tier-comp { background: rgba(251,191,36,.18); color: var(--tier-comp); }
+  .tier-carrier { background: rgba(244,114,182,.18); color: var(--tier-carrier); }
+  .tier-internal { background: rgba(248,113,113,.18); color: var(--tier-internal); }
+  .p-pill {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  }
+  .p1-pill { background: rgba(96,165,250,.18); color: var(--p1); }
+  .p2-pill { background: rgba(52,211,153,.18); color: var(--p2); }
+  .p3-pill { background: rgba(167,139,250,.18); color: var(--p3); }
+  .p4-pill { background: rgba(244,114,182,.18); color: var(--p4); }
+
+  /* Matrix table */
+  table.matrix th { text-align: center; }
+  table.matrix td { text-align: center; vertical-align: middle; }
+  table.matrix td.tier { text-align: left; }
+  .yes { color: #6EE7B7; font-weight: 700; font-family: "Geist Mono", ui-monospace, monospace; }
+  .no { color: #F87171; font-weight: 700; font-family: "Geist Mono", ui-monospace, monospace; }
+  .maybe { color: var(--accent); font-weight: 700; font-family: "Geist Mono", ui-monospace, monospace; }
+
+  /* Layer stack diagram */
+  .layer-stack {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; margin: 24px 0;
+  }
+  .layer-stack-title {
+    text-align: center; color: var(--muted); font-size: 11px;
+    letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 18px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+  }
+  .layer {
+    display: grid; grid-template-columns: 56px 1fr;
+    gap: 12px; align-items: center;
+    padding: 14px 16px; margin-bottom: 10px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; border-left: 4px solid var(--accent);
+    font-size: 13.5px;
+  }
+  .layer .ln {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    text-align: center; padding: 4px 0; background: var(--accent-soft); border-radius: 4px;
+  }
+  .layer .body strong { display: block; color: #fff; font-size: 14px; margin-bottom: 3px; }
+  .layer .body small { color: var(--muted); font-size: 12px;
+                       font-family: "Geist Mono", ui-monospace, monospace; }
+  .layer.l1 { border-left-color: var(--layer-auth); }
+  .layer.l1 .ln { background: rgba(96,165,250,.18); color: var(--layer-auth); }
+  .layer.l2 { border-left-color: var(--layer-mod); }
+  .layer.l2 .ln { background: rgba(251,191,36,.18); color: var(--layer-mod); }
+  .layer.l3 { border-left-color: var(--layer-intent); }
+  .layer.l3 .ln { background: rgba(167,139,250,.18); color: var(--layer-intent); }
+  .layer.l4 { border-left-color: var(--layer-acl); }
+  .layer.l4 .ln { background: rgba(52,211,153,.18); color: var(--layer-acl); }
+  .layer.l5 { border-left-color: var(--layer-gen); }
+  .layer.l5 .ln { background: rgba(232,155,60,.18); color: var(--layer-gen); }
+  .layer.l6 { border-left-color: var(--layer-redact); }
+  .layer.l6 .ln { background: rgba(248,113,113,.18); color: var(--layer-redact); }
+
+  /* Defense depth */
+  .defense {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0;
+  }
+  .defense .card {
+    padding: 16px 18px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; border-top: 3px solid;
+  }
+  .defense .card.tier1 { border-top-color: #6EE7B7; }
+  .defense .card.tier2 { border-top-color: #FBBF24; }
+  .defense .card.tier3 { border-top-color: #F87171; }
+  .defense .card h4 { color: #fff; margin: 0 0 6px; font-size: 14px; }
+  .defense .card .level {
+    display: inline-block; padding: 1px 8px; border-radius: 4px;
+    font-family: "Geist Mono", ui-monospace, monospace; font-size: 10px;
+    margin-bottom: 8px;
+  }
+  .defense .card.tier1 .level { background: rgba(110,231,183,.18); color: #6EE7B7; }
+  .defense .card.tier2 .level { background: rgba(251,191,36,.18); color: #FBBF24; }
+  .defense .card.tier3 .level { background: rgba(248,113,113,.18); color: #F87171; }
+  .defense .card p { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+
+  .exercise {
+    background: var(--surface); padding: 18px 22px; border-radius: 8px;
+    margin: 18px 0; border: 1px solid var(--border);
+  }
+  .exercise h4 { margin-top: 0; color: var(--fg); font-size: 14px; }
+  .exercise .level {
+    display: inline-block; padding: 2px 10px; border-radius: 4px;
+    font-family: "Geist Mono", ui-monospace, monospace; font-size: 11px;
+    letter-spacing: 0.06em; background: var(--accent-soft); color: var(--accent);
+    margin-left: 8px; font-weight: 600;
+  }
+  .exercise .hint {
+    margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border);
+    color: var(--muted); font-size: 13.5px;
+  }
+</style>
+</head>
+<body>
+
+<h1>페르소나 × 기능 × 보안 통합 설계</h1>
+<div class="meta">
+  <span>2026-05-29</span>
+  <span>Triple Chat / 보안 설계</span>
+  <span>관련: <a href="./2026-05-29-sales-persona-analysis.html">페르소나 분석</a></span>
+</div>
+
+<p class="lead">
+  <strong>같은 질문이라도 페르소나마다 다른 답이 나와야 한다.</strong>
+  매장직이 "기업 견적 얼마?" 라고 물으면 답이 <em>없는 게 정답</em> 이다.
+  본사 기획이 같은 질문 하면 공개 경쟁사 가격을 줘야 한다.
+  이걸 만들려면 <em>인덱싱 / 검색 / 답변 / 감사</em> 4 layer 모두에 페르소나 인식이 들어가야 한다.
+  기존 B1-B7 RBAC + Phase A SensitivityLabel 위에 1 layer 더.
+</p>
+
+<div class="warn-banner">
+  <strong>RAG 특수 위험.</strong> LLM 이 chunk 들을 <em>연결</em> 해서 추론한다.
+  chunk A = "S25 매장 KPI 목표 100대", chunk B = "현재 누적 50대" → LLM 이 "달성률 50%" 라 답함.
+  둘 다 따로는 OK 지만 합쳐서 매장 실적 누설. <strong>chunk 결합 추론이 가장 위험.</strong>
+</div>
+
+<div class="toc">
+  <h4>목차</h4>
+  <ol>
+    <li><a href="#analogy">비유 — 회사 출입증·캐비닛·CCTV</a></li>
+    <li><a href="#tradeoff">기능 vs 보안 trade-off</a></li>
+    <li><a href="#tier">audience_tier 6 분류</a></li>
+    <li><a href="#acl">persona × tier 매트릭스</a></li>
+    <li><a href="#feature">persona × feature 매트릭스</a></li>
+    <li><a href="#integration">기존 시스템 통합 지점</a></li>
+    <li><a href="#code">핵심 코드 5줄</a></li>
+    <li><a href="#flow">6 layer 데이터 흐름</a></li>
+    <li><a href="#admin">운영자 admin UI</a></li>
+    <li><a href="#principles">3 신뢰성 원칙</a></li>
+    <li><a href="#exercises">연습 문제</a></li>
+    <li><a href="#decisions">다음 결정 사항</a></li>
+  </ol>
+</div>
+
+<hr>
+
+<h2 id="analogy"><span class="num">비유</span>회사 출입증·캐비닛·CCTV</h2>
+
+<p>회사에 들어왔다고 모든 문서를 볼 수 있는 게 아니다:</p>
+<ul>
+  <li><strong>출입증 (badge)</strong> = 로그인. 누구인지 증명.</li>
+  <li><strong>부서 (department)</strong> = 페르소나. 어떤 데이터에 접근 가능한지.</li>
+  <li><strong>캐비닛 자물쇠 (lock)</strong> = chunk metadata. 데이터마다 누가 볼 수 있는지.</li>
+  <li><strong>CCTV (audit log)</strong> = 누가 무엇을 시도했는지 기록.</li>
+</ul>
+<div class="analogy">
+  <strong>핵심 — 자물쇠는 인덱싱 시점부터.</strong> 캐비닛 자체를 매장 사무실에 안 두는 게
+  가장 안전. 검색 필터·답변 마스킹은 보조 방어선.
+</div>
+
+<hr>
+
+<h2 id="tradeoff"><span class="num">VS</span>기능 vs 보안 trade-off</h2>
+
+<table>
+  <thead><tr><th>차원</th><th>기능 (helpfulness)</th><th>보안 (confidentiality)</th></tr></thead>
+  <tbody>
+    <tr><td>코퍼스</td><td>다 넣어야 답할 수 있음</td><td>비공개는 절대 안 넣음</td></tr>
+    <tr><td>검색</td><td>넓게 찾을수록 좋음</td><td>권한 밖 chunk 노출 안 됨</td></tr>
+    <tr><td>답변</td><td>풍부할수록 좋음</td><td>추론으로 기밀 누설 안 됨</td></tr>
+    <tr><td>감사</td><td>사용성 해침</td><td>모든 조회 기록 필수</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2 id="tier"><span class="num">×6</span>audience_tier 6 분류</h2>
+
+<p>모든 chunk 에 부여하는 <strong>민감도 + 청중</strong> 라벨.</p>
+
+<table>
+  <thead><tr><th>tier</th><th>정의</th><th>예시 chunk</th><th>인덱싱</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><span class="tier-pill tier-public">public</span></td>
+      <td>누구나 공개</td>
+      <td>gsmarena 스펙, USD 가격</td>
+      <td class="yes">✓</td>
+    </tr>
+    <tr>
+      <td><span class="tier-pill tier-retail">retail</span></td>
+      <td>한국 소비자 대상 공개</td>
+      <td>자급제 가격, 색상 출시일, 매장 위치</td>
+      <td class="yes">✓</td>
+    </tr>
+    <tr>
+      <td><span class="tier-pill tier-b2b">b2b</span></td>
+      <td>기업 고객 대상 공개</td>
+      <td>Knox 호환, 보안 인증, 임대 옵션</td>
+      <td class="yes">✓</td>
+    </tr>
+    <tr>
+      <td><span class="tier-pill tier-comp">competitive</span></td>
+      <td>대외 분석용 (경쟁사)</td>
+      <td>iPhone 16 벤치, 시장 점유율</td>
+      <td class="yes">✓</td>
+    </tr>
+    <tr>
+      <td><span class="tier-pill tier-carrier">carrier</span></td>
+      <td>통신사별 정보</td>
+      <td>약정 옵션, 결합 할인, 통신사 출고가</td>
+      <td class="yes">✓</td>
+    </tr>
+    <tr>
+      <td><span class="tier-pill tier-internal">internal_only</span></td>
+      <td><strong>사내 한정</strong></td>
+      <td>마진율, KPI, 견적 단가, 매장 인센티브</td>
+      <td class="no">✗ <strong>인덱싱 안 함</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="analogy">
+  <strong>internal_only 처리 원칙.</strong> corpus 에 절대 안 들어감. 챗봇이 받으면
+  <em>"내부 시스템 참조 필요. 챗봇은 공개 정보만 제공."</em> redirect.
+  내부 BI / SAP / Salesforce 로 사용자 안내. RAG 가 그 역할 하지 않음.
+</div>
+
+<hr>
+
+<h2 id="acl"><span class="num">ACL</span>persona × tier 접근 매트릭스</h2>
+
+<table class="matrix">
+  <thead>
+    <tr>
+      <th style="text-align:left">audience_tier</th>
+      <th><span class="p-pill p1-pill">P1 매장</span></th>
+      <th><span class="p-pill p2-pill">P2 B2B</span></th>
+      <th><span class="p-pill p3-pill">P3 본사</span></th>
+      <th><span class="p-pill p4-pill">P4 외판</span></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td class="tier"><span class="tier-pill tier-public">public</span></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td class="tier"><span class="tier-pill tier-retail">retail</span></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td class="tier"><span class="tier-pill tier-b2b">b2b</span></td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">✗</td></tr>
+    <tr><td class="tier"><span class="tier-pill tier-comp">competitive</span></td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td><td class="no">✗</td></tr>
+    <tr><td class="tier"><span class="tier-pill tier-carrier">carrier</span></td><td class="yes">✓</td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td class="tier"><span class="tier-pill tier-internal">internal_only</span></td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+  </tbody>
+</table>
+
+<p style="color: var(--muted); font-size: 13px;">
+  애매한 경계 셀은 <em>운영자 admin 에서 토글 가능</em> 해야 함. 코드 변경 없이.
+</p>
+
+<hr>
+
+<h2 id="feature"><span class="num">FN</span>persona × feature 매트릭스</h2>
+
+<table class="matrix">
+  <thead>
+    <tr>
+      <th style="text-align:left">Feature</th>
+      <th><span class="p-pill p1-pill">P1</span></th>
+      <th><span class="p-pill p2-pill">P2</span></th>
+      <th><span class="p-pill p3-pill">P3</span></th>
+      <th><span class="p-pill p4-pill">P4</span></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td class="tier">가격 즉답</td><td>자급제+통신사</td><td>공개가만</td><td>가격 history</td><td>통신사 월납</td></tr>
+    <tr><td class="tier">비교표 출력</td><td class="maybe">△ 짧은 표</td><td class="yes">✓ 풀비교</td><td class="yes">✓ 경쟁사</td><td class="no">✗</td></tr>
+    <tr><td class="tier">결합 할인 시뮬</td><td class="yes">✓</td><td class="no">✗</td><td class="maybe">△ 분석</td><td class="yes">✓</td></tr>
+    <tr><td class="tier">기업 견적 redirect</td><td class="no">✗</td><td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td></tr>
+    <tr><td class="tier">벤치마크 점수</td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td><td class="no">✗</td></tr>
+    <tr><td class="tier">음성 친화 답변</td><td class="maybe">△ 매장</td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td></tr>
+    <tr><td class="tier">답변 톤</td><td>친근 즉답</td><td>격식 전문</td><td>데이터 중립</td><td>음성 단답</td></tr>
+    <tr><td class="tier">Citation</td><td>chip 1~2개</td><td>표 + URL</td><td>출처+날짜</td><td>음성 친화</td></tr>
+    <tr><td class="tier">답변 길이 상한</td><td>2 문장</td><td>10 문장</td><td>무제한</td><td>1 문장</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2 id="integration"><span class="num">B+P</span>기존 시스템 통합 지점</h2>
+
+<h3>이미 있는 빌딩 블록</h3>
+
+<table>
+  <thead><tr><th>시스템</th><th>위치</th><th>페르소나에 활용</th></tr></thead>
+  <tbody>
+    <tr><td>User AbstractBaseUser</td><td><code>accounts/models.py</code> (B1)</td><td><code>persona</code> field 추가</td></tr>
+    <tr><td>Session-based login</td><td><code>accounts/views.py</code> (B2-B5)</td><td>login 시 persona 주입</td></tr>
+    <tr><td>RBAC Permissions</td><td><code>knowledge/models.Permission</code> (B6)</td><td>페르소나 = role 형태로 통합</td></tr>
+    <tr><td>ForbiddenWord 4경계</td><td><code>knowledge/models.ForbiddenWord</code> (B7)</td><td>persona scope 필드 추가</td></tr>
+    <tr><td>Operator admin UI</td><td><code>/admin/moderation/</code> (C2)</td><td>persona × tier 매트릭스 편집</td></tr>
+    <tr><td>SensitivityLabel</td><td><code>chat/vector_metadata.py</code> (Phase A)</td><td><code>audience_tier</code> 옆에 공존</td></tr>
+    <tr><td>Retrieval ACL filter</td><td><code>chat/pipeline/modules.py</code></td><td>filter 에 persona check 추가</td></tr>
+    <tr><td>Audit log schema</td><td>4경계 공통</td><td>persona·escalation 컬럼 추가</td></tr>
+  </tbody>
+</table>
+
+<h3>신규로 추가할 것</h3>
+<ol>
+  <li><code>User.persona</code> — DB migration. enum (P1, P2, P3, P4) + nullable (관리자)</li>
+  <li><code>Chunk.audience_tier</code> — ingest 시 부여. 파일 경로 매핑 + 운영자 override</li>
+  <li><code>PersonaAccess</code> 모델 — persona × tier 허용 매트릭스. admin 토글</li>
+  <li><code>PersonaPolicy</code> 모델 — prompt template, citation 형식, 답변 길이 상한</li>
+  <li><code>EscalationAttempt</code> — 권한 밖 정보 요청 로깅</li>
+  <li><code>PersonaClassifier</code> (선택) — 사용자 톤 분석. authorization 결정엔 X (정적 enum 우선)</li>
+</ol>
+
+<hr>
+
+<h2 id="code"><span class="num">5/L</span>핵심 코드 5줄</h2>
+
+<p><code>chat/pipeline/modules.py</code> — Retrieval ACL filter 확장:</p>
+<pre><code># 기존 (Phase A)
+filter = {"sensitivity_label": {"$in": allowed_labels}}
+# 추가
+filter["audience_tier"] = {"$in": tiers_for_persona(user.persona)}
+hits = vs.similarity_search(query, k=20, filter=filter)
+# Persona 매트릭스 위반 = retrieval 단계에서 차단. 답변 단계로 안 감.</code></pre>
+
+<p><code>chat/ingest/sinks/chroma.py</code> — 인덱싱 시점 tier 부여:</p>
+<pre><code>flat_meta["audience_tier"] = infer_tier(doc.source_file)
+# infer_tier: 파일 경로 → tier (예: samples/* → public, internal/* → internal_only)
+# internal_only 면 인덱싱 자체를 skip 하는 게 더 안전</code></pre>
+
+<hr>
+
+<h2 id="flow"><span class="num">×6</span>6 layer 데이터 흐름</h2>
+
+<div class="layer-stack">
+  <div class="layer-stack-title">Login → Output — 보안 통합 6 layers</div>
+
+  <div class="layer l1">
+    <div class="ln">L1</div>
+    <div class="body">
+      <strong>Authentication (B1-B5)</strong>
+      <small>session 검증 · user_id · persona 확정</small>
+    </div>
+  </div>
+
+  <div class="layer l2">
+    <div class="ln">L2</div>
+    <div class="body">
+      <strong>Pre-retrieval moderation (B7/C2)</strong>
+      <small>ForbiddenWord 4경계 · persona scope 적용</small>
+    </div>
+  </div>
+
+  <div class="layer l3">
+    <div class="ln">L3</div>
+    <div class="body">
+      <strong>Query intent + persona match check</strong>
+      <small>tone = b2b vs User.persona = P1 → mismatch → EscalationAttempt 로깅</small>
+    </div>
+  </div>
+
+  <div class="layer l4">
+    <div class="ln">L4</div>
+    <div class="body">
+      <strong>Retrieval with ACL filter</strong>
+      <small>filter(category, audience_tier IN allowed) · dense + BM25 + reranker</small>
+    </div>
+  </div>
+
+  <div class="layer l5">
+    <div class="ln">L5</div>
+    <div class="body">
+      <strong>Generation (persona prompt)</strong>
+      <small>P1: 1~2문장 친근 · P2: 표+격식 · P3: 수치+출처 · P4: 음성 단답</small>
+    </div>
+  </div>
+
+  <div class="layer l6">
+    <div class="ln">L6</div>
+    <div class="body">
+      <strong>Output moderation + audit</strong>
+      <small>persona-aware redaction · internal_only 토큰 마스킹 · audit log</small>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<h2 id="admin"><span class="num">UI</span>운영자 admin UI</h2>
+
+<p>기존 <code>/admin/moderation/</code> (C2) 에 탭 추가:</p>
+
+<table>
+  <thead><tr><th>탭</th><th>편집 가능</th></tr></thead>
+  <tbody>
+    <tr><td><strong>카테고리·패턴</strong> (기존 C2)</td><td>욕설·대외비·PII 룰</td></tr>
+    <tr><td><strong>Persona Access</strong> (신규)</td><td>persona × audience_tier 6×4 매트릭스 토글</td></tr>
+    <tr><td><strong>Persona Policy</strong> (신규)</td><td>persona 별 prompt, 답변 길이, citation 형식</td></tr>
+    <tr><td><strong>Escalation Audit</strong> (신규)</td><td>권한 위반 시도 로그 + 통계</td></tr>
+  </tbody>
+</table>
+
+<p>운영자가 "P1 매장에도 carrier 정보 보이게" 결정 시: admin 셀 1개 토글 → DB 업데이트 → 다음 query 즉시 반영 → 변경 자체가 audit log 에 기록.</p>
+
+<hr>
+
+<h2 id="principles"><span class="num">★3</span>3 신뢰성 원칙</h2>
+
+<h3>1. 무성 드롭 금지</h3>
+<p>P1 이 B2B 정보 요청 시 "결과 없음" silent return X. <strong>명시적 redirect:</strong></p>
+<pre><code>"기업 도입 견적은 B2B 영업팀 담당입니다.
+연락처: [redirect]
+챗봇은 공개 가격만 제공할 수 있습니다."</code></pre>
+
+<h3>2. 인덱싱 차단 &gt; 검색 필터 &gt; 답변 마스킹</h3>
+
+<div class="defense">
+  <div class="card tier1">
+    <span class="level">L1 · 100% 안전</span>
+    <h4>인덱싱 차단</h4>
+    <p>chunk 가 corpus 에 들어오지 않음. 검색·답변 단계에서 만날 일 자체가 없음. <strong>internal_only 는 여기서.</strong></p>
+  </div>
+  <div class="card tier2">
+    <span class="level">L2 · 99% 안전</span>
+    <h4>검색 필터</h4>
+    <p>chroma <code>filter</code> 로 retrieval 단계에서 차단. filter 버그 가능성 1%.</p>
+  </div>
+  <div class="card tier3">
+    <span class="level">L3 · 95% 안전</span>
+    <h4>답변 마스킹</h4>
+    <p>LLM 출력 토큰 검사. prompt injection 우회 가능성. <strong>마지막 안전망.</strong></p>
+  </div>
+</div>
+
+<h3>3. 모든 escalation 시도는 audit</h3>
+<p>P1 이 "마진 알려줘" 시도 시:</p>
+<ul>
+  <li>답변: redirect (위 1번)</li>
+  <li>audit: <code>EscalationAttempt(user=p1_user, query="마진 알려줘", from_persona=P1, requested_tier=internal_only, decision=block, ts=...)</code></li>
+  <li>운영자 대시보드에 누적 카운트. 패턴이면 운영자 룰 추가.</li>
+</ul>
+
+<hr>
+
+<h2 id="exercises"><span class="num">EX</span>연습 문제</h2>
+
+<div class="exercise">
+  <h4>문제 1 <span class="level">쉬움</span></h4>
+  <p><code>audience_tier=b2b</code> chunk 100개. P1 매장 사용자가 "Knox" 검색.
+     retrieval 단계 무슨 일? 답변에 무엇이 나와야?</p>
+  <div class="hint"><strong>힌트.</strong> filter 적용 후 hits=0. 무성 드롭 금지 원칙.</div>
+</div>
+
+<div class="exercise">
+  <h4>문제 2 <span class="level">중간</span></h4>
+  <p>운영자가 admin 에서 "P1 도 carrier 정보 보이게" 토글. 진행 중 P1 세션 즉시 영향?
+     캐시·세션·DB 측면에서 답하라.</p>
+  <div class="hint"><strong>힌트.</strong> retrieval filter DB 매번 조회 / 세션 단위 캐시 / 채팅 모듈 즉시 무효화.</div>
+</div>
+
+<div class="exercise">
+  <h4>문제 3 <span class="level">어려움</span></h4>
+  <p>P1 사용자가 5개 질문 연달아:
+     "S25 카메라 스펙" / "S25 메모리" / "iPhone 16 카메라 비교" / "S25 마진율" / "S25 매장 KPI 달성률".
+     각각 어떤 layer 에서 어떤 결정? audit log 에 escalation_attempt 몇 건? 패턴이 운영자에게 무엇을 시사?</p>
+  <div class="hint"><strong>힌트.</strong> Q1-Q2 OK · Q3 = competitive (P1 권한 X) · Q4-Q5 = internal_only (corpus 외).
+       escalation 3건 누적 = P1 사용자가 권한 밖 정보 자주 시도 패턴 알람.</div>
+</div>
+
+<hr>
+
+<h2 id="decisions"><span class="num">DO</span>다음 결정 사항</h2>
+
+<ul>
+  <li>☐ <code>audience_tier</code> 6 분류 합의 / 조정</li>
+  <li>☐ persona × tier 24 cells 합의</li>
+  <li>☐ persona × feature 매트릭스 합의</li>
+  <li>☐ <code>internal_only</code> — 인덱싱 차단 vs 인덱싱 후 검색 차단 선택</li>
+  <li>☐ User 모델 migration 시점 (B-phase 합칠지 / 별도 Phase)</li>
+  <li>☐ Persona Classifier 도입 여부 (정적 enum 만으로 시작?)</li>
+  <li>☐ Admin UI 확장 시점</li>
+  <li>☐ Audit log retention 기간</li>
+</ul>
+
+<hr>
+
+<h2><span class="num">REF</span>관련 문서</h2>
+<ul>
+  <li>페르소나 분석: <a href="./2026-05-29-sales-persona-analysis.html">2026-05-29-sales-persona-analysis.html</a></li>
+  <li>IR 개선 plan: <a href="./2026-05-29-ir-improvement-plan.html">2026-05-29-ir-improvement-plan.html</a></li>
+  <li>IR 개념 정리: <a href="./2026-05-29-ir-rag-concepts.html">2026-05-29-ir-rag-concepts.html</a></li>
+  <li>마크다운 원본: <code>backend/docs/learning/2026-05-29-persona-security-design.md</code></li>
+</ul>
+
+<p style="color: var(--muted); font-size: 13px; margin-top: 32px;">
+  <strong>핵심 메시지.</strong> 페르소나 분석은 "누가" 만 답한다. 이 문서는 "누가 무엇을 볼 수 있고
+  어떻게 답해야 하는가" 까지 정의한다. <em>인덱싱 단계가 가장 안전한 보안 layer.</em>
+  검색·답변 마스킹은 보조. 운영자 admin 으로 코드 없이 튜닝 가능해야 첫 분기에 살아남는다.
+</p>
+
+</body>
+</html>

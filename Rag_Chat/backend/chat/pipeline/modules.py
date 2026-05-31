@@ -23,10 +23,26 @@ class RetrieveModule(PipelineModule):
     name = "retrieve"
 
     def run(self, context: ModuleContext) -> ModuleContext:
+        # Retrieve a BROAD candidate pool (RERANKER_TOP_N, default 20).
+        # The frontend `top_k` knob caps the FINAL output via RerankModule, not
+        # the retrieve breadth — narrowing here would starve the reranker.
+        persona = context.extra.get("persona")
+
+        # Escalation 사전 탐지 (키워드 기반). 매칭 시 audit log + retrieval 계속.
+        # Filter 가 어차피 권한 밖 chunk 차단 — 로그는 누적 패턴 추적용.
+        from ..persona import is_escalation
+        escalated, detected_tiers, allowed_tiers = is_escalation(
+            context.question, persona,
+        )
+        if escalated:
+            self._log_escalation(context, persona, detected_tiers, allowed_tiers)
+
         try:
             rag_context = RAGUtils.get_rag_context(
                 context.question,
+                k=None,
                 user_access_level=context.user_access_level,
+                persona=persona,
             )
         except Exception as exc:  # pragma: no cover - defensive guard
             raise ModuleError(f"Failed to retrieve context: {exc}") from exc
@@ -44,8 +60,39 @@ class RetrieveModule(PipelineModule):
 
         context.images = images
         context.extra["rag_metadata"] = rag_context
+        # RerankModule reads this — must be set even when empty so rerank
+        # knows there are no candidates and bails cleanly.
         context.extra["retrieved_docs"] = rag_context.get("docs", [])
         return context
+
+    @staticmethod
+    def _log_escalation(context, persona, detected_tiers, allowed_tiers):
+        """Persist EscalationAttempt — best-effort, never raises."""
+        try:
+            from ..models import EscalationAttempt, User
+            user = None
+            if context.user_id:
+                user = User.objects.filter(user_id=context.user_id).first()
+            out_of_scope = [t for t in detected_tiers if t not in allowed_tiers]
+            decision = (
+                EscalationAttempt.Decision.BLOCKED
+                if "internal_only" in out_of_scope
+                else EscalationAttempt.Decision.REDIRECTED
+            )
+            EscalationAttempt.objects.create(
+                user=user,
+                from_persona=persona or "",
+                requested_query=context.question[:2000],
+                allowed_tiers=allowed_tiers,
+                detected_tiers=detected_tiers,
+                decision=decision,
+            )
+            logger.warning(
+                f"escalation: persona={persona} detected={detected_tiers} "
+                f"allowed={allowed_tiers} decision={decision}"
+            )
+        except Exception as exc:  # pragma: no cover - audit never breaks chat
+            logger.error(f"EscalationAttempt log failed: {exc}")
 
 
 class ReasoningModule(PipelineModule):
@@ -92,12 +139,26 @@ class GenerationModule(PipelineModule):
     def run(self, context: ModuleContext) -> ModuleContext:
         generation_model = provider_manager.get_generation_model(context.session_id)
 
+        # Persona 별 답변 길이·톤·citation 형식 가이드를 system prompt 에 주입.
+        from ..persona import prompt_style_for_persona
+        persona_style = prompt_style_for_persona(context.extra.get("persona"))
+
+        system_prompt = f"""당신은 영업팀을 돕는 친절한 한국어 사내 챗봇입니다.
+
+{persona_style}
+공통 규칙:
+1. 질문 의도가 불분명하면 (예: '?' 한 글자, 단순 부호) 추측 금지.
+   "질문 내용을 조금 더 자세히 말씀해 주세요" 처럼 명확화를 요청하세요.
+2. 사용자가 명확히 묻지 않은 카탈로그 정보 (가격·스펙 등) 는 답변에 포함하지 않습니다.
+   "안녕" 같은 인사에는 인사로만 답하세요.
+3. 제공된 컨텍스트와 reasoning 만 근거로. 컨텍스트에 없는 내용은 추측 금지 —
+   "해당 정보가 자료에 없습니다" 라고 솔직히 답하세요.
+4. 정보 부족 시 어떤 정보가 더 필요한지 물어보세요."""
+
         prompt = ChatPromptTemplate.from_messages([
             (
                 "system",
-                """You are a friendly Korean AI assistant. Use the provided context and
-reasoning steps to craft a clear, helpful answer. If information is missing,
-acknowledge it honestly.""",
+                system_prompt,
             ),
             MessagesPlaceholder(variable_name="history"),
             (
@@ -135,30 +196,41 @@ acknowledge it honestly.""",
 
 
 class RerankModule(PipelineModule):
-    """ONNX cross-encoder rerank of retrieved documents."""
+    """ONNX cross-encoder rerank of retrieved documents.
+
+    Final cut size = context.extra['top_k'] (frontend knob) when set,
+    else RERANKER_TOP_K env (default 3).
+    """
 
     name = "rerank"
 
     def __init__(self, top_k: int | None = None) -> None:
-        self.top_k = top_k if top_k is not None else int(os.getenv("RERANKER_TOP_K", "3"))
+        self.top_k_default = top_k if top_k is not None else int(os.getenv("RERANKER_TOP_K", "3"))
 
     def run(self, context: ModuleContext) -> ModuleContext:
         docs = context.extra.get("retrieved_docs") or []
         if not docs:
             return context
 
+        # Per-request override from frontend knob; cap to 1..len(docs).
+        req_k = context.extra.get("top_k")
+        if isinstance(req_k, int) and req_k > 0:
+            final_k = min(req_k, len(docs))
+        else:
+            final_k = min(self.top_k_default, len(docs))
+
         reranker = provider_manager.get_reranker()
         if reranker is None:
-            return context
-
-        try:
-            scores = reranker.score(context.question, [d.page_content for d in docs])
-        except Exception as exc:
-            logger.warning("Reranker scoring failed, keeping original order: %s", exc)
-            return context
-
-        ranked = sorted(zip(docs, scores), key=lambda x: x[1], reverse=True)[: self.top_k]
-        top_docs = [d for d, _ in ranked]
+            # Reranker unavailable — still narrow to final_k by original order.
+            top_docs = docs[:final_k]
+        else:
+            try:
+                scores = reranker.score(context.question, [d.page_content for d in docs])
+                ranked = sorted(zip(docs, scores), key=lambda x: x[1], reverse=True)[:final_k]
+                top_docs = [d for d, _ in ranked]
+            except Exception as exc:
+                logger.warning("Reranker scoring failed, keeping original order: %s", exc)
+                top_docs = docs[:final_k]
 
         context.context_text = "\n\n".join(d.page_content for d in top_docs)
         context.images = [
@@ -166,3 +238,4 @@ class RerankModule(PipelineModule):
         ]
         context.extra["retrieved_docs"] = top_docs
         return context
+

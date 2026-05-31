@@ -82,3 +82,9 @@ dump.rdb
 backend/staticfiles/
 # FAISS/Chroma vector dirs (rebuilt at boot)
 backend/vector_store/
+
+# Corpus — internal namespace (마진율·KPI·견적 단가 등 사내 한정)
+# 이 디렉토리에는 README 외 어떤 파일도 commit 되지 않는다.
+# 실제 데이터는 사내 ERP/BI 에 있으며, RAG 코퍼스에 들어오지 않는다.
+backend/data/corpus/internal/*
+!backend/data/corpus/internal/README.md

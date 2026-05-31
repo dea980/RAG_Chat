@@ -180,3 +180,60 @@ class EmbeddingCompareAPIView(APIView):
                 logger.warning("embedding compare failed (%s): %s", key, exc)
                 results[key] = {"error": str(exc), "label": spec["label"]}
         return Response({"text1": text1, "text2": text2, "results": results})
+
+
+class EmbeddingEvalAPIView(APIView):
+    """Bulk evaluation — labeled dataset (KorSTS / KorNLI / curated) × N models.
+
+    GET  → list available datasets + registered models.
+    POST → run evaluation, return per-model metrics + scatter + top errors.
+
+    Long-running: 1500 pairs × 2 models on CPU ≈ 1~3 min. Frontend timeout
+    should be set to 600s when calling this endpoint.
+    """
+
+    permission_classes = [AllowAny]
+    throttle_classes = [EmbeddingLabRateThrottle]
+
+    def get(self, request):
+        from .embedding_eval import list_datasets
+
+        return Response({
+            "datasets": list_datasets(),
+            "models": list_registered_models(),
+        })
+
+    def post(self, request):
+        from .embedding_eval import evaluate
+
+        dataset = (request.data.get("dataset") or "").strip()
+        models = request.data.get("models") or []
+        limit = request.data.get("limit")
+        if not dataset:
+            return Response(
+                {"error": "dataset 필수 (예: 'korsts-dev')."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not isinstance(models, list) or not models:
+            return Response(
+                {"error": "models 리스트 필수."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            limit_val = int(limit) if limit is not None else None
+        except (TypeError, ValueError):
+            return Response(
+                {"error": "limit 은 정수."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            payload = evaluate(dataset, list(models), limit=limit_val)
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except FileNotFoundError as exc:
+            return Response(
+                {"error": f"데이터셋 파일 없음: {exc}"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(payload)

@@ -113,6 +113,22 @@ class User(AbstractBaseUser, PermissionsMixin):
         null=True, blank=True,
         related_name="members",
     )
+    # 페르소나 × audience_tier ACL.
+    # 설계: backend/docs/learning/2026-05-29-persona-security-design.md
+    # 매핑: chat/persona.py — tiers_for_persona(persona)
+    # null = 미할당 → 가장 보수적 fallback (public + retail) 만 노출.
+    persona = models.CharField(
+        max_length=20,
+        choices=[
+            ("P1_RETAIL", "P1 매장 직원"),
+            ("P2_B2B", "P2 B2B 영업"),
+            ("P3_HQ", "P3 본사 마케팅/영업기획"),
+            ("P4_OUTBOUND", "P4 외판/콜센터"),
+        ],
+        null=True, blank=True,
+        help_text="페르소나 → 접근 가능 audience_tier 매트릭스. "
+                  "null = public + retail 만 노출.",
+    )
     created_datetime = models.DateTimeField(auto_now_add=True)  # SQLite time is incorrect
     last_activity = models.DateTimeField(auto_now=True, null=True)  # 활동 시간 추적을 위한 필드 추가
     expired_datetime = models.DateTimeField(null=True, blank=True)
@@ -151,6 +167,10 @@ class RagData(models.Model):
 
 
 class Chat(models.Model):
+    """DEPRECATED — Q+A pair per row. Superseded by Conversation/Message in
+    migration 0007. Kept for backward compatibility (audit log queries,
+    SearchLog FK). New code MUST write Conversation+Message instead.
+    """
     question_id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     question_text = models.TextField()
@@ -160,6 +180,116 @@ class Chat(models.Model):
 
     def __str__(self):
         return f"Question {self.question_id} by User {self.user.user_id}"
+
+
+class Conversation(models.Model):
+    """Multi-turn thread. One row per chat session (ChatGPT-style sidebar entry).
+
+    Title auto = first user message text[:30]. last_message_at drives sidebar
+    sort. deleted_at = soft-delete (audit retention).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="conversations")
+    title = models.CharField(max_length=120, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_message_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        ordering = ["-last_message_at"]
+        indexes = [
+            models.Index(fields=["user", "-last_message_at"]),
+            models.Index(fields=["deleted_at"]),
+        ]
+
+    def __str__(self):
+        return f"Conv {str(self.id)[:8]} · {self.title[:30] or '(no title)'}"
+
+
+class Message(models.Model):
+    """One turn in a Conversation. role = user | assistant.
+
+    Replaces the (question_text, response_text) pair in legacy Chat. moderation_flags
+    caches per-boundary verdicts so the audit UI can render without re-running
+    moderation. data (RagData) is filled only on assistant turns that used RAG.
+    """
+    class Role(models.TextChoices):
+        USER = "user", "User"
+        ASSISTANT = "assistant", "Assistant"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    conversation = models.ForeignKey(
+        Conversation, on_delete=models.CASCADE, related_name="messages"
+    )
+    role = models.CharField(max_length=10, choices=Role.choices)
+    content_text = models.TextField(blank=True, default="")
+    data = models.ForeignKey(
+        RagData, on_delete=models.SET_NULL, null=True, blank=True,
+        help_text="RAG context snapshot (assistant turn only)",
+    )
+    redacted_count = models.IntegerField(
+        default=0,
+        help_text="Layer 3 ACL/keyword redactions during retrieval (assistant)",
+    )
+    moderation_flags = models.JSONField(
+        default=dict, blank=True,
+        help_text='{"inbound":[],"outbound":[],"retrieval_redacted":N}',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["conversation", "created_at"]),
+            models.Index(fields=["deleted_at"]),
+        ]
+
+    def __str__(self):
+        return f"Msg {str(self.id)[:8]} · {self.role} · {self.content_text[:30]}"
+
+
+class Attachment(models.Model):
+    """File or image attached to a Message. Two modes:
+
+    - **Ephemeral**: file used only as context for this single message. Stored on
+      disk under `media/uploads/<conv_uuid>/<msg_uuid>/<name>`. Cleaned on
+      conversation hard-delete.
+    - **Ingested**: also pushed through the ingest pipeline → indexed into
+      VectorChunk so future queries can retrieve it. `ingest_manifest` FK is
+      filled in that mode (links to chat.IngestManifest).
+    """
+    class Kind(models.TextChoices):
+        IMAGE = "image", "Image"
+        FILE = "file", "File"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    message = models.ForeignKey(
+        Message, on_delete=models.CASCADE, related_name="attachments"
+    )
+    kind = models.CharField(max_length=10, choices=Kind.choices)
+    filename = models.CharField(max_length=240)
+    mime_type = models.CharField(max_length=120, blank=True, default="")
+    size_bytes = models.BigIntegerField(default=0)
+    storage_path = models.CharField(
+        max_length=512,
+        help_text="Relative to MEDIA_ROOT",
+    )
+    sha256 = models.CharField(
+        max_length=64, blank=True, default="", db_index=True,
+        help_text="content hash for dedup",
+    )
+    ingest_manifest = models.ForeignKey(
+        "chat.IngestManifest", on_delete=models.SET_NULL, null=True, blank=True,
+        help_text="Filled when the attachment was ingested into the vector store.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["message", "kind"])]
+
+    def __str__(self):
+        return f"Att {str(self.id)[:8]} · {self.kind} · {self.filename}"
 
 
 class SearchLog(models.Model):
@@ -203,3 +333,43 @@ class IngestManifest(models.Model):
 
     def __str__(self):
         return f"{self.source_uri} ({self.doc_sha256[:8]}) {self.status}"
+
+
+class EscalationAttempt(models.Model):
+    """페르소나 권한 밖 정보 요청 시도 audit.
+
+    설계 §10.3: 운영자 대시보드 누적 카운트 → 패턴 발견 시 룰 추가.
+    검색 결과가 비었거나 모두 fallback tier 일 때 (예: P1 매장이 b2b 키워드)
+    1 행 기록. 사용자 답변 redirect 와 함께 비동기로 저장.
+    """
+    class Decision(models.TextChoices):
+        BLOCKED = "BLOCKED", "권한 밖 — 차단"
+        REDIRECTED = "REDIRECTED", "다른 채널로 안내"
+        EMPTY_FALLBACK = "EMPTY_FALLBACK", "권한 내 결과 없음"
+
+    user = models.ForeignKey(
+        "chat.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="escalation_attempts",
+    )
+    from_persona = models.CharField(max_length=20, blank=True, default="")
+    requested_query = models.TextField()
+    allowed_tiers = models.JSONField(default=list)
+    detected_tiers = models.JSONField(
+        default=list,
+        help_text="질문이 의도한 것으로 추정되는 tier (heuristic 또는 LLM 분류).",
+    )
+    decision = models.CharField(
+        max_length=20, choices=Decision.choices, default=Decision.EMPTY_FALLBACK,
+    )
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "occurred_at"]),
+            models.Index(fields=["from_persona", "occurred_at"]),
+            models.Index(fields=["decision"]),
+        ]
+        ordering = ["-occurred_at"]
+
+    def __str__(self):
+        return f"{self.from_persona or 'NONE'} {self.decision} '{self.requested_query[:30]}'"

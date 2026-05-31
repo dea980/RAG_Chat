@@ -1,8 +1,26 @@
-Model,Color,Storage,RAM,Camera,Display,Battery,Price,Image Path
-Galaxy S25,Phantom Black,256GB,12GB,108MP Main + 12MP Ultra Wide + 10MP Telephoto,6.8" Dynamic AMOLED 2X 120Hz,5000mAh,1199.99,black_s25.png
-Galaxy S25,Silver,256GB,12GB,108MP Main + 12MP Ultra Wide + 10MP Telephoto,6.8" Dynamic AMOLED 2X 120Hz,5000mAh,1199.99,silver_s25.png
-Galaxy S25,Navy Blue,512GB,16GB,108MP Main + 12MP Ultra Wide + 12MP Telephoto,6.8" Dynamic AMOLED 2X 120Hz,5000mAh,1299.99,blue_s25.png
-Galaxy S25 Plus,Phantom Black,256GB,12GB,108MP Main + 12MP Ultra Wide + 64MP Telephoto,6.9" Dynamic AMOLED 2X 120Hz,5500mAh,1399.99,black_s25_plus.png
-Galaxy S25 Plus,Silver,512GB,16GB,108MP Main + 12MP Ultra Wide + 64MP Telephoto,6.9" Dynamic AMOLED 2X 120Hz,5500mAh,1499.99,silver_s25_plus.png
-Galaxy S25 Ultra,Phantom Black,512GB,16GB,200MP Main + 12MP Ultra Wide + 48MP Telephoto + 10MP Periscope,7.0" Dynamic AMOLED 2X 120Hz,6000mAh,1599.99,black_s25_ultra.png
-Galaxy S25 Ultra,Silver,1TB,16GB,200MP Main + 12MP Ultra Wide + 48MP Telephoto + 10MP Periscope,7.0" Dynamic AMOLED 2X 120Hz,6000mAh,1799.99,silver_s25_ultra.png
+Model,Color,Storage,RAM,Camera,Display,Battery,Chipset,Release Year,Launch Price USD,Image Path
+Galaxy S25,Icyblue,128GB,12GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.2" QHD+ Dynamic AMOLED 2X 120Hz,4000mAh,Snapdragon 8 Elite for Galaxy,2025,799.99,s25_icyblue.png
+Galaxy S25,Navy,256GB,12GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.2" QHD+ Dynamic AMOLED 2X 120Hz,4000mAh,Snapdragon 8 Elite for Galaxy,2025,859.99,s25_navy.png
+Galaxy S25,Mint,256GB,12GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.2" QHD+ Dynamic AMOLED 2X 120Hz,4000mAh,Snapdragon 8 Elite for Galaxy,2025,859.99,s25_mint.png
+Galaxy S25,Silver Shadow,512GB,12GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.2" QHD+ Dynamic AMOLED 2X 120Hz,4000mAh,Snapdragon 8 Elite for Galaxy,2025,979.99,s25_silver_shadow.png
+Galaxy S25 Plus,Icyblue,256GB,12GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.7" QHD+ Dynamic AMOLED 2X 120Hz,4900mAh,Snapdragon 8 Elite for Galaxy,2025,999.99,s25plus_icyblue.png
+Galaxy S25 Plus,Navy,256GB,12GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.7" QHD+ Dynamic AMOLED 2X 120Hz,4900mAh,Snapdragon 8 Elite for Galaxy,2025,999.99,s25plus_navy.png
+Galaxy S25 Plus,Silver Shadow,512GB,12GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.7" QHD+ Dynamic AMOLED 2X 120Hz,4900mAh,Snapdragon 8 Elite for Galaxy,2025,1119.99,s25plus_silver.png
+Galaxy S25 Ultra,Titanium Whitesilver,256GB,12GB,200MP Main + 50MP 5x Periscope Telephoto + 10MP 3x Telephoto + 50MP Ultra Wide,6.9" QHD+ Dynamic AMOLED 2X LTPO 120Hz,5000mAh,Snapdragon 8 Elite for Galaxy,2025,1299.99,s25ultra_whitesilver.png
+Galaxy S25 Ultra,Titanium Black,512GB,12GB,200MP Main + 50MP 5x Periscope Telephoto + 10MP 3x Telephoto + 50MP Ultra Wide,6.9" QHD+ Dynamic AMOLED 2X LTPO 120Hz,5000mAh,Snapdragon 8 Elite for Galaxy,2025,1419.99,s25ultra_black.png
+Galaxy S25 Ultra,Titanium Gray,512GB,12GB,200MP Main + 50MP 5x Periscope Telephoto + 10MP 3x Telephoto + 50MP Ultra Wide,6.9" QHD+ Dynamic AMOLED 2X LTPO 120Hz,5000mAh,Snapdragon 8 Elite for Galaxy,2025,1419.99,s25ultra_gray.png
+Galaxy S25 Ultra,Titanium Whitesilver,1TB,12GB,200MP Main + 50MP 5x Periscope Telephoto + 10MP 3x Telephoto + 50MP Ultra Wide,6.9" QHD+ Dynamic AMOLED 2X LTPO 120Hz,5000mAh,Snapdragon 8 Elite for Galaxy,2025,1659.99,s25ultra_whitesilver_1tb.png
+Galaxy S25 Ultra,Titanium Jade Green (online exclusive),512GB,12GB,200MP Main + 50MP 5x Periscope Telephoto + 10MP 3x Telephoto + 50MP Ultra Wide,6.9" QHD+ Dynamic AMOLED 2X LTPO 120Hz,5000mAh,Snapdragon 8 Elite for Galaxy,2025,1419.99,s25ultra_jadegreen.png
+Galaxy S24,Onyx Black,128GB,8GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.2" FHD+ Dynamic AMOLED 2X 120Hz,4000mAh,Snapdragon 8 Gen 3 for Galaxy / Exynos 2400,2024,799.99,s24_onyxblack.png
+Galaxy S24,Marble Gray,256GB,8GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.2" FHD+ Dynamic AMOLED 2X 120Hz,4000mAh,Snapdragon 8 Gen 3 for Galaxy / Exynos 2400,2024,859.99,s24_marblegray.png
+Galaxy S24,Cobalt Violet,256GB,8GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.2" FHD+ Dynamic AMOLED 2X 120Hz,4000mAh,Snapdragon 8 Gen 3 for Galaxy / Exynos 2400,2024,859.99,s24_cobaltviolet.png
+Galaxy S24,Amber Yellow,512GB,8GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.2" FHD+ Dynamic AMOLED 2X 120Hz,4000mAh,Snapdragon 8 Gen 3 for Galaxy / Exynos 2400,2024,919.99,s24_amberyellow.png
+Galaxy S24,Sapphire Blue (online exclusive),256GB,8GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.2" FHD+ Dynamic AMOLED 2X 120Hz,4000mAh,Snapdragon 8 Gen 3 for Galaxy / Exynos 2400,2024,859.99,s24_sapphireblue.png
+Galaxy S24 Plus,Onyx Black,256GB,12GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.7" QHD+ Dynamic AMOLED 2X 120Hz,4900mAh,Snapdragon 8 Gen 3 for Galaxy / Exynos 2400,2024,999.99,s24plus_onyxblack.png
+Galaxy S24 Plus,Marble Gray,512GB,12GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.7" QHD+ Dynamic AMOLED 2X 120Hz,4900mAh,Snapdragon 8 Gen 3 for Galaxy / Exynos 2400,2024,1119.99,s24plus_marblegray.png
+Galaxy S24 Plus,Cobalt Violet,256GB,12GB,50MP Main + 12MP Ultra Wide + 10MP 3x Telephoto,6.7" QHD+ Dynamic AMOLED 2X 120Hz,4900mAh,Snapdragon 8 Gen 3 for Galaxy / Exynos 2400,2024,999.99,s24plus_cobaltviolet.png
+Galaxy S24 Ultra,Titanium Black,256GB,12GB,200MP Main + 50MP 5x Periscope Telephoto + 10MP 3x Telephoto + 12MP Ultra Wide,6.8" QHD+ Dynamic AMOLED 2X LTPO 120Hz,5000mAh,Snapdragon 8 Gen 3 for Galaxy,2024,1299.99,s24ultra_black.png
+Galaxy S24 Ultra,Titanium Gray,512GB,12GB,200MP Main + 50MP 5x Periscope Telephoto + 10MP 3x Telephoto + 12MP Ultra Wide,6.8" QHD+ Dynamic AMOLED 2X LTPO 120Hz,5000mAh,Snapdragon 8 Gen 3 for Galaxy,2024,1419.99,s24ultra_gray.png
+Galaxy S24 Ultra,Titanium Violet,512GB,12GB,200MP Main + 50MP 5x Periscope Telephoto + 10MP 3x Telephoto + 12MP Ultra Wide,6.8" QHD+ Dynamic AMOLED 2X LTPO 120Hz,5000mAh,Snapdragon 8 Gen 3 for Galaxy,2024,1419.99,s24ultra_violet.png
+Galaxy S24 Ultra,Titanium Yellow,1TB,12GB,200MP Main + 50MP 5x Periscope Telephoto + 10MP 3x Telephoto + 12MP Ultra Wide,6.8" QHD+ Dynamic AMOLED 2X LTPO 120Hz,5000mAh,Snapdragon 8 Gen 3 for Galaxy,2024,1659.99,s24ultra_yellow.png
+Galaxy S24 Ultra,Titanium Blue (online exclusive),512GB,12GB,200MP Main + 50MP 5x Periscope Telephoto + 10MP 3x Telephoto + 12MP Ultra Wide,6.8" QHD+ Dynamic AMOLED 2X LTPO 120Hz,5000mAh,Snapdragon 8 Gen 3 for Galaxy,2024,1419.99,s24ultra_blue.png

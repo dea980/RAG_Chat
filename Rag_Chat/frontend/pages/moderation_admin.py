@@ -45,6 +45,9 @@ SOURCE_LABELS = {
 
 st.set_page_config(page_title="Moderation Admin · Triple Chat", layout="wide")
 
+from role_gate import require_admin  # noqa: E402
+require_admin()
+
 
 def _inject_design_tokens() -> None:
     st.markdown(

@@ -17,6 +17,7 @@ from typing import Iterable
 from . import manifest as manifest_helpers
 from .base import BaseSink, BaseSplitter, RawDoc
 from .registry import loader_for
+from .sinks.chroma import infer_tier
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ def ingest_path(
     force: bool = False,
     source_uri_override: str | None = None,
     sensitivity: str = "internal",
+    collection: str = "policy",
 ) -> int:
     """파일 1개를 ingest. 기록된 청크 수 반환 (skip 되면 0).
 
@@ -124,14 +126,24 @@ def ingest_path(
             filtered.append(d)
         raw_docs = filtered
 
+        # Persona × audience_tier ACL — 경로 prefix → tier 매핑.
+        # internal_only (None) 은 ChromaSink/PgvectorSink 가 차단.
+        # 모든 sink (Chroma, pgvector, ...) 가 chunk.metadata 에서 audience_tier 읽음.
+        tier = infer_tier(path)
         chunks: list[RawDoc] = []
         for d in raw_docs:
             # 모든 청크에 doc_sha256 메타데이터를 자동 부여 — Chroma 에서도 추적 가능
             d.metadata.setdefault("doc_sha256", doc_sha)
             # Layer 2 — chunk metadata 의 sensitivity 가 retrieval 필터의 기준.
             d.metadata.setdefault("sensitivity", sensitivity)
+            d.metadata.setdefault("collection", collection)
+            if tier is not None:
+                d.metadata.setdefault("audience_tier", tier)
             for chunk in splitter.split(d):
                 chunk.metadata.setdefault("sensitivity", sensitivity)
+                chunk.metadata.setdefault("collection", collection)
+                if tier is not None:
+                    chunk.metadata.setdefault("audience_tier", tier)
                 chunks.append(chunk)
 
         result = sink.write(chunks)
@@ -169,12 +181,16 @@ def ingest_paths(
     *,
     force: bool = False,
     sensitivity: str = "internal",
+    collection: str = "policy",
 ) -> int:
     """여러 파일을 순차 ingest. 총 청크 수 반환. 개별 실패는 건너뜀."""
     total = 0
     for path in paths:
         try:
-            total += ingest_path(path, splitter, sink, force=force, sensitivity=sensitivity)
+            total += ingest_path(
+                path, splitter, sink,
+                force=force, sensitivity=sensitivity, collection=collection,
+            )
         except ValueError as exc:
             # registry 에 없는 확장자 — 단일 파일 실패가 전체를 막지 않게
             logger.warning(f"skipped {path}: {exc}")

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Triple Chat 데이터 현황 스냅샷 — 2026-05-31</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+<style>
+  :root {
+    --bg: #0A0B0D;
+    --surface: #14151A;
+    --surface-2: #1C1E26;
+    --fg: #E8E9EC;
+    --muted: #8B8F99;
+    --border: #2A2D36;
+    --accent: #E89B3C;
+    --accent-soft: rgba(232,155,60,.12);
+    --code-bg: #1C1E26;
+    --good: #4ADE80;
+    --warn: #FACC15;
+    --bad: #F87171;
+    --t-public: #6EE7B7;
+    --t-retail: #60A5FA;
+    --t-b2b: #A78BFA;
+    --t-comp: #FBBF24;
+    --t-carrier: #F472B6;
+    --t-internal: #F87171;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: "Pretendard", -apple-system, sans-serif;
+    max-width: 1000px; margin: 0 auto; padding: 48px 28px 120px;
+    line-height: 1.7; font-size: 15px;
+    font-feature-settings: "tnum" on;
+  }
+  h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -.6px; }
+  .meta { font-size: 12px; color: var(--muted); margin: 0 0 24px;
+          font-family: "Geist Mono", ui-monospace, monospace; }
+  .meta span::before { content: "·"; margin: 0 10px; color: var(--border); }
+  .meta span:first-child::before { content: none; }
+  h2 {
+    font-size: 20px; margin: 48px 0 14px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  h2 .pill {
+    display: inline-block; padding: 3px 10px; border-radius: 6px;
+    background: var(--accent); color: #14151A;
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 12px; margin-right: 10px; font-weight: 700;
+  }
+  h3 { font-size: 16px; margin: 24px 0 10px; color: var(--accent); }
+  code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 13px; color: #F4D7A9;
+  }
+  table {
+    border-collapse: collapse; width: 100%; margin: 14px 0;
+    font-size: 13px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+  }
+  th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  thead th { background: var(--surface-2); color: var(--accent); font-weight: 600; }
+  tbody tr:last-child td { border-bottom: none; }
+  .yes { color: var(--good); font-weight: 700; font-family: "Geist Mono", ui-monospace, monospace; }
+  .no { color: var(--bad); font-weight: 700; font-family: "Geist Mono", ui-monospace, monospace; }
+  .partial { color: var(--warn); font-weight: 700; font-family: "Geist Mono", ui-monospace, monospace; }
+
+  /* tier pills */
+  .tp {
+    display: inline-block; padding: 2px 10px; border-radius: 999px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  }
+  .tp.public { background: rgba(110,231,183,.18); color: var(--t-public); }
+  .tp.retail { background: rgba(96,165,250,.18); color: var(--t-retail); }
+  .tp.b2b { background: rgba(167,139,250,.18); color: var(--t-b2b); }
+  .tp.comp { background: rgba(251,191,36,.18); color: var(--t-comp); }
+  .tp.carrier { background: rgba(244,114,182,.18); color: var(--t-carrier); }
+  .tp.internal { background: rgba(248,113,113,.18); color: var(--t-internal); }
+
+  /* stat cards */
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px; margin: 18px 0;
+  }
+  .stat {
+    padding: 14px 16px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px;
+    border-top: 3px solid var(--accent);
+  }
+  .stat .lbl {
+    font-size: 11px; color: var(--muted); letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: "Geist Mono", ui-monospace, monospace;
+  }
+  .stat .val {
+    font-size: 28px; color: #fff; font-weight: 700;
+    font-family: "Geist Mono", ui-monospace, monospace;
+    margin-top: 4px;
+  }
+  .stat .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .stat.good { border-top-color: var(--good); }
+  .stat.warn { border-top-color: var(--warn); }
+  .stat.bad { border-top-color: var(--bad); }
+  .stat.bad .val { color: var(--bad); }
+  .stat.warn .val { color: var(--warn); }
+
+  /* tier distribution bars */
+  .dist {
+    display: grid; grid-template-columns: 120px 1fr 80px;
+    gap: 10px; align-items: center; margin: 8px 0; font-size: 13px;
+  }
+  .dist .bar { height: 18px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .dist .bar > span { display: block; height: 100%; }
+  .dist .pct {
+    text-align: right; color: var(--muted);
+    font-family: "Geist Mono", ui-monospace, monospace; font-size: 12px;
+  }
+
+  /* flow diagram */
+  .flow {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 22px; margin: 18px 0;
+  }
+  .stage {
+    display: grid; grid-template-columns: 70px 1fr 80px;
+    gap: 12px; align-items: center; padding: 12px 14px;
+    margin-bottom: 8px; background: var(--surface-2);
+    border-radius: 6px; border-left: 3px solid var(--border);
+    font-size: 13px;
+  }
+  .stage.ok { border-left-color: var(--good); }
+  .stage.warn { border-left-color: var(--warn); }
+  .stage.bad { border-left-color: var(--bad); }
+  .stage .name {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .stage .body strong { color: #fff; display: block; margin-bottom: 2px; }
+  .stage .body small { color: var(--muted); font-size: 12px; }
+  .stage .status {
+    text-align: right; font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 11px; font-weight: 700;
+  }
+  .stage.ok .status { color: var(--good); }
+  .stage.warn .status { color: var(--warn); }
+  .stage.bad .status { color: var(--bad); }
+
+  .verdict {
+    background: var(--surface); padding: 18px 22px; border-radius: 10px;
+    border: 1px solid var(--border); margin: 18px 0;
+    border-left: 4px solid var(--accent);
+  }
+  .verdict h4 { margin: 0 0 8px; color: var(--accent); }
+  .verdict ul { margin: 0; padding-left: 22px; }
+  .verdict li { margin: 4px 0; font-size: 13.5px; }
+  .verdict.warn { border-left-color: var(--warn); }
+  .verdict.warn h4 { color: var(--warn); }
+  .verdict.bad { border-left-color: var(--bad); }
+  .verdict.bad h4 { color: var(--bad); }
+
+  /* score gauge */
+  .score-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px; margin: 18px 0;
+  }
+  .score-card {
+    padding: 14px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; text-align: center;
+  }
+  .score-card .title { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .score-card .grade {
+    font-size: 36px; font-weight: 700;
+    font-family: "Geist Mono", ui-monospace, monospace; color: var(--accent);
+  }
+  .score-card.good .grade { color: var(--good); }
+  .score-card.warn .grade { color: var(--warn); }
+  .score-card.bad .grade { color: var(--bad); }
+  .score-card .note { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  pre {
+    background: var(--code-bg); padding: 12px 16px; border-radius: 6px;
+    overflow-x: auto; font-size: 12px; line-height: 1.5;
+    border: 1px solid var(--border);
+    font-family: "Geist Mono", ui-monospace, monospace;
+  }
+  hr { border: none; border-top: 1px solid var(--border); margin: 36px 0; }
+  .toc {
+    background: var(--surface); padding: 14px 18px; border-radius: 8px;
+    margin: 20px 0; font-size: 13px; border: 1px solid var(--border);
+  }
+  .toc a { color: var(--fg); text-decoration: none; margin-right: 16px; }
+  .toc a:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<h1>Triple Chat 데이터 현황 스냅샷</h1>
+<div class="meta">
+  <span>2026-05-31</span>
+  <span>state-of-the-system 자가 진단</span>
+  <span>관련: <a href="./2026-05-29-persona-security-design.html" style="color:var(--accent)">persona × security</a></span>
+</div>
+
+<div class="toc">
+  <strong>목차:</strong>
+  <a href="#stats">전체 수치</a>
+  <a href="#dist">tier 분포</a>
+  <a href="#layers">레이어 상태</a>
+  <a href="#tree">디렉토리 트리</a>
+  <a href="#drift">Chroma vs pgvector drift</a>
+  <a href="#verdict">총평·다음 결정</a>
+</div>
+
+<h2 id="stats"><span class="pill">STAT</span>전체 수치 (오늘 측정)</h2>
+
+<div class="stats">
+  <div class="stat good">
+    <div class="lbl">Chroma chunks</div>
+    <div class="val">198</div>
+    <div class="sub">ollama 768d, audience_tier 부여 OK</div>
+  </div>
+  <div class="stat warn">
+    <div class="lbl">pgvector chunks</div>
+    <div class="val">140</div>
+    <div class="sub">mixed history, dim drift 위험</div>
+  </div>
+  <div class="stat">
+    <div class="lbl">IngestManifest</div>
+    <div class="val">25</div>
+    <div class="sub">파일 단위 dedup 추적</div>
+  </div>
+  <div class="stat good">
+    <div class="lbl">corpus 파일</div>
+    <div class="val">9</div>
+    <div class="sub">retail(2) b2b(3) comp(2) carrier(2)</div>
+  </div>
+  <div class="stat">
+    <div class="lbl">samples 파일</div>
+    <div class="val">14</div>
+    <div class="sub">기존 fixture, public tier 호환</div>
+  </div>
+  <div class="stat bad">
+    <div class="lbl">N/A scaffold</div>
+    <div class="val">24/24</div>
+    <div class="sub">carrier_pricing 전 셀 N/A</div>
+  </div>
+</div>
+
+<hr>
+
+<h2 id="dist"><span class="pill">DIST</span>tier 분포 (Chroma 기준)</h2>
+
+<div class="dist">
+  <div><span class="tp public">public</span></div>
+  <div class="bar"><span style="width: 49%; background: var(--t-public);"></span></div>
+  <div class="pct">97 (49.0%)</div>
+</div>
+<div class="dist">
+  <div><span class="tp b2b">b2b</span></div>
+  <div class="bar"><span style="width: 16%; background: var(--t-b2b);"></span></div>
+  <div class="pct">31 (15.7%)</div>
+</div>
+<div class="dist">
+  <div><span class="tp carrier">carrier</span></div>
+  <div class="bar"><span style="width: 14.6%; background: var(--t-carrier);"></span></div>
+  <div class="pct">29 (14.6%)</div>
+</div>
+<div class="dist">
+  <div><span class="tp comp">competitive</span></div>
+  <div class="bar"><span style="width: 10.6%; background: var(--t-comp);"></span></div>
+  <div class="pct">21 (10.6%)</div>
+</div>
+<div class="dist">
+  <div><span class="tp retail">retail</span></div>
+  <div class="bar"><span style="width: 10.1%; background: var(--t-retail);"></span></div>
+  <div class="pct">20 (10.1%)</div>
+</div>
+<div class="dist">
+  <div><span class="tp internal">internal_only</span></div>
+  <div class="bar"><span style="width: 0%; background: var(--t-internal);"></span></div>
+  <div class="pct">0 (skip ✓)</div>
+</div>
+
+<p style="color: var(--muted); font-size: 13px;">
+  <strong>관찰.</strong> public 이 절반. samples/ legacy + bundled S25 CSV 가 차지.
+  retail/competitive 가 가장 얇음 (10% 씩) → P1 매장·P3 본사 응답이 토픽적으로 빈약할 가능성.
+  carrier 29 중 24 는 N/A scaffold → 실제 답변 가능 chunk 는 5 정도.
+</p>
+
+<hr>
+
+<h2 id="layers"><span class="pill">PIPE</span>레이어 상태 (인덱싱 + 검색)</h2>
+
+<div class="flow">
+
+  <div class="stage ok">
+    <div class="name">L1 LOADER</div>
+    <div class="body">
+      <strong>파일 읽기 (csv/md/html/xlsx/pdf)</strong>
+      <small>확장자 자동 dispatch · registry 기반</small>
+    </div>
+    <div class="status">✓ OK</div>
+  </div>
+
+  <div class="stage ok">
+    <div class="name">L2 SPLITTER</div>
+    <div class="body">
+      <strong>row · heading · clause · recursive 자동 선택</strong>
+      <small>--splitter flag 강제 가능</small>
+    </div>
+    <div class="status">✓ OK</div>
+  </div>
+
+  <div class="stage ok">
+    <div class="name">L3 ACL TAG</div>
+    <div class="body">
+      <strong>infer_tier(path) → chunk.metadata['audience_tier']</strong>
+      <small>pipeline.py 에서 모든 sink 가 자동 노출 · internal_only → skip</small>
+    </div>
+    <div class="status">✓ OK</div>
+  </div>
+
+  <div class="stage ok">
+    <div class="name">L4 EMBED</div>
+    <div class="body">
+      <strong>Ollama nomic-embed-text 768d (현재)</strong>
+      <small>로컬, quota 무관 · gemini quota 죽음 우회 완료</small>
+    </div>
+    <div class="status">✓ OK</div>
+  </div>
+
+  <div class="stage warn">
+    <div class="name">L5 SINK</div>
+    <div class="body">
+      <strong>ChromaSink 198 chunks (primary) · PgvectorSink 140 stale</strong>
+      <small>Chroma 는 새 768d, pgvector 는 옛 3072d 섞여있음 → drift</small>
+    </div>
+    <div class="status">⚠ DRIFT</div>
+  </div>
+
+  <div class="stage ok">
+    <div class="name">L6 ACL FILTER</div>
+    <div class="body">
+      <strong>persona → tiers_for_persona() → chroma filter</strong>
+      <small>P1 차단 검증 OK (iPhone 16 → P1 못 봄, P3 OK)</small>
+    </div>
+    <div class="status">✓ OK</div>
+  </div>
+
+  <div class="stage warn">
+    <div class="name">L7 RERANK</div>
+    <div class="body">
+      <strong>ONNX bge-reranker-v2-m3 (env 활성)</strong>
+      <small>RERANKER_ENABLED=1 셋업됨, 실측 효과 미평가</small>
+    </div>
+    <div class="status">⚠ 미측정</div>
+  </div>
+
+  <div class="stage bad">
+    <div class="name">L8 PERSONA SRC</div>
+    <div class="body">
+      <strong>User.persona DB field 없음</strong>
+      <small>현재 context.extra['persona'] 하드코딩만. view 가 주입 안 함 → 항상 fallback (public+retail) 동작</small>
+    </div>
+    <div class="status">✗ TODO</div>
+  </div>
+
+  <div class="stage bad">
+    <div class="name">L9 PERSONA PROMPT</div>
+    <div class="body">
+      <strong>GenerationModule 프롬프트 페르소나 분기 없음</strong>
+      <small>모든 페르소나 동일 한국어 prompt — P1/P2/P3/P4 길이·톤 차별화 미구현</small>
+    </div>
+    <div class="status">✗ TODO</div>
+  </div>
+
+  <div class="stage bad">
+    <div class="name">L10 ESCALATION</div>
+    <div class="body">
+      <strong>EscalationAttempt 모델 없음</strong>
+      <small>P1 이 b2b 요청해도 silent block (audit log 없음). 패턴 추적 불가</small>
+    </div>
+    <div class="status">✗ TODO</div>
+  </div>
+
+</div>
+
+<hr>
+
+<h2 id="tree"><span class="pill">TREE</span>디렉토리 트리 (단순화 후)</h2>
+
+<pre><code>backend/data/
+├── README.md
+│
+├── corpus/                  ← RAG 인덱싱 대상 (namespace = audience tier)
+│   ├── public/              ← (비어있음, samples/ 가 호환 역할)
+│   ├── retail/              ← kr_pricing.csv · selling_points.md
+│   ├── b2b/                 ← knox_compatibility · security_certifications · handbook
+│   ├── competitive/         ← competitors_lineup · handbook
+│   ├── carrier/             ← carrier_pricing (⚠ 24/24 N/A) · bundle_policies.md
+│   └── internal/            ← README 만. gitignored. 인덱싱 차단
+│
+├── samples/                 ← 기존 fixture (test 호환, public tier)
+│   └── galaxy_* · foldable_* · a_series_* · tab_* · buds_* · watch_* · accessories_*
+│
+├── eval/                    ← QA dataset (비어있음 — sales_full 은 chat/tests/evals/)
+├── external/                ← KorSTS · KorNLI (외부 benchmark)
+└── embedding_eval/          ← curated_pairs.yaml (intrinsic eval)</code></pre>
+
+<hr>
+
+<h2 id="drift"><span class="pill">DRIFT</span>Chroma vs pgvector 상태 격차</h2>
+
+<table>
+  <thead><tr><th>차원</th><th>Chroma (primary)</th><th>pgvector (fallback)</th></tr></thead>
+  <tbody>
+    <tr><td>chunks</td><td><span class="yes">198</span></td><td><span class="partial">140</span></td></tr>
+    <tr><td>embedding dim</td><td>768 (ollama)</td><td><span class="no">3072 (옛 gemini)</span></td></tr>
+    <tr><td>audience_tier metadata</td><td><span class="yes">✓ 부여됨</span></td><td><span class="no">✗ 부재</span></td></tr>
+    <tr><td>persona ACL filter</td><td><span class="yes">✓ 검증됨</span></td><td><span class="partial">✓ 코드 wiring · 데이터 없음</span></td></tr>
+    <tr><td>get_rag_context 우선순위</td><td>fallback (when pgvector 비어있을 때만)</td><td><span class="no">primary (현재 if VectorChunk.exists() 분기)</span></td></tr>
+  </tbody>
+</table>
+
+<div class="verdict bad">
+  <h4>⚠ 위험 — get_rag_context 가 stale pgvector 를 먼저 본다</h4>
+  <p>현재 코드는 <code>if VectorChunk.objects.exists(): pgvector path</code> 패턴.
+     pgvector 에 옛 데이터 (gemini 3072d) 가 있으면 그쪽이 우선. 그런데 query 는 ollama 768d 로 embed → <strong>dim mismatch 에러 → 빈 결과</strong>.
+     production 에서는 Chroma fallback 도 안 가고 그냥 fail.</p>
+  <ul>
+    <li><strong>해결책 A:</strong> pgvector 재인덱싱 (ollama 768d + audience_tier)</li>
+    <li><strong>해결책 B:</strong> pgvector 전부 wipe → Chroma only 운영</li>
+    <li><strong>해결책 C:</strong> 분기 명시 (env var <code>USE_PGVECTOR=0</code> 추가)</li>
+  </ul>
+</div>
+
+<hr>
+
+<h2 id="verdict"><span class="pill">★</span>총평 — 지금 상황이 최선인가?</h2>
+
+<div class="score-grid">
+  <div class="score-card good">
+    <div class="title">데이터 namespace 구조</div>
+    <div class="grade">A</div>
+    <div class="note">corpus/&lt;tier&gt;/ 단순 + 확장 OK</div>
+  </div>
+  <div class="score-card good">
+    <div class="title">tier 메타데이터 부여</div>
+    <div class="grade">A</div>
+    <div class="note">pipeline.py 에서 모든 sink 자동</div>
+  </div>
+  <div class="score-card good">
+    <div class="title">Chroma ACL filter</div>
+    <div class="grade">A−</div>
+    <div class="note">검증 OK, retrieval ranking 은 별개</div>
+  </div>
+  <div class="score-card warn">
+    <div class="title">Embedding 안정성</div>
+    <div class="grade">B+</div>
+    <div class="note">ollama 로컬 OK · 단 .env 자주 토글</div>
+  </div>
+  <div class="score-card bad">
+    <div class="title">pgvector 정합</div>
+    <div class="grade">D</div>
+    <div class="note">dim mismatch · 새 chunk 인덱싱 안 됨</div>
+  </div>
+  <div class="score-card bad">
+    <div class="title">User.persona 결선</div>
+    <div class="grade">F</div>
+    <div class="note">DB field 없음 · 항상 fallback ACL</div>
+  </div>
+  <div class="score-card bad">
+    <div class="title">Persona prompt 분기</div>
+    <div class="grade">F</div>
+    <div class="note">GenerationModule 단일 prompt</div>
+  </div>
+  <div class="score-card bad">
+    <div class="title">Escalation audit</div>
+    <div class="grade">F</div>
+    <div class="note">권한 위반 침묵 — 추적 불가</div>
+  </div>
+  <div class="score-card warn">
+    <div class="title">데이터 품질</div>
+    <div class="grade">C</div>
+    <div class="note">carrier 24/24 N/A · 영업이 기대하는 답 못 함</div>
+  </div>
+  <div class="score-card warn">
+    <div class="title">IR 평가 baseline</div>
+    <div class="grade">B</div>
+    <div class="note">sales_full 60Q MRR 0.87 — author bias 가능성</div>
+  </div>
+</div>
+
+<h3>최선인가? — 솔직한 답</h3>
+
+<div class="verdict warn">
+  <h4>⚠ 부분적으로만. 인덱싱·ACL filter 골격 = 최선에 가까움. 운영 layer 미완성.</h4>
+  <ul>
+    <li><strong>잘된 것:</strong> namespace = tier 라는 단순 매핑 (가독성 + 운영). pipeline 에서 한 곳에서 tier 부여 (모든 sink 자동). internal_only 인덱싱 차단 (defense in depth). retrieval 단계에서 ACL filter 검증됨.</li>
+    <li><strong>덜 된 것 (구조적):</strong> persona 가 hardcode/fallback 만 — 사용자 실제 권한 반영 안 됨. ACL filter 가 동작해도 항상 P1 권한 (public+retail) 으로 떨어짐.</li>
+    <li><strong>위험한 것:</strong> Chroma vs pgvector drift. pgvector 가 먼저 호출되는데 옛 데이터. production 에서 dim mismatch → fail. <strong>지금 즉시 해결 필요.</strong></li>
+    <li><strong>데이터 측면:</strong> carrier tier 가 100% N/A scaffold — 영업 P4 외판이 챗봇 쓰면 "정보 없음" 만 받음. 실제 fetch 작업 필요 (sandbox 차단으로 처음 실패).</li>
+    <li><strong>측정 측면:</strong> IR 평가 dataset 이 60개 (author bias). 10K dataset 설계 문서만 작성됨, 실제 생성 안 함. 측정 없는 ACL 변경은 위험.</li>
+  </ul>
+</div>
+
+<h3>다음 결정 우선순위 (ROI 순)</h3>
+
+<table>
+  <thead><tr><th>#</th><th>액션</th><th>리스크 해결</th><th>비용</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><strong>pgvector wipe 또는 재인덱싱</strong></td><td>production fail 위험 즉시 제거</td><td>30분</td></tr>
+    <tr><td>2</td><td><code>User.persona</code> field + migration + view 가 주입</td><td>ACL filter 실제 동작</td><td>1~2h</td></tr>
+    <tr><td>3</td><td>GenerationModule persona prompt 분기</td><td>답변 길이·톤 차별화</td><td>1h</td></tr>
+    <tr><td>4</td><td><code>EscalationAttempt</code> 모델 + 로깅</td><td>권한 위반 가시화</td><td>1h</td></tr>
+    <tr><td>5</td><td>carrier 데이터 실제 fetch (manual or 다른 sandbox)</td><td>P4 외판 응답 가능</td><td>1~2h</td></tr>
+    <tr><td>6</td><td>10K dataset 1차 batch + baseline</td><td>측정 → 다음 stage 의사결정</td><td>1d</td></tr>
+  </tbody>
+</table>
+
+<p style="color: var(--muted); font-size: 13px; margin-top: 22px;">
+  <strong>요약.</strong> 골격은 단순·안전. 위에 올릴 운영 layer (persona DB, prompt 분기, audit) 미완성.
+  지금 멈추면 "보안 설계는 했는데 사용자가 못 쓰는 챗봇" 상태. 1번 drift 부터 해결 권장.
+</p>
+
+</body>
+</html>

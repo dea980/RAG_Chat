@@ -22,7 +22,35 @@ _EMBEDDING_REQUIRED_ENV = {
     "gemini": "GOOGLE_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "qwen": "QWEN_API_KEY",
+    "ollama": None,  # local, no API key required
 }
+
+
+# Persona × tier ACL — 페르소나 보안 설계 문서 참조:
+# backend/docs/learning/2026-05-29-persona-security-design.md
+# 경로 prefix → audience_tier. None = 인덱싱 SKIP (internal_only).
+_TIER_BY_PATH_PREFIX = (
+    ("data/corpus/public/", "public"),
+    ("data/corpus/retail/", "retail"),
+    ("data/corpus/b2b/", "b2b"),
+    ("data/corpus/competitive/", "competitive"),
+    ("data/corpus/carrier/", "carrier"),
+    ("data/corpus/internal/", None),  # 인덱싱 자체 차단
+    ("data/samples/", "public"),       # 기존 test fixture 호환
+)
+
+
+def infer_tier(source_file: str) -> str | None:
+    """파일 경로에서 audience_tier 추론.
+
+    `corpus/internal/` 은 None 반환 → ingest pipeline 이 skip.
+    매핑 없는 경로는 'public' 으로 fallback (legacy 호환).
+    """
+    normalized = source_file.replace("\\", "/")
+    for prefix, tier in _TIER_BY_PATH_PREFIX:
+        if prefix in normalized:
+            return tier
+    return "public"
 
 
 def _check_embedding_credentials() -> None:
@@ -65,6 +93,10 @@ def _to_lc_document(doc: RawDoc) -> Document:
         flat_meta["page"] = doc.page
     if doc.section is not None:
         flat_meta["section"] = doc.section
+    # persona × tier ACL — retrieval 단계 filter 의 기준
+    tier = infer_tier(doc.source_file)
+    if tier is not None:
+        flat_meta["audience_tier"] = tier
     return Document(page_content=doc.content, metadata=flat_meta)
 
 
@@ -72,10 +104,21 @@ class ChromaSink:
     """RawDoc 청크들을 Chroma 컬렉션에 임베딩·저장."""
 
     def write(self, docs: Iterable[RawDoc]) -> WriteResult:
-        """청크들을 결정론적 id 와 함께 Chroma 에 add. 같은 id 면 upsert."""
+        """청크들을 결정론적 id 와 함께 Chroma 에 add. 같은 id 면 upsert.
+
+        internal_only tier (infer_tier=None) 청크는 인덱싱 차단 — 검색 필터·
+        답변 마스킹보다 가장 안전한 layer.
+        """
         _check_embedding_credentials()
 
-        chunks = list(docs)
+        all_chunks = list(docs)
+        chunks = [c for c in all_chunks if infer_tier(c.source_file) is not None]
+        skipped = len(all_chunks) - len(chunks)
+        if skipped:
+            logger.warning(
+                f"ChromaSink.write: skipped {skipped} chunks from internal_only tier "
+                "(인덱싱 차단 — corpus/internal/* 경로)"
+            )
         if not chunks:
             logger.warning("ChromaSink.write: empty input — nothing to ingest")
             return WriteResult(count=0, ids=[])

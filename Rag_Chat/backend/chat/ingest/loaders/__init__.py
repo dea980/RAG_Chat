@@ -10,4 +10,3 @@
 # 등록을 트리거하기 위한 side-effect import.
 from . import structured  # noqa: F401
 from . import text  # noqa: F401
-from .ocr import image as _ocr_image  # noqa: F401

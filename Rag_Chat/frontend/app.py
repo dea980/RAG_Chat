@@ -7,9 +7,10 @@ import logging
 import os
 import time
 from datetime import datetime, timedelta
-from api import fetch_user_id, get_provider_selection, set_provider_combo, upload_knowledge_files
+from api import fetch_user_id, get_provider_selection, set_provider_selection, upload_knowledge_files
 from typing import Optional, Dict, Any
 import auth as auth_mod  # B5 — session-based login
+import messages_api as msgs_api  # ChatGPT-style conv/messages endpoints
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -262,23 +263,6 @@ def update_session_activity() -> bool:
     return False
 
 
-def determine_provider_combo(selection: Dict[str, Any]) -> str:
-    reasoning = selection.get("reasoning_provider")
-    generation = selection.get("generation_provider")
-    if reasoning == "gemini" and generation == "gemini":
-        return "gemini_only"
-    if reasoning == "qwen" and generation == "gemini":
-        return "qwen_reasoning_gemini_generation"
-    if reasoning == "qwen" and generation == "qwen":
-        return "qwen_only"
-    if reasoning == "openrouter" and generation == "openrouter":
-        return "openrouter_only"
-    if reasoning == "ollama" and generation == "ollama":
-        return "ollama_only"
-    if reasoning == "huggingface" and generation == "huggingface":
-        return "huggingface_only"
-    return "custom"
-
 def send_chat_request(prompt):
     """Send chat request to backend API"""
     try:
@@ -300,21 +284,38 @@ def send_chat_request(prompt):
         # cookie is sent. user_id is no longer sent in the payload; the backend
         # reads request.user from the session (B4).
         sess = auth_mod.get_session()
+        # DRF SessionAuthentication enforces CSRF on non-safe methods.
+        # Forward the csrftoken cookie as X-CSRFToken header — otherwise
+        # Django returns 403 with `detail: "CSRF Failed: ..."` and the
+        # frontend wrongly treats it as a moderation block.
+        csrf_token = sess.cookies.get("csrftoken", "")
         response = sess.post(
             request_url,
             json={"question": prompt},
-            headers={"Content-Type": "application/json"},
-            timeout=10,
+            headers={
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrf_token,
+                "Referer": API_BASE_URL,
+            },
+            # Ollama gpt-oss 첫 콜드 호출 = 60~120s. 그 다음 호출도 RAG context
+            # 큰 답변은 30~60s. 180s 까지 허용.
+            timeout=180,
         )
-        # C7 — surface 403 (moderation block) to the caller instead of
-        # raising. Body holds blocked_words/categories/next_steps.
+        # 403 disambiguation:
+        #   - CSRF failure  → body has `detail: "CSRF Failed: ..."`, treat as error.
+        #   - Moderation    → body has `blocked_words`/`categories`/`next_steps`.
         if response.status_code == 403:
             try:
                 payload = response.json()
             except ValueError:
                 payload = {}
-            payload["blocked"] = True
-            return payload
+            if "blocked_words" in payload or "categories" in payload:
+                payload["blocked"] = True
+                return payload
+            # CSRF / permission / other 403 — surface as error.
+            logger.error(f"chat 403 (non-moderation): {payload}")
+            st.error(f"인증 또는 권한 오류 (403): {payload.get('detail', '')}")
+            return None
         response.raise_for_status()
         return response.json()
     except requests.Timeout:
@@ -349,17 +350,13 @@ if not st.session_state.user_id:
         st.session_state.last_activity = time.time()
         info = get_provider_selection(user["user_id"])
         if info:
-            selection = info.get("selection", {})
-            st.session_state.provider_combo = determine_provider_combo(selection)
-            st.session_state.provider_selection = selection
+            st.session_state.provider_selection = info.get("selection", {})
             st.session_state.embedding_config = info.get("embedding", {})
 
-if st.session_state.user_id and "provider_combo" not in st.session_state:
+if st.session_state.user_id and "provider_selection" not in st.session_state:
     info = get_provider_selection(st.session_state.user_id)
     if info:
-        selection = info.get("selection", {})
-        st.session_state.provider_combo = determine_provider_combo(selection)
-        st.session_state.provider_selection = selection
+        st.session_state.provider_selection = info.get("selection", {})
         st.session_state.embedding_config = info.get("embedding", {})
 
 # Start Redis listener in background
@@ -431,10 +428,75 @@ def load_phone_data():
         return False
 
 # UI Components
+auth_mod.render_topbar()
 st.title("Samsung Galaxy 25 Phone Chat Assistant")
 
 # Session status indicator
 auth_mod.render_user_chip()
+
+# ---------------------------------------------------------------------------
+# Sidebar — Conversations list (ChatGPT-style)
+# ---------------------------------------------------------------------------
+if auth_mod.is_authenticated():
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 💬 대화 목록")
+
+    if st.sidebar.button("➕ 새 대화", key="conv_new_btn", use_container_width=True):
+        st.session_state["active_conversation_id"] = None
+        st.session_state["messages"] = []
+        st.rerun()
+
+    convs = msgs_api.list_conversations(limit=20)
+    active_id = st.session_state.get("active_conversation_id")
+    if not convs:
+        st.sidebar.caption("아직 대화가 없습니다. 메시지를 보내 시작하세요.")
+    for c in convs:
+        is_active = c["id"] == active_id
+        prefix = "▸ " if is_active else "  "
+        label = f"{prefix}{c['title'][:28]}"
+        if st.sidebar.button(
+            label,
+            key=f"conv_btn_{c['id']}",
+            use_container_width=True,
+        ):
+            st.session_state["active_conversation_id"] = c["id"]
+            # Hydrate messages from server
+            detail = msgs_api.get_conversation(c["id"])
+            if detail:
+                st.session_state["messages"] = [
+                    {"role": m["role"], "content": m["content"],
+                     "redacted_count": m.get("redacted_count", 0)}
+                    for m in detail.get("messages", [])
+                ]
+            st.rerun()
+
+    # ----- 응답 설정 (knobs) -----
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("⚙ 응답 설정", expanded=False):
+        st.session_state.setdefault("knob_top_k", 5)
+        st.session_state.setdefault("knob_history_turns", 5)
+        st.session_state.setdefault("knob_use_reasoning", False)
+
+        st.session_state["knob_top_k"] = st.slider(
+            "검색 청크 수 (top_k)",
+            1, 20, st.session_state["knob_top_k"],
+            help="LLM 컨텍스트로 넘기는 RAG 청크 수. 낮을수록 빠르나 정보 적음.",
+        )
+        st.session_state["knob_history_turns"] = st.slider(
+            "히스토리 turn 수",
+            0, 20, st.session_state["knob_history_turns"],
+            help="이전 대화 중 마지막 N turn 만 LLM 에 노출. 낮을수록 빠름.",
+        )
+        st.session_state["knob_use_reasoning"] = st.toggle(
+            "추론 단계 사용",
+            value=st.session_state["knob_use_reasoning"],
+            help="ON = reasoning + generation (LLM 2회, 느림, 정밀). OFF = generation 만.",
+        )
+        if st.button("기본값으로 초기화", key="knob_reset"):
+            st.session_state["knob_top_k"] = 5
+            st.session_state["knob_history_turns"] = 5
+            st.session_state["knob_use_reasoning"] = False
+            st.rerun()
 if st.session_state.user_id:
     st.sidebar.success(f"Session active: {st.session_state.user_id}")
 
@@ -472,35 +534,56 @@ if st.sidebar.button("Use Bundled Phone Data"):
         else:
             st.sidebar.error("Failed to update bundled phone data. Please try again.")
 
-provider_options = {
-    "Gemini Only": "gemini_only",
-    "Qwen Reasoning + Gemini Generation": "qwen_reasoning_gemini_generation",
-    "Qwen Only": "qwen_only",
-    "OpenRouter Only": "openrouter_only",
-    "Ollama Only": "ollama_only",
-    "Hugging Face Only": "huggingface_only",
-    "Custom (manual)": "custom",
+PROVIDER_CHOICES = ["gemini", "qwen", "openrouter", "ollama", "huggingface"]
+PROVIDER_LABELS = {
+    "gemini": "Gemini",
+    "qwen": "Qwen",
+    "openrouter": "OpenRouter",
+    "ollama": "Ollama",
+    "huggingface": "Hugging Face",
 }
 
 if st.session_state.user_id:
-    current_combo = st.session_state.get("provider_combo", "gemini_only")
-    labels = list(provider_options.keys())
-    default_label = next((label for label, value in provider_options.items() if value == current_combo), "Custom (manual)")
-    selected_label = st.sidebar.selectbox(
-        "Provider Preset",
-        labels,
-        index=labels.index(default_label) if default_label in labels else len(labels) - 1,
-        key="provider_selectbox",
-    )
-    selected_combo = provider_options[selected_label]
+    current_selection = st.session_state.get("provider_selection", {})
+    current_reasoning = current_selection.get("reasoning_provider", "gemini")
+    current_generation = current_selection.get("generation_provider", "gemini")
 
-    if selected_combo != "custom" and selected_combo != st.session_state.get("provider_combo"):
-        result = set_provider_combo(st.session_state.user_id, selected_combo)
+    def _provider_index(value: str) -> int:
+        return PROVIDER_CHOICES.index(value) if value in PROVIDER_CHOICES else 0
+
+    st.sidebar.markdown("**Provider Selection**")
+    reasoning_choice = st.sidebar.selectbox(
+        "Reasoning",
+        PROVIDER_CHOICES,
+        index=_provider_index(current_reasoning),
+        format_func=lambda v: PROVIDER_LABELS.get(v, v),
+        key="reasoning_provider_select",
+    )
+    generation_choice = st.sidebar.selectbox(
+        "Generation",
+        PROVIDER_CHOICES,
+        index=_provider_index(current_generation),
+        format_func=lambda v: PROVIDER_LABELS.get(v, v),
+        key="generation_provider_select",
+    )
+
+    dirty = (
+        reasoning_choice != current_reasoning
+        or generation_choice != current_generation
+    )
+    if st.sidebar.button("적용", disabled=not dirty, key="apply_provider_btn"):
+        result = set_provider_selection(
+            st.session_state.user_id,
+            reasoning_choice,
+            generation_choice,
+        )
         if result:
-            st.session_state.provider_combo = selected_combo
             st.session_state.provider_selection = result.get("selection", {})
             st.session_state.embedding_config = result.get("embedding", {})
-            st.sidebar.success(f"Provider updated to {selected_label}")
+            st.sidebar.success(
+                f"Reasoning={PROVIDER_LABELS[reasoning_choice]} · "
+                f"Generation={PROVIDER_LABELS[generation_choice]}"
+            )
 
     def _kv_lines(d: dict) -> str:
         """dict → markdown 키:값 리스트. 중첩 dict 는 한 줄에 inline."""
@@ -538,41 +621,79 @@ if not st.session_state.session_expired and st.session_state.user_id and is_sess
         with st.chat_message(message["role"]):
             st.write(message["content"])
 
-    # Chat input
-    if prompt := st.chat_input("What would you like to discuss?"):
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.write(prompt)
+    # ---------------------------------------------------------------
+    # Send box — st.chat_input (bottom-fixed natively) + ingest toggle row.
+    # The toggle persists per session via session_state["ingest_flag"].
+    # ---------------------------------------------------------------
+    if "ingest_flag" not in st.session_state:
+        st.session_state["ingest_flag"] = False
 
-        # Update session activity
+    col_left, col_toggle = st.columns([5, 2])
+    with col_toggle:
+        st.session_state["ingest_flag"] = st.toggle(
+            "📚 파일 영구 등록",
+            value=st.session_state["ingest_flag"],
+            help="ON = 첨부 파일을 벡터스토어에 저장하여 다음 검색에도 사용 / "
+                 "OFF = 이 메시지의 컨텍스트로만 사용",
+        )
+
+    chat_value = st.chat_input(
+        "메시지 입력 — 파일 첨부 가능 (Cmd/Ctrl+Enter 로 전송)",
+        accept_file="multiple",
+        file_type=["pdf", "docx", "xlsx", "xls", "csv", "txt", "md", "html",
+                   "png", "jpg", "jpeg"],
+    )
+
+    # st.chat_input with accept_file returns ChatInputValue (or None).
+    # Backward-compat: if accept_file is unsupported on this Streamlit
+    # version, it returns a plain string instead.
+    submitted = False
+    prompt_text = ""
+    uploaded = []
+    if chat_value:
+        if isinstance(chat_value, str):
+            prompt_text = chat_value
+        else:
+            prompt_text = (getattr(chat_value, "text", "") or "").strip()
+            uploaded = list(getattr(chat_value, "files", []) or [])
+        if prompt_text:
+            submitted = True
+    ingest_flag = st.session_state["ingest_flag"]
+
+    if submitted and prompt_text.strip():
+        # Optimistic user message
+        st.session_state.messages.append({"role": "user", "content": prompt_text.strip()})
         update_session_activity()
+        with st.chat_message("user"):
+            st.write(prompt_text.strip())
+            if uploaded:
+                for f in uploaded:
+                    st.caption(f"📎 {f.name} ({f.size} bytes)")
 
-        # Get AI response
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                if response_data := send_chat_request(prompt):
-                    # C7 — moderation block: amber border + reason + next steps
-                    # (CLAUDE.md 거절 패턴, 빨강 배너 금지).
-                    if response_data.get("blocked"):
-                        blocked_words = response_data.get("blocked_words", [])
-                        categories = response_data.get("categories", [])
-                        next_steps = response_data.get("next_steps", [])
-                        words_chip = " · ".join(f"`{w}`" for w in blocked_words) or "—"
-                        cat_chip = " · ".join(categories) or "—"
-                        steps_md = "\n".join(f"- {s}" for s in next_steps)
-                        block_html = f"""
-<div style="
-    border:1px solid #D9A441;
-    background:rgba(217,164,65,0.08);
-    border-radius:6px;
-    padding:12px 16px;
-    margin:8px 0;
-    font-family:-apple-system,'Pretendard Variable',sans-serif;
-">
-  <div style="font-weight:500;color:#D9A441;
-              font-family:'Geist Mono',monospace;font-size:11px;
-              letter-spacing:0.09em;text-transform:uppercase;">
+                response_data = msgs_api.send_message(
+                    text=prompt_text.strip(),
+                    conversation_id=st.session_state.get("active_conversation_id"),
+                    files=uploaded or [],
+                    ingest=ingest_flag,
+                    top_k=st.session_state.get("knob_top_k", 5),
+                    use_reasoning=st.session_state.get("knob_use_reasoning", False),
+                    history_turns=st.session_state.get("knob_history_turns", 5),
+                )
+
+                if response_data and response_data.get("blocked"):
+                    blocked_words = response_data.get("blocked_words", [])
+                    categories = response_data.get("categories", [])
+                    next_steps = response_data.get("next_steps", [])
+                    words_chip = " · ".join(f"`{w}`" for w in blocked_words) or "—"
+                    cat_chip = " · ".join(categories) or "—"
+                    block_html = f"""
+<div style="border:1px solid #D9A441;background:rgba(217,164,65,0.08);
+            border-radius:6px;padding:12px 16px;margin:8px 0;
+            font-family:-apple-system,'Pretendard Variable',sans-serif;">
+  <div style="font-weight:500;color:#D9A441;font-family:'Geist Mono',monospace;
+              font-size:11px;letter-spacing:0.09em;text-transform:uppercase;">
     BLOCKED · MODERATION
   </div>
   <div style="margin-top:6px;color:#F3F2EE;">
@@ -582,38 +703,36 @@ if not st.session_state.session_expired and st.session_state.user_id and is_sess
               font-size:12px;">
     Words: {words_chip} &nbsp;·&nbsp; Categories: {cat_chip}
   </div>
-</div>
-"""
-                        st.markdown(block_html, unsafe_allow_html=True)
-                        if next_steps:
-                            st.markdown("**다음 단계**")
-                            st.markdown(steps_md)
-                        st.session_state.messages.append(
-                            {"role": "assistant", "content": "[BLOCKED — moderation]"}
+</div>"""
+                    st.markdown(block_html, unsafe_allow_html=True)
+                    if next_steps:
+                        st.markdown("**다음 단계**")
+                        st.markdown("\n".join(f"- {s}" for s in next_steps))
+                    st.session_state.messages.append(
+                        {"role": "assistant", "content": "[BLOCKED — moderation]"}
+                    )
+                elif response_data:
+                    asst = response_data.get("assistant_message", {}) or {}
+                    response_text = asst.get("content", "Sorry, I couldn't process that.")
+                    redacted_count = asst.get("redacted_count", 0)
+                    st.write(response_text)
+                    if redacted_count > 0:
+                        st.warning(
+                            f"[수정됨·{redacted_count}건] 권한 외 chunk 가 검색결과에서 가려졌습니다. "
+                            "접근 권한 확장은 관리자에게 문의하세요."
                         )
-                    else:
-                        response = response_data.get("response", "Sorry, I couldn't process that.")
-                        images = response_data.get("images", [])
-                        redacted_count = response_data.get("redacted_count", 0)
-
-                        # Response Text
-                        st.write(response)
-
-                        # Phase A — redacted ribbon (silent drop 금지).
-                        if redacted_count > 0:
-                            st.warning(
-                                f"[수정됨·{redacted_count}건] 권한 외 chunk 가 검색결과에서 가려졌습니다. "
-                                "접근 권한 확장은 관리자에게 문의하세요."
-                            )
-
-                        # Response Image
-                        if images:
-                            st.write("🔹 Related Images:")
-                            for image in images:
-                                image_url = STATIC_IMAGE_URL + image + ".png"
-                                st.image(image_url, use_container_width=True)
-
-                        st.session_state.messages.append({"role": "assistant", "content": response})
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": response_text,
+                        "redacted_count": redacted_count,
+                    })
+                    # New conv created? Persist active id and refresh sidebar.
+                    new_conv_id = response_data.get("conversation_id")
+                    if new_conv_id and st.session_state.get("active_conversation_id") != new_conv_id:
+                        st.session_state["active_conversation_id"] = new_conv_id
+                else:
+                    st.error("응답을 받지 못했습니다. 다시 시도해 주세요.")
+        st.rerun()
 
 else:
     st.warning("Your session has expired. Please refresh the page to start a new session.")

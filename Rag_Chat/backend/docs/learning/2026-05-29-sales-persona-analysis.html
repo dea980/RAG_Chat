@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>삼성 모바일부 영업 페르소나 분석 — RAG 챗봇 사용자 정의</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+<style>
+  :root {
+    --bg: #0A0B0D;
+    --surface: #14151A;
+    --surface-2: #1C1E26;
+    --fg: #E8E9EC;
+    --muted: #8B8F99;
+    --border: #2A2D36;
+    --accent: #E89B3C;
+    --accent-soft: rgba(232,155,60,.12);
+    --code-bg: #1C1E26;
+    --note: #161821;
+    --p1: #60A5FA;
+    --p2: #34D399;
+    --p3: #A78BFA;
+    --p4: #F472B6;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+    max-width: 980px; margin: 0 auto; padding: 56px 28px 120px;
+    line-height: 1.75; font-size: 15.5px;
+    font-feature-settings: "tnum" on;
+  }
+  h1 { font-size: 32px; margin: 0 0 8px; letter-spacing: -.6px; font-weight: 700; }
+  p.lead {
+    color: var(--muted); margin: 0 0 32px; font-size: 15px;
+    border-left: 3px solid var(--accent); padding: 4px 0 4px 14px;
+  }
+  h2 {
+    font-size: 22px; margin: 64px 0 16px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border); font-weight: 600;
+  }
+  h2 .num {
+    display: inline-block; min-width: 30px; height: 30px; padding: 0 10px;
+    background: var(--accent); color: #14151A; border-radius: 6px;
+    text-align: center; line-height: 30px; font-size: 13px;
+    margin-right: 10px; font-weight: 700;
+    font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  }
+  h3 { font-size: 17px; margin: 32px 0 12px; color: var(--accent); font-weight: 600; }
+  h4 { font-size: 14px; margin: 16px 0 6px; color: var(--muted); font-weight: 500; }
+  p { margin: 12px 0; }
+  strong { color: #fff; font-weight: 600; }
+  em { color: var(--accent); font-style: normal; font-weight: 500; }
+  code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: 13.5px;
+    font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+    font-feature-settings: "tnum" on;
+    color: #F4D7A9;
+  }
+  pre {
+    background: var(--code-bg); padding: 16px 18px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.65;
+    border: 1px solid var(--border);
+    font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+    font-feature-settings: "tnum" on;
+  }
+  pre code { background: transparent; padding: 0; color: var(--fg); }
+  blockquote {
+    margin: 14px 0; padding: 8px 16px; border-left: 3px solid var(--accent);
+    background: var(--surface); color: var(--fg); border-radius: 0 6px 6px 0;
+  }
+  table {
+    border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 13.5px;
+    border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+    font-feature-settings: "tnum" on;
+  }
+  th, td {
+    border-top: 1px solid var(--border); border-right: 1px solid var(--border);
+    padding: 10px 14px; text-align: left; vertical-align: top;
+  }
+  th:last-child, td:last-child { border-right: none; }
+  thead th { background: var(--surface-2); font-weight: 600; color: var(--accent); border-top: none; }
+  tbody tr:first-child td { border-top: 1px solid var(--border); }
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .analogy {
+    background: var(--note); padding: 16px 20px; border-radius: 8px;
+    border-left: 3px solid var(--accent); margin: 18px 0;
+  }
+  .analogy strong { color: var(--accent); }
+  .toc {
+    background: var(--surface); padding: 18px 24px; border-radius: 10px;
+    margin: 32px 0; font-size: 14px; border: 1px solid var(--border);
+  }
+  .toc h4 { margin: 0 0 8px; color: var(--accent); font-size: 12px;
+            letter-spacing: 0.1em; text-transform: uppercase; }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin: 2px 0; }
+  .toc a { color: var(--fg); }
+  .meta {
+    display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px;
+    color: var(--muted); margin: 4px 0 32px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+  }
+  .meta span::before { content: "·"; margin-right: 16px; color: var(--border); }
+  .meta span:first-child::before { content: none; }
+  .exercise {
+    background: var(--surface); padding: 18px 22px; border-radius: 8px;
+    margin: 18px 0; border: 1px solid var(--border);
+  }
+  .exercise h4 { margin-top: 0; color: var(--fg); font-size: 14px; }
+  .exercise .level {
+    display: inline-block; padding: 2px 10px; border-radius: 4px;
+    font-family: "Geist Mono", ui-monospace, monospace; font-size: 11px;
+    letter-spacing: 0.06em; background: var(--accent-soft); color: var(--accent);
+    margin-left: 8px; font-weight: 600;
+  }
+  .exercise .hint {
+    margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border);
+    color: var(--muted); font-size: 13.5px;
+  }
+  .hypothesis-banner {
+    background: rgba(250,204,21,.08);
+    border: 1px solid rgba(250,204,21,.4);
+    color: #FACC15;
+    padding: 14px 20px; border-radius: 8px;
+    margin: 24px 0; font-size: 13.5px;
+  }
+  .hypothesis-banner strong { color: #FACC15; }
+
+  /* Persona cards */
+  .persona-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 16px; margin: 24px 0;
+  }
+  .persona-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 22px;
+    position: relative;
+  }
+  .persona-card.p1 { border-top: 4px solid var(--p1); }
+  .persona-card.p2 { border-top: 4px solid var(--p2); }
+  .persona-card.p3 { border-top: 4px solid var(--p3); }
+  .persona-card.p4 { border-top: 4px solid var(--p4); }
+  .persona-card .pid {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    padding: 2px 10px; border-radius: 999px;
+    display: inline-block; margin-bottom: 8px;
+  }
+  .persona-card.p1 .pid { background: rgba(96,165,250,.18); color: var(--p1); }
+  .persona-card.p2 .pid { background: rgba(52,211,153,.18); color: var(--p2); }
+  .persona-card.p3 .pid { background: rgba(167,139,250,.18); color: var(--p3); }
+  .persona-card.p4 .pid { background: rgba(244,114,182,.18); color: var(--p4); }
+  .persona-card h4 { font-size: 15px; margin: 0 0 6px; color: #fff; font-weight: 600; }
+  .persona-card .role-sub { color: var(--muted); font-size: 12.5px; margin-bottom: 14px; }
+  .persona-card dl { margin: 0; display: grid; grid-template-columns: 90px 1fr; gap: 6px 12px; font-size: 13px; }
+  .persona-card dt { color: var(--muted); font-weight: 500; }
+  .persona-card dd { margin: 0; color: var(--fg); }
+  .persona-card .examples {
+    margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border);
+    font-size: 12.5px; color: var(--muted);
+  }
+  .persona-card .examples b { color: var(--accent); font-weight: 600; font-size: 11px;
+                              text-transform: uppercase; letter-spacing: 0.08em; }
+  .persona-card .examples ul { margin: 6px 0 0; padding-left: 16px; }
+  .persona-card .examples li { color: var(--fg); margin: 2px 0; font-size: 12.5px; }
+
+  /* Distribution bars */
+  .dist-row {
+    display: grid; grid-template-columns: 140px 1fr 90px;
+    gap: 12px; align-items: center; margin: 10px 0;
+    font-size: 13.5px;
+  }
+  .dist-row .label { color: var(--fg); }
+  .dist-row .bar {
+    height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden;
+  }
+  .dist-row .bar > span {
+    display: block; height: 100%; border-radius: 4px;
+  }
+  .dist-row.p1 .bar > span { background: var(--p1); }
+  .dist-row.p2 .bar > span { background: var(--p2); }
+  .dist-row.p3 .bar > span { background: var(--p3); }
+  .dist-row.p4 .bar > span { background: var(--p4); }
+  .dist-row.diff .bar > span { background: var(--accent); }
+  .dist-row .pct {
+    text-align: right; color: var(--muted);
+    font-family: "Geist Mono", ui-monospace, monospace; font-size: 12.5px;
+  }
+
+  /* Flow diagram (persona-aware RAG) */
+  .flow-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 28px 24px; margin: 24px 0;
+  }
+  .flow-title {
+    text-align: center; color: var(--muted); font-size: 11px;
+    letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 18px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+  }
+  .flow { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .node {
+    display: flex; align-items: center; gap: 10px;
+    min-width: 380px; padding: 12px 16px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px;
+  }
+  .node .tag {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent);
+    letter-spacing: 0.06em; white-space: nowrap;
+  }
+  .node .body { flex: 1; }
+  .node .body strong { display: block; font-size: 14px; color: #fff; }
+  .node .body small { color: var(--muted); font-size: 12px;
+                      font-family: "Geist Mono", ui-monospace, monospace; }
+  .node.user { border-color: var(--muted); background: var(--note); }
+  .node.persona { border-left: 3px solid var(--accent); }
+  .node.persona .tag { background: rgba(232,155,60,.18); color: var(--accent); }
+  .node.output { background: var(--accent); color: #14151A; border-color: var(--accent); }
+  .node.output strong { color: #14151A; }
+  .node.output small { color: rgba(20,21,26,.7); }
+  .node.output .tag { background: rgba(20,21,26,.18); color: #14151A; }
+  .arrow { width: 2px; height: 18px; background: var(--border); position: relative; }
+  .arrow::after {
+    content: ""; position: absolute; bottom: -6px; left: -4px;
+    width: 0; height: 0; border-left: 5px solid transparent;
+    border-right: 5px solid transparent; border-top: 8px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<h1>삼성 모바일부 영업 페르소나 분석</h1>
+<div class="meta">
+  <span>2026-05-29</span>
+  <span>RAG 챗봇 사용자 정의</span>
+  <span>관련: <a href="./2026-05-29-ir-improvement-plan.html">IR 개선 plan</a></span>
+</div>
+
+<p class="lead">
+  <strong>삼성 모바일부 영업 = 동질 집단이 아니다.</strong> 매장직·B2B·본사 기획·외판이
+  모두 다른 환경에서 다른 정보를 다르게 빠르게 요구한다. RAG 챗봇은 한 종류의 답이
+  아니라 <em>페르소나별 정보 우선순위</em> 를 알아야 한다.
+</p>
+
+<div class="hypothesis-banner">
+  <strong>⚠ 작업 가설.</strong> 아래는 공개 정보 + 일반 영업 조직 지식 기반 가설이다.
+  실제 사내 인터뷰 데이터 없음. 영업팀과 합 맞춘 후 보정 필요.
+</div>
+
+<div class="toc">
+  <h4>목차</h4>
+  <ol>
+    <li><a href="#analogy">비유 — 응급실 / 가정의학과 / 산부인과</a></li>
+    <li><a href="#cost">페르소나 무시의 비용</a></li>
+    <li><a href="#personas">4 페르소나 정의</a></li>
+    <li><a href="#corpus">페르소나별 corpus 매핑</a></li>
+    <li><a href="#dist">10K dataset 분포</a></li>
+    <li><a href="#pipeline">생성 파이프라인</a></li>
+    <li><a href="#flow">페르소나 인식 RAG 흐름</a></li>
+    <li><a href="#verify">가설 보정 절차</a></li>
+    <li><a href="#exercises">연습 문제</a></li>
+    <li><a href="#decisions">다음 세션 결정 사항</a></li>
+  </ol>
+</div>
+
+<hr>
+
+<h2 id="analogy"><span class="num">비유</span>응급실 / 가정의학과 / 산부인과</h2>
+
+<p>같은 "환자" 도 어떤 의사가 보느냐에 따라 묻는 것이 다르다:</p>
+<ul>
+  <li><strong>응급실:</strong> "지금 당장 죽나? 뭘 끊어야 하나?" — 속도 우선, 정답 1개</li>
+  <li><strong>가정의학과:</strong> "장기 관리. 다음 약은? 식이는?" — 맥락 우선, 옵션 비교</li>
+  <li><strong>산부인과:</strong> "임신 차원 정보. 다른 과 안 봐도 됨" — 도메인 좁고 깊음</li>
+</ul>
+<div class="analogy">
+  <strong>매핑.</strong> 매장직 = 응급실 (고객 앞에서 30초). B2B = 가정의학과 (제안서, 옵션 비교).
+  본사 기획 = 산부인과 (좁고 깊은 분석). 같은 챗봇이 셋에 같은 답 = 누구도 만족시키지 못함.
+</div>
+
+<hr>
+
+<h2 id="cost"><span class="num">COST</span>페르소나 무시의 비용</h2>
+
+<table>
+  <thead><tr><th>측면</th><th>페르소나 무시 (현재)</th><th>페르소나 명시 후</th></tr></thead>
+  <tbody>
+    <tr><td>corpus 우선순위</td><td>"스펙 다 넣자" 무차별</td><td>매장 → 가격/색상/할부, B2B → DeX/관리/단가</td></tr>
+    <tr><td>dataset 질문 분포</td><td>임의 — 작성자가 corpus 보고 작성</td><td>페르소나별 비중 (50/25/15/10)</td></tr>
+    <tr><td>평가 metric 가중치</td><td>MRR 평균 (모든 질문 동등)</td><td>매장직 latency 가중치 ↑</td></tr>
+    <tr><td>chunk metadata</td><td>category 만</td><td>category + audience_tier (b2c/b2b/internal)</td></tr>
+    <tr><td>답변 톤 (prompt)</td><td>일률 친근체</td><td>매장 짧고 명료 / B2B 격식 / 본사 데이터</td></tr>
+    <tr><td>deferred 기능 우선순위</td><td>모호</td><td>"결합 할인 계산기" vs "경쟁사 비교표" 명확</td></tr>
+  </tbody>
+</table>
+
+<p><strong>한 줄.</strong> 페르소나 명시 = corpus 선별 + dataset 균형 + metric 가중치 한꺼번에 결정.</p>
+
+<hr>
+
+<h2 id="personas"><span class="num">P×4</span>4 페르소나 정의</h2>
+
+<div class="persona-grid">
+
+  <div class="persona-card p1">
+    <span class="pid">P1 · 매장</span>
+    <h4>매장 직원</h4>
+    <div class="role-sub">디지털프라자 · 양판점 · 진열 응대</div>
+    <dl>
+      <dt>환경</dt><dd>고객 응대 중. 시간 압박 30초~2분. 단말기 시연 가능.</dd>
+      <dt>핵심 정보</dt><dd>자급제 가격 · 통신사 출고가 · 결합 할인 · 색상/재고 · 1줄 셀링 포인트</dd>
+      <dt>답변 길이</dt><dd><strong>짧을수록 좋음</strong> (1~2 문장)</dd>
+      <dt>답변 톤</dt><dd>친근 · 즉답</dd>
+      <dt>비공개</dt><dd>마진율 · 매장 인센티브</dd>
+      <dt>우선순위</dt><dd>latency &lt; 1s · citation 짧게</dd>
+    </dl>
+    <div class="examples">
+      <b>예시 질문</b>
+      <ul>
+        <li>"S25 자급제 얼마예요?"</li>
+        <li>"이거 폴드보다 가벼워요?"</li>
+        <li>"민트색 재고 있어요?"</li>
+        <li>"할부 36개월 월 얼마?"</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="persona-card p2">
+    <span class="pid">P2 · B2B</span>
+    <h4>B2B 영업</h4>
+    <div class="role-sub">기업 단체 도입 · 제안서 작성</div>
+    <dl>
+      <dt>환경</dt><dd>제안서 작성. 단가표·DeX 시연. 시간 여유 있음.</dd>
+      <dt>핵심 정보</dt><dd>DeX · Knox · 보안 인증 (KCMVP/CC/NIAP) · 대량 견적 기준 · 기업 액세서리 · 수리 정책</dd>
+      <dt>답변 길이</dt><dd>중장문 OK (3~10 문장, 표 환영)</dd>
+      <dt>답변 톤</dt><dd>격식 · 전문 · 근거</dd>
+      <dt>비공개</dt><dd>기업 견적 단가 · 임대 계약</dd>
+      <dt>우선순위</dt><dd>accuracy · citation 정확 · 비교표</dd>
+    </dl>
+    <div class="examples">
+      <b>예시 질문</b>
+      <ul>
+        <li>"Tab S10 Ultra 100대 도입 시 키보드·S Pen 포함?"</li>
+        <li>"Knox Manage 와 어떤 모델 호환?"</li>
+        <li>"기업 회원사 수리 우선 처리 정책?"</li>
+        <li>"Z Fold6 vs Tab S10+ 출장 임원용 추천?"</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="persona-card p3">
+    <span class="pid">P3 · 본사</span>
+    <h4>본사 마케팅·영업기획</h4>
+    <div class="role-sub">캠페인 기획 · 경쟁사 분석</div>
+    <dl>
+      <dt>환경</dt><dd>통계·캠페인 기획. PC 환경. 시간 여유.</dd>
+      <dt>핵심 정보</dt><dd>경쟁사 풀스펙 · 벤치마크 점수 · 시장 점유율 · 출시 캘린더 · 가격 history</dd>
+      <dt>답변 길이</dt><dd>표 · 표 · 표. 가공 데이터</dd>
+      <dt>답변 톤</dt><dd>데이터 중립</dd>
+      <dt>비공개</dt><dd>매출 · KPI · 재고 (사내 BI)</dd>
+      <dt>우선순위</dt><dd>완전성 · 출처 명시 · 수치 정확</dd>
+    </dl>
+    <div class="examples">
+      <b>예시 질문</b>
+      <ul>
+        <li>"S25 Ultra Geekbench vs iPhone 16 Pro"</li>
+        <li>"Galaxy A55 글로벌 판매량 추세"</li>
+        <li>"한국 5G 시장 Galaxy 점유율 2024 Q4"</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="persona-card p4">
+    <span class="pid">P4 · 외판</span>
+    <h4>외판 · 방문판매 · 콜센터</h4>
+    <div class="role-sub">전화·방문 · 음성 only 가능</div>
+    <dl>
+      <dt>환경</dt><dd>전화·방문. 화면 못 볼 수도. 30~60초.</dd>
+      <dt>핵심 정보</dt><dd>통신사별 월 납부액 · 약정 조건 · 사은품/이벤트 · 결합 할인 시뮬레이션</dd>
+      <dt>답변 길이</dt><dd>매우 짧음 (음성 친화 1~2 문장)</dd>
+      <dt>답변 톤</dt><dd>친근 · 간결</dd>
+      <dt>비공개</dt><dd>통신사 보조금표 (변동성 큼)</dd>
+      <dt>우선순위</dt><dd>정확한 가격 + 갱신 시점</dd>
+    </dl>
+    <div class="examples">
+      <b>예시 질문</b>
+      <ul>
+        <li>"S25 KT 36개월 약정 월 얼마?"</li>
+        <li>"가족 4명 결합하면?"</li>
+        <li>"지금 사은품 뭐 줘?"</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<hr>
+
+<h2 id="corpus"><span class="num">MAP</span>페르소나별 corpus 매핑</h2>
+
+<table>
+  <thead><tr><th>페르소나</th><th>현재 corpus 로 답 가능</th><th>추가 필요 (공개 한도)</th></tr></thead>
+  <tbody>
+    <tr><td><span style="color:var(--p1)">P1 매장</span></td><td>스펙 · 색상 · USD 가격</td><td><strong>한국 자급제·통신사 출고가 · 1줄 셀링 포인트 · 색상별 출시일</strong></td></tr>
+    <tr><td><span style="color:var(--p2)">P2 B2B</span></td><td>DeX · 일부 액세서리</td><td><strong>Knox 호환 모델 · 보안 인증 · 대량 견적 기준 (공개 가격)</strong></td></tr>
+    <tr><td><span style="color:var(--p3)">P3 본사</span></td><td>스펙 풀시트 (lineup csv)</td><td><strong>경쟁사 (iPhone/Pixel/Xiaomi) 풀스펙 · AP 벤치 · 글로벌 판매 추세</strong></td></tr>
+    <tr><td><span style="color:var(--p4)">P4 외판</span></td><td>거의 못 답함</td><td><strong>통신사 공개 출고가 · 약정 옵션 · 사은품 이벤트</strong></td></tr>
+  </tbody>
+</table>
+
+<div class="hypothesis-banner">
+  <strong>비공개 = 절대 수집 안 함.</strong> 마진율 · 매장 KPI · 통신사 보조금표 · 기업 견적 단가 · 가족결합 할인율.
+</div>
+
+<hr>
+
+<h2 id="dist"><span class="num">10K</span>10K dataset 분포</h2>
+
+<h3>페르소나 비중 (작업 가설)</h3>
+
+<div class="dist-row p1"><div class="label">P1 매장</div><div class="bar"><span style="width:50%"></span></div><div class="pct">50% · 5000</div></div>
+<div class="dist-row p2"><div class="label">P2 B2B</div><div class="bar"><span style="width:25%"></span></div><div class="pct">25% · 2500</div></div>
+<div class="dist-row p3"><div class="label">P3 본사 기획</div><div class="bar"><span style="width:15%"></span></div><div class="pct">15% · 1500</div></div>
+<div class="dist-row p4"><div class="label">P4 외판</div><div class="bar"><span style="width:10%"></span></div><div class="pct">10% · 1000</div></div>
+
+<h3>난이도 분포 (페르소나 무관 cross-cut)</h3>
+
+<div class="dist-row diff"><div class="label">Easy (정확매칭)</div><div class="bar"><span style="width:30%"></span></div><div class="pct">30%</div></div>
+<div class="dist-row diff"><div class="label">Medium (paraphrase)</div><div class="bar"><span style="width:30%"></span></div><div class="pct">30%</div></div>
+<div class="dist-row diff"><div class="label">Hard (negation/multi-hop)</div><div class="bar"><span style="width:25%"></span></div><div class="pct">25%</div></div>
+<div class="dist-row diff"><div class="label">N/A (코퍼스 외)</div><div class="bar"><span style="width:10%"></span></div><div class="pct">10%</div></div>
+<div class="dist-row diff"><div class="label">Adversarial (오타·spoof)</div><div class="bar"><span style="width:5%"></span></div><div class="pct">5%</div></div>
+
+<hr>
+
+<h2 id="pipeline"><span class="num">GEN</span>생성 파이프라인 (페르소나 기반)</h2>
+
+<pre><code>페르소나 1~4 × 카테고리 6 × 난이도 5 × 의도 N = 매트릭스 셀
+   ↓
+각 셀당 N개 생성 (총합 10K)
+   ↓
+┌─────────────────────────────────────┐
+│ Template      60%   결정적          │
+│   corpus fact + 페르소나 어휘       │
+│   "P1 + foldable + easy + 가격"     │
+│   → "Z Fold6 자급제 얼마예요?"      │
+├─────────────────────────────────────┤
+│ LLM rewrite   30%   다양화          │
+│   template 결과 → 페르소나 말투     │
+├─────────────────────────────────────┤
+│ LLM naive     10%   자연어 생성     │
+│   "P1 매장 직원 입장에서 자주 할    │
+│    질문 N개 만들어줘"               │
+└─────────────────────────────────────┘
+   ↓
+JSONL 저장 + stratified sample500 추출
+   ↓
+재현 가능 (seed 고정) · 결정적 · 비용 한정</code></pre>
+
+<hr>
+
+<h2 id="flow"><span class="num">FLOW</span>페르소나 인식 RAG 흐름</h2>
+
+<div class="flow-wrap">
+  <div class="flow-title">사용자 질문 → 페르소나 분류 → 답변</div>
+
+  <div class="flow">
+
+    <div class="node user">
+      <span class="tag">USER</span>
+      <div class="body"><strong>사용자 질문</strong><small>"이거 얼마예요?"</small></div>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="node persona">
+      <span class="tag">PERSONA</span>
+      <div class="body"><strong>Persona Classifier</strong><small>LLM 1콜 · 짧음/존댓말/맥락 → P1</small></div>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="node">
+      <span class="tag">CATEGORY</span>
+      <div class="body"><strong>Category Classifier</strong><small>Stage 3 — product category 추론</small></div>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="node">
+      <span class="tag">RETRIEVE</span>
+      <div class="body"><strong>Dense + BM25 검색</strong><small>filter(persona_tier · category) · top-20</small></div>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="node">
+      <span class="tag">RERANK</span>
+      <div class="body"><strong>Cross-encoder rerank</strong><small>bge-reranker-v2-m3 · top-20 → top-5</small></div>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="node">
+      <span class="tag">GEN</span>
+      <div class="body"><strong>Generation (페르소나 prompt)</strong>
+        <small>P1: 1~2문장 · P2: 표 · P3: 수치 · P4: 음성 친화</small>
+      </div>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="node output">
+      <span class="tag">OUT</span>
+      <div class="body"><strong>답변 + citation</strong>
+        <small>"S25 자급제는 139.7만원입니다."</small>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr>
+
+<h2 id="verify"><span class="num">CHK</span>가설 보정 절차</h2>
+
+<p>이 문서는 <strong>가설</strong> 이다. 다음 절차로 보정:</p>
+
+<ol>
+  <li><strong>사내 인터뷰 5명 × 페르소나</strong> — 30분씩, 자주 받는 질문 top 10</li>
+  <li>수집된 100개 질문 → dataset 의 ground truth 로 흡수</li>
+  <li>분포·난이도 가중치 재조정</li>
+  <li>3개월 후 <strong>실제 챗봇 로그</strong> 로 분포 검증</li>
+</ol>
+
+<div class="analogy">
+  <strong>핵심.</strong> 인터뷰 없이는 페르소나 비중 (50/25/15/10) 은 <em>추측</em> 이다.
+</div>
+
+<hr>
+
+<h2 id="exercises"><span class="num">EX</span>연습 문제</h2>
+
+<div class="exercise">
+  <h4>문제 1 <span class="level">쉬움</span></h4>
+  <p>P1 매장 직원과 P3 본사 기획 모두 "S25 카메라" 라고 질문했다.
+     같은 답이 맞나? 다르다면 어떻게 다르게 답해야 하나? 2개 이상 차이점.</p>
+  <div class="hint"><strong>힌트.</strong> 답변 길이 · 답변 톤 · 포함 정보 (가격 vs 벤치마크).</div>
+</div>
+
+<div class="exercise">
+  <h4>문제 2 <span class="level">중간</span></h4>
+  <p>P2 B2B 영업이 "Tab S10 Ultra 100대 도입 견적" 이라고 물었다. 우리 corpus 에는 공개 USD 가격만 있다.
+     RAG 가 어떻게 응답해야 하는가? 답변 본문 + 메타 정보 (citation · disclaimer) 를 1~2 문장씩.</p>
+  <div class="hint"><strong>힌트.</strong> "기업 견적은 공개 단가 외 변수가 큼. 본 가격은 공개 시작가 기준" 패턴.</div>
+</div>
+
+<div class="exercise">
+  <h4>문제 3 <span class="level">어려움</span></h4>
+  <p>10K dataset 중 P1 매장 5000 질문 평균 MRR = 0.92, 평균 답변 길이 8 문장.
+     production 출시하면 매장 직원 만족도는?
+     <strong>MRR 만 좋아진 게 만족도와 직결되지 않는 이유 3가지</strong>.</p>
+  <div class="hint"><strong>힌트.</strong> P1 답변 환경 (고객 앞) · 정보 과잉 비용 · latency · 음성 변환 가능성.</div>
+</div>
+
+<hr>
+
+<h2 id="decisions"><span class="num">DO</span>다음 세션 결정 사항</h2>
+
+<ul>
+  <li>☐ 페르소나 4개 가설 — 유지 / 통합 / 추가? 영업팀 확인.</li>
+  <li>☐ 페르소나 비중 (50/25/15/10) — 유지 / 조정? 인터뷰로.</li>
+  <li>☐ 비공개 정보 경계 — RAG 가 "내부 시스템 참조" 라고 redirect?</li>
+  <li>☐ Persona Classifier 도입 시점 — Stage 3 (category filter) 와 동시? 별도?</li>
+  <li>☐ Corpus 재수집 우선순위 — P1 (한국 출고가) vs P3 (경쟁사 스펙) 중 먼저?</li>
+</ul>
+
+<hr>
+
+<h2><span class="num">REF</span>관련 문서</h2>
+<ul>
+  <li>개념 정리: <a href="./2026-05-29-ir-rag-concepts.html">2026-05-29-ir-rag-concepts.html</a></li>
+  <li>IR 개선 plan (6 stages): <a href="./2026-05-29-ir-improvement-plan.html">2026-05-29-ir-improvement-plan.html</a></li>
+  <li>마크다운 원본: <code>backend/docs/learning/2026-05-29-sales-persona-analysis.md</code></li>
+  <li>현재 eval dataset: <code>backend/chat/tests/evals/dataset_sales_full.jsonl</code> (60 Q)</li>
+</ul>
+
+<p style="color: var(--muted); font-size: 13px; margin-top: 32px;">
+  <strong>핵심 메시지.</strong> 더 큰 dataset (60 → 10K) 의 효과는 분포가 맞을 때만 나온다.
+  페르소나 정의 없이 10K 만들면 잘못된 분포의 10K. 페르소나 → 코퍼스 → dataset → eval → 튜닝 순서.
+</p>
+
+</body>
+</html>

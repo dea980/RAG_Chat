@@ -9,7 +9,8 @@
   - 7강 강사가 39조 정답 못 찾다가 500자 → "조항 단위" 로 바꾸고 찾은 그 실험.
 
 UI 스택:
-  - streamlit-extras: colored_header, style_metric_cards
+  - streamlit-extras: style_metric_cards
+  - st.subheader(divider="violet") — colored_header 대체 (1.45+ deprecated)
   - st-aggrid: 정렬·셀 색상 가능한 비교 테이블 / 청크 그리드
   - plotly: 청크 길이 분포 overlay 히스토그램
 """
@@ -24,16 +25,54 @@ import requests
 import streamlit as st
 from st_aggrid import AgGrid, ColumnsAutoSizeMode, GridOptionsBuilder
 from st_aggrid.shared import JsCode
-from streamlit_extras.colored_header import colored_header
 from streamlit_extras.metric_cards import style_metric_cards
+
+
+def _section(label: str, description: str = "") -> None:
+    """colored_header 대체 — st.subheader(divider) 사용."""
+    st.subheader(label, divider="violet")
+    if description:
+        st.caption(description)
 
 st.set_page_config(page_title="Chunk Lab", layout="wide")
 
+import sys as _sys
+_sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from role_gate import require_manager  # noqa: E402
+require_manager()
+
 API_BASE = os.getenv("BACKEND_URL", "http://localhost:8000") + "/api/v1/triple"
 PREVIEW_URL = f"{API_BASE}/ingest/preview/"
+INGEST_URL = f"{API_BASE}/ingest/upload/"
 
 
 # --- API --------------------------------------------------------------------
+
+
+def call_ingest(
+    file: Any, *, collection: str = "policy", sensitivity: str = "internal",
+) -> dict:
+    """실제 적재 — backend /ingest/upload/ 호출. DB write 발생."""
+    files = {"files": (file.name, file.getvalue())}
+    data = {"collection": collection, "sensitivity": sensitivity}
+    resp = requests.post(INGEST_URL, files=files, data=data, timeout=120)
+    resp.raise_for_status()
+    return resp.json()
+
+
+COLLECTION_CHOICES = {
+    "training": "학습 자료",
+    "policy":   "사규·정책",
+    "sales":    "영업 데이터",
+    "user":     "유저 추가",
+}
+
+SENSITIVITY_CHOICES = {
+    "public":       "공개",
+    "internal":     "사내 공유",
+    "confidential": "대외비",
+    "restricted":   "기밀 (인덱싱 차단)",
+}
 
 
 def call_preview(
@@ -186,10 +225,9 @@ def chunk_preview_grid(chunks: list[dict], key: str) -> None:
 # --- Sidebar ----------------------------------------------------------------
 
 
-colored_header(
-    label="🧪 Chunk Lab",
-    description="청크 사이즈·오버랩 별 결과를 나란히 비교. 저장·임베딩은 하지 않음.",
-    color_name="violet-70",
+_section(
+    "🧪 Chunk Lab",
+    "청크 사이즈·오버랩 별 결과를 나란히 비교. 저장·임베딩은 하지 않음.",
 )
 
 with st.sidebar:
@@ -247,6 +285,37 @@ with st.sidebar:
     st.divider()
     run = st.button("청킹 실행", type="primary", use_container_width=True)
 
+    st.divider()
+    st.subheader("실제 적재")
+    st.caption(
+        "⚠️ DB·벡터 저장 발생. 좌측 splitter/size 설정은 **무시**됨 — "
+        "`ingest_path()` 가 파일 타입별 자동 dispatch. 같은 파일명 재업로드는 "
+        "SHA256 dedup."
+    )
+    ingest_collection = st.selectbox(
+        "Collection (도메인 분류)",
+        list(COLLECTION_CHOICES.keys()),
+        format_func=lambda k: f"{k} — {COLLECTION_CHOICES[k]}",
+        index=1,  # policy default
+        help="청크에 박혀 검색 시 namespace 필터로 사용. enum 외 값 거부됨.",
+    )
+    ingest_sensitivity = st.selectbox(
+        "Sensitivity (열람 등급)",
+        list(SENSITIVITY_CHOICES.keys()),
+        format_func=lambda k: f"{k} — {SENSITIVITY_CHOICES[k]}",
+        index=1,  # internal default
+        help="restricted = 벡터 스토어 진입 차단 (Layer 1).",
+    )
+    ingest_disabled = uploaded_file is None
+    if ingest_disabled:
+        st.caption("파일 업로드 모드일 때만 활성화 (text 는 source_uri 불안정).")
+    ingest_run = st.button(
+        "이 파일을 실제 적재",
+        type="secondary",
+        use_container_width=True,
+        disabled=ingest_disabled,
+    )
+
 
 # --- Run --------------------------------------------------------------------
 
@@ -281,15 +350,13 @@ if run:
     if not results:
         st.stop()
 
-    colored_header("📊 비교 요약", "헤더 클릭으로 정렬 가능", color_name="violet-70")
+    _section("📊 비교 요약", "헤더 클릭으로 정렬 가능")
     summary_grid(results)
 
-    colored_header(
-        "📈 길이 분포", "여러 config 를 한 차트에 overlay", color_name="violet-70",
-    )
+    _section("📈 길이 분포", "여러 config 를 한 차트에 overlay")
     length_distribution_plot(results)
 
-    colored_header("🔢 컬럼별 지표", "", color_name="violet-70")
+    _section("🔢 컬럼별 지표")
     cols = st.columns(len(results))
     for col, r in zip(cols, results):
         with col:
@@ -301,10 +368,9 @@ if run:
             m2.metric("max", r["max_length"])
     style_metric_cards(border_left_color="#7c3aed", box_shadow=True)
 
-    colored_header(
+    _section(
         "🧩 청크 미리보기",
         "탭으로 config 전환 · 셀 클릭으로 전체 보기 · 헤더로 정렬",
-        color_name="violet-70",
     )
     tabs = st.tabs(
         [f"size={r['chunk_size']} / ov={r['chunk_overlap']}" for r in results]
@@ -315,7 +381,46 @@ if run:
                 r["chunks"], key=f"grid_{r['chunk_size']}_{r['chunk_overlap']}"
             )
 
-else:
+if ingest_run and uploaded_file is not None:
+    _section(
+        "📥 실제 적재 결과",
+        f"collection={ingest_collection} · sensitivity={ingest_sensitivity}",
+    )
+    with st.spinner(f"적재 중... ({uploaded_file.name})"):
+        try:
+            res = call_ingest(
+                uploaded_file,
+                collection=ingest_collection,
+                sensitivity=ingest_sensitivity,
+            )
+        except requests.HTTPError as exc:
+            st.error(f"backend {exc.response.status_code}: {exc.response.text[:200]}")
+            res = None
+        except requests.RequestException as exc:
+            st.error(f"요청 실패: {exc}")
+            res = None
+
+    if res is not None:
+        processed = res.get("processed", [])
+        failed = res.get("failed", [])
+        cols = st.columns(3)
+        cols[0].metric("처리됨", len(processed))
+        cols[1].metric(
+            "신규 청크",
+            sum(p.get("chunks", 0) for p in processed if p.get("status") == "ok"),
+        )
+        cols[2].metric("실패", len(failed))
+        style_metric_cards(border_left_color="#7c3aed", box_shadow=True)
+        if processed:
+            st.success("적재 완료")
+            st.json(processed)
+        if failed:
+            st.error("일부 실패")
+            st.json(failed)
+        if processed and all(p.get("status") == "skipped" for p in processed):
+            st.info("모두 dedup skip — 동일 SHA256 manifest 존재.")
+
+if not run and not ingest_run:
     st.info("좌측에서 텍스트/파일 입력 후 **청킹 실행** 을 눌러주세요.")
     with st.expander("이 페이지가 무엇을 보여주는가"):
         st.markdown(

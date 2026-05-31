@@ -20,6 +20,8 @@ whitenoise>=6.5.0
 # Utils
 requests>=2.31.0
 redis>=5.0.1
+pgvector>=0.4.0
+faiss-cpu>=1.7.0
 python-jose>=3.3.0
 tiktoken>=0.7.0
 

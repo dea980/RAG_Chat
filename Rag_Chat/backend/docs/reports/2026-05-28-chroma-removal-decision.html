@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chroma 제거 판단 자료 — Triple Chat</title>
+<style>
+  :root {
+    --bg: #0A0B0D; --surface: #141519; --border: #2a2b30;
+    --text: #e0e0e0; --muted: #888; --accent: #E89B3C;
+    --green: #4ade80; --red: #f87171; --yellow: #facc15;
+    --font: 'Pretendard', -apple-system, sans-serif;
+    --mono: 'Geist Mono', 'SF Mono', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font: 16px/1.7 var(--font); padding: 2rem; max-width: 900px; margin: 0 auto; }
+  h1 { color: var(--accent); font-size: 1.6rem; margin-bottom: .5rem; }
+  h2 { color: var(--accent); font-size: 1.2rem; margin: 2rem 0 .8rem; border-bottom: 1px solid var(--border); padding-bottom: .3rem; }
+  h3 { color: var(--text); font-size: 1rem; margin: 1.2rem 0 .5rem; }
+  p, li { color: var(--text); margin-bottom: .5rem; }
+  .subtitle { color: var(--muted); font-size: .9rem; margin-bottom: 2rem; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .9rem; }
+  th, td { padding: .6rem .8rem; border: 1px solid var(--border); text-align: left; }
+  th { background: var(--surface); color: var(--accent); font-weight: 600; }
+  td { background: var(--bg); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: .75rem; font-family: var(--mono); font-weight: 600; }
+  .badge-green { background: #064e3b; color: var(--green); }
+  .badge-red { background: #450a0a; color: var(--red); }
+  .badge-yellow { background: #422006; color: var(--yellow); }
+  .option-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; margin: 1rem 0; }
+  .option-card h3 { margin-top: 0; }
+  .option-card.recommended { border-color: var(--accent); }
+  .option-card.recommended::before { content: "★ 추천"; display: inline-block; background: var(--accent); color: var(--bg); padding: 2px 10px; border-radius: 4px; font-size: .75rem; font-weight: 700; margin-bottom: .5rem; }
+  code { font-family: var(--mono); background: var(--surface); padding: 2px 6px; border-radius: 3px; font-size: .85rem; }
+  pre { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; margin: .8rem 0; font-family: var(--mono); font-size: .8rem; line-height: 1.5; }
+  ul { padding-left: 1.5rem; }
+  .verdict { background: var(--surface); border-left: 4px solid var(--accent); padding: 1rem 1.2rem; margin: 1.5rem 0; border-radius: 0 6px 6px 0; }
+  .flow { font-family: var(--mono); font-size: .8rem; line-height: 1.6; white-space: pre; background: var(--surface); padding: 1rem; border-radius: 6px; overflow-x: auto; }
+  .risk { border-left: 3px solid var(--red); padding-left: .8rem; margin: .5rem 0; }
+  .metric { font-family: var(--mono); color: var(--accent); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<h1>Chroma 제거 판단 자료</h1>
+<p class="subtitle">2026-05-28 | Triple Chat — pgvector 전환 후 Chroma 의존성 유지 vs 제거</p>
+
+<h2>1. 현재 상태</h2>
+
+<table>
+  <tr><th>항목</th><th>Chroma</th><th>pgvector</th></tr>
+  <tr><td>저장 위치</td><td><code>vector_store/chroma.sqlite3</code> (20MB)</td><td>PostgreSQL <code>knowledge_vectorchunk</code></td></tr>
+  <tr><td>청크 수</td><td class="metric">102</td><td class="metric">102 (동일 데이터)</td></tr>
+  <tr><td>검색 경로</td><td><code>get_rag_context()</code> 폴백</td><td><code>get_rag_context()</code> 우선</td></tr>
+  <tr><td>ACL 필터</td><td>Python 후처리</td><td>SQL WHERE</td></tr>
+  <tr><td>상태</td><td><span class="badge badge-yellow">deprecated 경고</span></td><td><span class="badge badge-green">active</span></td></tr>
+</table>
+
+<p><code>get_rag_context()</code>는 현재 <strong>pgvector에 데이터가 있으면 pgvector 사용, 없으면 Chroma 폴백</strong> 로직. 즉 지금은 항상 pgvector를 타고 있음.</p>
+
+<h2>2. 선택지 3가지</h2>
+
+<div class="option-card">
+  <h3>A) Chroma 유지 (현 상태 — 폴백으로 남겨둠)</h3>
+  <table>
+    <tr><th>장점</th><th>단점</th></tr>
+    <tr>
+      <td>
+        <ul>
+          <li>pgvector 장애 시 Chroma로 자동 폴백</li>
+          <li>코드 변경 없음 — 리스크 제로</li>
+          <li>비교 테스트 가능 (결과 검증용)</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><code>chromadb</code> 패키지 계속 설치 (용량 + 취약점 관리)</li>
+          <li><code>vector_store/</code> 디렉토리 20MB 유지</li>
+          <li><span class="badge badge-yellow">LangChain deprecated 경고</span> 로그에 계속 노출</li>
+          <li>두 저장소 동기화 안 됨 — 새 ingest는 pgvector만 갈 수 있음</li>
+        </ul>
+      </td>
+    </tr>
+  </table>
+  <p><strong>적합 시점:</strong> pgvector 안정성이 검증되기 전 1~2주 과도기</p>
+</div>
+
+<div class="option-card recommended">
+  <h3>B) Chroma 제거 — pgvector 단독</h3>
+  <table>
+    <tr><th>장점</th><th>단점</th></tr>
+    <tr>
+      <td>
+        <ul>
+          <li>인프라 단일화 — PostgreSQL 하나로 관리</li>
+          <li><code>chromadb</code> 의존성 제거 (설치 시간 ↓, 보안 표면 ↓)</li>
+          <li>deprecated 경고 해소</li>
+          <li>코드 단순화 — 폴백 분기 삭제</li>
+          <li>ACL이 SQL 레벨에서 끝 — 성능·정확도 ↑</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li>PostgreSQL 다운 시 검색 불가 (하지만 Django 자체도 죽음)</li>
+          <li>롤백하려면 Chroma 재설치 + 데이터 복원 필요</li>
+          <li>코드 변경 필요 (아래 목록 참고)</li>
+        </ul>
+      </td>
+    </tr>
+  </table>
+  <p><strong>적합 시점:</strong> pgvector 검색 결과가 Chroma와 동등함을 확인한 후</p>
+</div>
+
+<div class="option-card">
+  <h3>C) Chroma → langchain-chroma 업그레이드 (deprecated 해소만)</h3>
+  <table>
+    <tr><th>장점</th><th>단점</th></tr>
+    <tr>
+      <td>
+        <ul>
+          <li>deprecated 경고 해소</li>
+          <li>코드 변경 최소 (import 경로만)</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li>여전히 2개 벡터 DB 운영</li>
+          <li>ACL은 여전히 Python 후처리</li>
+          <li>pgvector와 이중 관리 — 의미 없는 복잡도</li>
+        </ul>
+      </td>
+    </tr>
+  </table>
+  <p><strong>적합 시점:</strong> pgvector 전환을 안 했을 때만 의미 있음. 지금은 <span class="badge badge-red">불필요</span></p>
+</div>
+
+<h2>3. B안 선택 시 — 제거 범위</h2>
+
+<table>
+  <tr><th>파일</th><th>변경</th><th>위험도</th></tr>
+  <tr><td><code>requirements.txt</code></td><td><code>chromadb==0.4.22</code> 삭제</td><td><span class="badge badge-green">낮음</span></td></tr>
+  <tr><td><code>vector_store/</code> 디렉토리</td><td>삭제 (20MB 회수)</td><td><span class="badge badge-green">낮음</span> — 백업 후</td></tr>
+  <tr><td><code>chat/providers/manager.py</code></td><td><code>get_vector_store()</code>, <code>create_vector_store_from_documents()</code> 제거</td><td><span class="badge badge-yellow">중간</span></td></tr>
+  <tr><td><code>chat/utils.py</code></td><td>Chroma 폴백 분기 삭제, <code>get_vector_store()</code> 제거</td><td><span class="badge badge-yellow">중간</span></td></tr>
+  <tr><td><code>chat/ingest/sinks/chroma.py</code></td><td>파일 삭제 또는 deprecated 표시</td><td><span class="badge badge-green">낮음</span></td></tr>
+  <tr><td><code>chat/build_vector_store.py</code></td><td>이미 deprecated — 삭제</td><td><span class="badge badge-green">낮음</span></td></tr>
+  <tr><td><code>chat/vector_metadata.py</code></td><td>Chroma 의존 함수 정리</td><td><span class="badge badge-yellow">중간</span></td></tr>
+  <tr><td><code>chat/management/commands/build_vectors.py</code></td><td>PgvectorSink 사용으로 전환</td><td><span class="badge badge-yellow">중간</span></td></tr>
+</table>
+
+<h2>4. 리스크 분석</h2>
+
+<div class="risk">
+  <strong>Q: PostgreSQL 죽으면?</strong><br>
+  A: Django 자체가 PostgreSQL 의존 → PG 죽으면 Chroma 있어도 서비스 불가. Chroma 폴백이 실질적 안전망이 아님.
+</div>
+
+<div class="risk">
+  <strong>Q: 검색 품질 차이?</strong><br>
+  A: 동일한 임베딩(3072차원 Gemini) + 동일한 코사인 거리 계산. 수학적으로 동일한 결과. 단, 부동소수점 정밀도 차이로 순위가 미세하게 다를 수 있음 — 실사용에 영향 없음.
+</div>
+
+<div class="risk">
+  <strong>Q: 롤백이 필요하면?</strong><br>
+  A: <code>vector_store/</code> 백업 보관 + <code>chromadb</code> 재설치하면 복원 가능. Git에서 삭제된 코드도 복구 가능.
+</div>
+
+<h2>5. 판단 기준 체크리스트</h2>
+
+<table>
+  <tr><th>체크</th><th>항목</th><th>현재 상태</th></tr>
+  <tr><td>☐</td><td>pgvector 검색이 Chroma와 동등한 결과를 반환하는가?</td><td>수동 비교 필요</td></tr>
+  <tr><td>☑</td><td>pgvector에 전체 데이터가 마이그레이션 되었는가?</td><td><span class="badge badge-green">102/102 완료</span></td></tr>
+  <tr><td>☑</td><td>테스트가 pgvector 환경에서 통과하는가?</td><td><span class="badge badge-green">97 passed</span></td></tr>
+  <tr><td>☐</td><td><code>vector_store/</code> 백업을 보관했는가?</td><td>삭제 전 백업 필요</td></tr>
+  <tr><td>☑</td><td>새 ingest 경로(PgvectorSink)가 동작하는가?</td><td><span class="badge badge-green">구현 완료</span></td></tr>
+  <tr><td>☐</td><td>운영 환경에서 PostgreSQL이 안정적으로 운영되는가?</td><td>로컬 dev만 검증</td></tr>
+</table>
+
+<h2>6. 추천 타임라인</h2>
+
+<div class="flow">지금 (2026-05-28)
+│  pgvector 전환 완료. Chroma 폴백으로 유지.
+│  검색 결과 비교 테스트 수행.
+│
+├─ 1주 후: 결과 동등 확인 시
+│  → B안 실행 (Chroma 제거)
+│  → vector_store/ 백업 후 삭제
+│  → chromadb 의존성 제거
+│
+└─ 문제 발견 시
+   → A안 유지 (폴백 활용)
+   → 문제 해결 후 재평가</div>
+
+<div class="verdict">
+  <strong>결론:</strong> 지금 당장 제거할 필요는 없지만, <strong>1~2주 안에 B안(완전 제거)으로 가는 게 맞다.</strong>
+  Chroma를 남겨두는 건 "보험"이지 "필요"가 아님.
+  PostgreSQL 다운 시 Django 자체가 죽으므로 Chroma 폴백은 실질적 안전망이 아님.
+  검색 결과 비교만 확인하면 제거 진행.
+</div>
+
+</body>
+</html>

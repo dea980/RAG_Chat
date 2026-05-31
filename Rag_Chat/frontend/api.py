@@ -153,18 +153,26 @@ def get_provider_selection(user_id: str):
         return None
 
 
-def set_provider_combo(user_id: str, provider_combo: str):
-    """Apply a provider combo for the session/user"""
+def set_provider_selection(user_id: str, reasoning: str, generation: str):
+    """Apply explicit reasoning + generation provider choice for the session/user.
+
+    Embedding provider stays system-wide because switching it would invalidate
+    the existing vector index (dimensions change → searches return empty).
+    """
     try:
         response = requests.post(
             f"{API_BASE_URL}/providers/",
-            json={"user_id": user_id, "provider_combo": provider_combo},
+            json={
+                "user_id": user_id,
+                "reasoning_provider": reasoning,
+                "generation_provider": generation,
+            },
             headers={"Content-Type": "application/json"},
             timeout=5,
         )
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        logger.error(f"Failed to set provider combo: {e}")
+        logger.error(f"Failed to set provider selection: {e}")
         st.sidebar.error("Failed to update provider settings.")
         return None

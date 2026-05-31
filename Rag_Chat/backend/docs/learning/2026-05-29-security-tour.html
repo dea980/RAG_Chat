@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Triple Chat 보안 투어 — 비밀번호·세션·시크릿 한눈에</title>
+<style>
+  :root {
+    --bg: #fafafa; --fg: #1a1a1a; --muted: #666; --border: #e1e1e1;
+    --accent: #2563eb; --warn-bg: #fef3c7; --warn-fg: #92400e;
+    --good-bg: #ecfdf5; --good-fg: #065f46; --bad-bg: #fee2e2; --bad-fg: #991b1b;
+    --note: #eff6ff; --code-bg: #f3f4f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --border: #30363d;
+      --accent: #58a6ff; --warn-bg: #3a2a08; --warn-fg: #fde68a;
+      --good-bg: #0a2a1c; --good-fg: #86efac; --bad-bg: #3a1212; --bad-fg: #fca5a5;
+      --note: #0c2545; --code-bg: #161b22;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+    max-width: 860px; margin: 0 auto; padding: 40px 24px;
+    line-height: 1.75; font-size: 16px;
+  }
+  h1 { font-size: 30px; margin-bottom: 4px; letter-spacing: -.5px; }
+  p.lead { color: var(--muted); margin-top: 0; font-size: 16px; }
+  h2 {
+    font-size: 22px; margin-top: 56px; padding-bottom: 8px;
+    border-bottom: 3px solid var(--accent);
+  }
+  h2 .num {
+    display: inline-block; width: 36px; height: 36px;
+    background: var(--accent); color: #fff; border-radius: 50%;
+    text-align: center; line-height: 36px; font-size: 16px; margin-right: 10px;
+  }
+  h3 { font-size: 18px; margin-top: 28px; color: var(--accent); }
+  h4 { font-size: 15px; margin: 16px 0 4px; color: var(--muted); }
+  code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: 14px; font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre {
+    background: var(--code-bg); padding: 14px 18px; border-radius: 6px;
+    overflow-x: auto; font-size: 13px; line-height: 1.6;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
+  .analogy { background: var(--note); padding: 14px 18px; border-radius: 6px;
+             border-left: 4px solid var(--accent); margin: 16px 0; }
+  .good { background: var(--good-bg); color: var(--good-fg); padding: 12px 16px;
+          border-radius: 6px; border-left: 4px solid var(--good-fg); margin: 12px 0; }
+  .warn { background: var(--warn-bg); color: var(--warn-fg); padding: 12px 16px;
+          border-radius: 6px; border-left: 4px solid var(--warn-fg); margin: 12px 0; }
+  .bad  { background: var(--bad-bg);  color: var(--bad-fg);  padding: 12px 16px;
+          border-radius: 6px; border-left: 4px solid var(--bad-fg);  margin: 12px 0; }
+  .exercise { background: var(--code-bg); padding: 14px 18px;
+              border-radius: 6px; margin: 16px 0; }
+  .exercise h4 { margin-top: 0; color: var(--fg); }
+  .toc { background: var(--note); padding: 18px 24px; border-radius: 8px;
+         margin: 24px 0; font-size: 14px; }
+  .toc ol { margin: 8px 0; padding-left: 20px; }
+  .toc li { margin: 3px 0; }
+  .toc a { color: var(--fg); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 4px;
+          font-family: "JetBrains Mono", monospace; font-size: 11px;
+          letter-spacing: 0.05em; }
+  .chip-good { background: var(--good-bg); color: var(--good-fg); }
+  .chip-warn { background: var(--warn-bg); color: var(--warn-fg); }
+  .chip-bad  { background: var(--bad-bg);  color: var(--bad-fg);  }
+</style>
+</head>
+<body>
+
+<h1>Triple Chat 보안 투어</h1>
+<p class="lead">비밀번호·세션·시크릿이 어디서 어떻게 보호되는지 — 처음 보는 사람용 가이드.</p>
+
+<div class="toc">
+  <strong>목차</strong>
+  <ol>
+    <li><a href="#summary">한 줄 요약</a></li>
+    <li><a href="#analogy">비유 — 회사 출입증</a></li>
+    <li><a href="#password">비밀번호 저장 (PBKDF2)</a></li>
+    <li><a href="#login">로그인 흐름과 sessionid 쿠키</a></li>
+    <li><a href="#secrets">.env 와 SECRET_KEY</a></li>
+    <li><a href="#csrf-cors">CSRF / CORS — 다른 origin 차단</a></li>
+    <li><a href="#scorecard">현재 상태 점수표</a></li>
+    <li><a href="#prod">dev → prod 가기 전 체크리스트</a></li>
+    <li><a href="#exercises">연습 문제</a></li>
+  </ol>
+</div>
+
+<h2 id="summary"><span class="num">1</span>한 줄 요약</h2>
+<p>
+  Triple Chat 는 비밀번호를 평문 저장하지 않고 <strong>PBKDF2 해시</strong>로 저장한다 (Django 기본). 사용자는 <code>/auth/login/</code> 한 번 호출 후 받은 <strong>sessionid 쿠키</strong>로 다음 요청들을 인증한다. 비밀(SECRET_KEY · API 키 · DB 비밀번호)은 모두 <code>.env</code> 에 있고 <code>.gitignore</code> 로 git 에서 빠진다. CORS allowlist 와 CSRF 미들웨어로 다른 origin 의 무단 호출을 막는다.
+</p>
+<p>
+  핵심 결론 — <strong>dev 환경에서는 다 안전 설정</strong>. 다만 prod 로 갈 때 4 가지 추가 잠금 (HTTPS 전용 쿠키, 강한 SECRET_KEY 강제, 하드코딩된 dev 비밀번호 제거, ALLOWED_HOSTS 좁히기) 이 필요.
+</p>
+
+<h2 id="analogy"><span class="num">2</span>비유 — 회사 출입증</h2>
+<div class="analogy">
+  <strong>회사 정문 + 카드키 시스템과 똑같다.</strong>
+  <ul>
+    <li><strong>비밀번호</strong> = 입사 시 등록한 지문. 본인이 누른 손가락 모양 자체는 회사에 안 남는다. 대신 그 모양을 산수로 변형(=해시)한 결과만 남고, 다음에 손가락 댈 때마다 같은 산수로 비교한다. 회사 데이터가 털려도 원본 지문은 복원 불가.</li>
+    <li><strong>로그인</strong> = 정문에서 지문 한 번 → 일회용 카드키(=sessionid 쿠키) 발급. 그 후 24h 동안은 카드만 대도 통과.</li>
+    <li><strong>SECRET_KEY</strong> = 카드키 자체를 발급할 때 쓰는 본사 마스터 도장. 이게 새면 누구나 가짜 카드를 만들 수 있어서 회사가 망함.</li>
+    <li><strong>.env</strong> = 마스터 도장 보관 금고. 사진(=git)에 절대 안 찍힌다.</li>
+    <li><strong>CORS allowlist</strong> = 정문이 받아주는 "어느 건물에서 온 사람"인지의 명단. 다른 회사 건물에서 온 카드는 정문이 거부.</li>
+  </ul>
+</div>
+
+<h2 id="password"><span class="num">3</span>비밀번호 저장 (PBKDF2)</h2>
+<p>
+  Django 의 <code>AbstractBaseUser</code> 가 <code>set_password()</code> 를 호출하면 자동으로 <strong>PBKDF2-SHA256</strong> 해시를 만든다. DB 의 <code>password</code> 칼럼에 들어가는 값은 이렇게 생겼다:
+</p>
+<pre>pbkdf2_sha256$600000$randomsalt$AbCdEfGh+long+base64+hash...</pre>
+<table>
+  <tr><th>구간</th><th>의미</th></tr>
+  <tr><td><code>pbkdf2_sha256</code></td><td>해시 알고리즘 이름</td></tr>
+  <tr><td><code>600000</code></td><td>해시 반복 횟수 — GPU 공격 비용을 60만배 높임</td></tr>
+  <tr><td><code>randomsalt</code></td><td>사용자마다 다른 16자 무작위 — 같은 비밀번호도 다르게 저장됨 (레인보우 테이블 방어)</td></tr>
+  <tr><td>마지막 base64</td><td>실제 해시 결과</td></tr>
+</table>
+<p>
+  관련 코드: <code>Rag_Chat/backend/chat/models.py:25</code> 의 <code>user.set_password(password)</code> 한 줄. 로그인 시점에는 <code>user.check_password(input)</code> 로 비교 (timing-safe — 매번 같은 시간 걸려서 응답 시간으로 비밀번호 추측 불가).
+</p>
+<div class="good">
+  ✓ 좋음: 평문 저장 0건. 우리 코드는 비밀번호 원본을 어디에도 안 들고 다님. 받자마자 <code>set_password</code> 로 해시.
+</div>
+
+<h2 id="login"><span class="num">4</span>로그인 흐름과 sessionid 쿠키</h2>
+<pre>1. 사용자: POST /api/v1/triple/auth/login/  {email, password}
+   ─────────────────────────────────────────────────────────────▶
+2. Django: User.objects.get(email=...)
+          → check_password(password)   [✓ 일치]
+          → login(request, user)
+          → 응답에 Set-Cookie: sessionid=abc123...; HttpOnly; SameSite=Lax
+   ◀─────────────────────────────────────────────────────────────
+3. 브라우저: 그 쿠키를 자동 보관
+
+4. 다음 모든 요청:  GET /api/v1/triple/moderation/rules/
+                    Cookie: sessionid=abc123...
+   ─────────────────────────────────────────────────────────────▶
+5. Django: sessionid 로 user 조회 → request.user 채움 → DRF 가 인가</pre>
+<p>
+  핵심 코드: <code>chat/auth_views.py</code> 의 <code>LoginAPIView</code>. Django 의 표준 <code>authenticate()</code> + <code>login()</code> 만 호출. 직접 쿠키 만지지 않음.
+</p>
+<div class="good">
+  ✓ <strong>HttpOnly</strong> 쿠키 (JavaScript 가 못 읽음 → XSS 로 쿠키 탈취 불가).<br>
+  ✓ <strong>SameSite=Lax</strong> (다른 사이트 클릭으로 발생하는 cross-site 요청에 쿠키 자동 첨부 안 됨 → CSRF 보호 강화).<br>
+  ✓ DB-backed session (Django 기본) — 서버가 강제로 sessionid 무효화 가능.
+</div>
+
+<h2 id="secrets"><span class="num">5</span>.env 와 SECRET_KEY</h2>
+<p>
+  민감 값은 모두 환경변수에서 읽는다. 코드에 직접 안 박힘.
+</p>
+<pre>Rag_Chat/.env  (git 에 안 올라감)
+─────────────────────────────────
+DJANGO_SECRET_KEY=...
+POSTGRES_PASSWORD=...
+OPENROUTER_API_KEY=...
+GOOGLE_API_KEY=...
+QWEN_API_KEY=...
+HUGGINGFACE_API_KEY=...</pre>
+<p>
+  <code>Rag_Chat/.gitignore</code> 24, 69, 70, 71 행이 <code>.env</code>, <code>.env.example</code>, <code>.env.local</code>, <code>.env.*.local</code> 을 막는다. <code>git status</code> 에서 <code>.env</code> 가 절대 untracked 로도 안 나옴.
+</p>
+<p>
+  <code>settings.py:38-52</code> 가 SECRET_KEY 처리:
+</p>
+<pre>SECRET_KEY = os.getenv(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-n#&amp;9eyax6nle6pk*6(!0hnvi-g4-+c-#ps&amp;=*%5wn++dzvdlw8",
+)
+
+DEBUG = os.getenv("DEBUG", "1") not in ("0", "false", "False", "")
+
+if not DEBUG and SECRET_KEY.startswith("django-insecure-"):
+    raise RuntimeError(
+        "DEBUG=0 requires a non-default DJANGO_SECRET_KEY. ..."
+    )</pre>
+<div class="good">
+  ✓ <strong>안전망 한 줄</strong>: <code>DEBUG=0</code> (=prod) 인데 SECRET_KEY 가 dev 기본값이면 서버가 부팅을 거부한다. "운영자가 깜빡하고 그대로 배포" 사고를 방지.
+</div>
+
+<h2 id="csrf-cors"><span class="num">6</span>CSRF / CORS — 다른 origin 차단</h2>
+<h3>CSRF (Cross-Site Request Forgery)</h3>
+<p>
+  악성 사이트가 사용자 브라우저로 "은행 송금 양식" 같은 걸 몰래 보내는 공격. Django 의 <code>CsrfViewMiddleware</code> (settings.py:115 행) 가 모든 POST/PUT/DELETE 에 CSRF 토큰을 요구해서 차단. 우리 코드엔 <code>@csrf_exempt</code> 가 한 곳도 없음 — 풀린 곳 없음.
+</p>
+<h3>CORS (Cross-Origin Resource Sharing)</h3>
+<p>
+  Streamlit (http://localhost:8501) 과 Django (http://localhost:8000) 는 다른 origin. 그냥 두면 브라우저가 쿠키를 안 보낸다. 그래서:
+</p>
+<pre>CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8501",   # Streamlit
+    "http://localhost:3000",   # 미래 Next.js
+]
+CORS_ALLOW_CREDENTIALS = True</pre>
+<div class="good">
+  ✓ allowlist 방식. <strong>등록된 origin 만</strong> 쿠키 전송 허용. 다른 사이트가 Triple Chat 백엔드에 요청해도 브라우저가 쿠키 첨부 거부.
+</div>
+
+<h2 id="scorecard"><span class="num">7</span>현재 상태 점수표</h2>
+<table>
+  <tr>
+    <th>항목</th>
+    <th>현재</th>
+    <th>설명</th>
+  </tr>
+  <tr><td>비밀번호 평문 저장</td><td><span class="chip chip-good">안전</span></td>
+      <td>PBKDF2-SHA256 600,000 라운드 + salt. 평문 0건.</td></tr>
+  <tr><td>쿠키 HttpOnly</td><td><span class="chip chip-good">안전</span></td>
+      <td>Django 기본. JS 가 쿠키 못 읽음 → XSS 로 세션 탈취 불가.</td></tr>
+  <tr><td>쿠키 SameSite</td><td><span class="chip chip-good">안전</span></td>
+      <td>Lax. cross-site 클릭 공격 거의 차단.</td></tr>
+  <tr><td>쿠키 Secure (HTTPS only)</td><td><span class="chip chip-warn">dev 만 OK</span></td>
+      <td>현재 미설정 → HTTP 도 허용. prod 에선 켜야 함.</td></tr>
+  <tr><td>CSRF 미들웨어</td><td><span class="chip chip-good">안전</span></td>
+      <td>활성. <code>@csrf_exempt</code> 없음.</td></tr>
+  <tr><td>CORS allowlist</td><td><span class="chip chip-good">안전</span></td>
+      <td>env 기반, dev 는 localhost 만.</td></tr>
+  <tr><td>SECRET_KEY 보호</td><td><span class="chip chip-good">안전</span></td>
+      <td>env + DEBUG=0 게이트로 default 차단.</td></tr>
+  <tr><td>.env gitignore</td><td><span class="chip chip-good">안전</span></td>
+      <td>여러 패턴으로 확실히 차단.</td></tr>
+  <tr><td>dev seed 비밀번호 (<code>Triple!23</code>)</td><td><span class="chip chip-warn">dev 한정</span></td>
+      <td><code>seed_test_users</code> 가 하드코딩. dev 만 가정, prod 배포 시 명령 자체 빠져야 함.</td></tr>
+  <tr><td>frontend 기본 로그인 값</td><td><span class="chip chip-warn">개선 가능</span></td>
+      <td><code>frontend/auth.py:render_login_form</code> 이 <code>user.internal@...</code> + <code>Triple!23</code> 을 폼에 채워둠 — 데모용. prod 직전에 비워야.</td></tr>
+  <tr><td>ALLOWED_HOSTS</td><td><span class="chip chip-warn">prod 시 좁히기</span></td>
+      <td>현재 <code>localhost,127.0.0.1,backend</code>. prod 도메인으로 교체.</td></tr>
+  <tr><td>로그인 횟수 제한 (brute-force 방어)</td><td><span class="chip chip-bad">미구현</span></td>
+      <td>몇 회 실패하면 계정 잠금/지연 — 아직 없음. Phase D 후보.</td></tr>
+</table>
+
+<h2 id="prod"><span class="num">8</span>dev → prod 가기 전 체크리스트</h2>
+<div class="warn">
+  <strong>지금 dev 상태로는 안전.</strong> 외부에 노출하려면 아래 4 가지를 settings 에 추가해야 함:
+</div>
+<pre># settings.py — prod 추가
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True   # HTTPS 에서만 쿠키 전송
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True     # HTTP 접근을 HTTPS 로 강제 리다이렉트
+    SECURE_HSTS_SECONDS = 31536000 # 브라우저가 1년간 HTTPS 만 쓰도록 강제
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True</pre>
+<p>그리고:</p>
+<ol>
+  <li><strong>frontend/auth.py</strong> 의 <code>render_login_form()</code> 에서 <code>value="user.internal@..."</code> + <code>value="Triple!23"</code> 을 빈 문자열로.</li>
+  <li><strong>seed_test_users</strong> 는 <code>DEBUG=False</code> 일 때 자동 거부 (이미 구현되어 있음 — <code>--force</code> 없으면 막힘).</li>
+  <li><code>ALLOWED_HOSTS</code> 를 실제 도메인으로 좁히기 (예: <code>triplechat.internal,api.triplechat.internal</code>).</li>
+  <li><code>CORS_ALLOWED_ORIGINS</code> 도 실제 frontend 도메인만.</li>
+</ol>
+
+<h2 id="exercises"><span class="num">9</span>연습 문제</h2>
+
+<div class="exercise">
+  <h4>1. 비밀번호가 정말 해시인지 직접 확인</h4>
+  <pre>cd Rag_Chat/backend
+venv/bin/python manage.py shell -c "
+from chat.models import User
+u = User.objects.get(email='admin@triplechat.test')
+print(u.password)
+"</pre>
+  <p>출력이 <code>pbkdf2_sha256$600000$...</code> 로 시작해야 한다. <code>Triple!23</code> 같은 평문이 보이면 어딘가 잘못된 것.</p>
+</div>
+
+<div class="exercise">
+  <h4>2. SECRET_KEY 부팅 안전망 시험</h4>
+  <p>임시로 <code>.env</code> 의 <code>DJANGO_SECRET_KEY</code> 줄을 주석 처리하고 <code>DEBUG=0</code> 으로 띄워보라:</p>
+  <pre>DEBUG=0 venv/bin/python manage.py runserver</pre>
+  <p>"DEBUG=0 requires a non-default DJANGO_SECRET_KEY..." 에러로 거부되면 정상. .env 줄 다시 복구.</p>
+</div>
+
+<div class="exercise">
+  <h4>3. CSRF 보호 직접 확인</h4>
+  <p>curl 로 sessionid 없이 chat 호출 → 403:</p>
+  <pre>curl -i -X POST http://localhost:8000/api/v1/triple/chat/ \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"test"}'</pre>
+  <p>응답이 <code>403 Forbidden</code> 이어야 한다. 200 OK 가 오면 인증 게이트가 뚫린 것.</p>
+</div>
+
+<div class="exercise">
+  <h4>4. dev 기본값 제거 시뮬</h4>
+  <p><code>frontend/auth.py</code> 의 <code>render_login_form()</code> 에서 <code>value="user.internal@..."</code> 를 <code>value=""</code> 로 바꿔보고 Streamlit rerun. 로그인 화면이 빈 폼이어야 함. prod 직전에 해야 할 최소 변경.</p>
+</div>
+
+<div class="exercise">
+  <h4>5. 더 나아간 질문</h4>
+  <p>brute-force 공격 — 누군가 <code>/auth/login/</code> 에 비밀번호를 1초에 100번 시도하면 어떻게 막을까? 힌트: <code>django-axes</code> 또는 IP 기반 rate-limit (Redis 카운터). Phase D 후보.</p>
+</div>
+
+</body>
+</html>
