@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import User, Chat, SearchLog, RagData, MetaData
+from .models import User, Chat, SearchLog, RagData, MetaData, EscalationAttempt
 # 다른 앱 모델을 user detail inline 에 끌어오기 위한 import.
 from moderation.models import ModerationLog
 from audit.models import AuditLog
@@ -129,3 +129,21 @@ class MetaDataAdmin(admin.ModelAdmin):
         ("Values", {"fields": ("string_value", "integer_value", "float_value", "boolean_value", "json_value")}),
     )
     readonly_fields = ("last_updated",)
+
+
+@admin.register(EscalationAttempt)
+class EscalationAttemptAdmin(admin.ModelAdmin):
+    """페르소나 권한 위반 audit. 운영자가 패턴 발견 → 룰 조정."""
+    list_display = ("occurred_at", "from_persona", "decision", "_query_excerpt", "user")
+    list_filter = ("decision", "from_persona", "occurred_at")
+    search_fields = ("requested_query", "user__email")
+    readonly_fields = (
+        "user", "from_persona", "requested_query",
+        "allowed_tiers", "detected_tiers", "decision", "occurred_at",
+    )
+    date_hierarchy = "occurred_at"
+    ordering = ("-occurred_at",)
+
+    @admin.display(description="query")
+    def _query_excerpt(self, obj):
+        return _excerpt(obj.requested_query, 80)

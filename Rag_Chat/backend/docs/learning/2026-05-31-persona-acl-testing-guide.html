@@ -529,16 +529,19 @@ admin.site.register(EscalationAttempt)</code></pre>
   <li><input type="checkbox"> Step 3: P3 결과에 competitive 1건 이상</li>
   <li><input type="checkbox"> Step 4: 4 페르소나 답변 길이/톤 차이 눈으로 확인</li>
   <li><input type="checkbox"> Step 5: Streamlit 로그인 후 P1/P3 답변 본문 차이</li>
+  <li><input type="checkbox"> Step 6: 권한 위반 3건 EscalationAttempt 누적 확인</li>
+  <li><input type="checkbox"> Step 6: 페르소나 × decision 집계 쿼리 동작</li>
 </ul>
 
 <h3>테스트 끝나면 정리</h3>
 
-<pre class="cmd"><code># 테스트 유저 삭제 (운영 데이터 오염 방지)
+<pre class="cmd"><code># 테스트 유저 + escalation 로그 삭제 (운영 데이터 오염 방지)
 EMBEDDING_PROVIDER=ollama ./venv/bin/python -c "
 import django; django.setup()
-from chat.models import User
+from chat.models import User, EscalationAttempt
 User.objects.filter(email__endswith='@test.kr').delete()
-print('test users wiped')
+EscalationAttempt.objects.filter(from_persona__in=['P1_RETAIL','P2_B2B','P3_HQ','P4_OUTBOUND']).delete()
+print('test users + escalation logs wiped')
 "</code></pre>
 
 <h3>현재 알려진 한계</h3>
@@ -546,10 +549,10 @@ print('test users wiped')
 <table>
   <thead><tr><th>한계</th><th>영향</th><th>다음 작업</th></tr></thead>
   <tbody>
-    <tr><td>EscalationAttempt 로그 없음</td><td>P1 의 b2b 시도 silent block</td><td>모델 + view 미들웨어 추가</td></tr>
     <tr><td>carrier corpus = 24/24 N/A</td><td>P4 외판 답변 자료 거의 없음</td><td>통신사 실 페이지 fetch 필요</td></tr>
     <tr><td>retrieval ranking 검증 안 됨</td><td>Knox 쿼리에 b2b chunk top-1 안 옴</td><td>Stage 1 reranker 효과 측정</td></tr>
     <tr><td>persona × tier 매트릭스 = 코드 하드코딩</td><td>운영자 admin 토글 불가</td><td>DB-backed PersonaAccess 모델</td></tr>
+    <tr><td>Escalation 탐지 = 키워드만</td><td>"마진율 분석" 같은 우회 표현 못 잡음</td><td>LLM classifier 도입</td></tr>
   </tbody>
 </table>
 
