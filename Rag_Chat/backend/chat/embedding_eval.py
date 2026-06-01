@@ -120,11 +120,13 @@ def load_curated(path: Path, limit: int | None = None) -> list[EvalPair]:
     return pairs
 
 
+# Benchmark datasets are now under data/external/ (2026-05-31 lake simplification).
+# Repo data 와 분리해서 외부 라이선스·갱신 주기를 명확히 구분.
 DATASETS: dict[str, Callable[[int | None], list[EvalPair]]] = {
-    "korsts-dev": lambda lim: load_korsts(DATA_DIR / "KorSTS" / "sts-dev.tsv", lim),
-    "korsts-test": lambda lim: load_korsts(DATA_DIR / "KorSTS" / "sts-test.tsv", lim),
-    "kornli-dev": lambda lim: load_kornli(DATA_DIR / "KorNLI" / "xnli.dev.ko.tsv", lim),
-    "kornli-test": lambda lim: load_kornli(DATA_DIR / "KorNLI" / "xnli.test.ko.tsv", lim),
+    "korsts-dev": lambda lim: load_korsts(DATA_DIR / "external" / "KorSTS" / "sts-dev.tsv", lim),
+    "korsts-test": lambda lim: load_korsts(DATA_DIR / "external" / "KorSTS" / "sts-test.tsv", lim),
+    "kornli-dev": lambda lim: load_kornli(DATA_DIR / "external" / "KorNLI" / "xnli.dev.ko.tsv", lim),
+    "kornli-test": lambda lim: load_kornli(DATA_DIR / "external" / "KorNLI" / "xnli.test.ko.tsv", lim),
     "curated": lambda lim: load_curated(DATA_DIR / "embedding_eval" / "curated_pairs.yaml", lim),
 }
 

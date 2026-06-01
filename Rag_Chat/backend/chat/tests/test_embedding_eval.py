@@ -37,7 +37,7 @@ def test_data_dir_resolves():
 
 
 def test_load_korsts_dev_first_10():
-    path = DATA_DIR / "KorSTS" / "sts-dev.tsv"
+    path = DATA_DIR / "external" / "KorSTS" / "sts-dev.tsv"
     if not path.exists():
         pytest.skip("KorSTS dev tsv missing")
     pairs = load_korsts(path, limit=10)
