@@ -309,6 +309,8 @@ class MessageCreateAPIView(APIView):
             user_access_level=getattr(user_obj, "access_level", "internal") or "internal",
         )
         ctx.extra["top_k"] = top_k
+        # Persona × audience_tier ACL — RetrieveModule reads this.
+        ctx.extra["persona"] = getattr(user_obj, "persona", None)
 
         steps: list[dict] = [{"type": "retrieve"}, {"type": "rerank"}]
         if use_reasoning:

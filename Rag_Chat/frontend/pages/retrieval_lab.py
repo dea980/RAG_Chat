@@ -28,7 +28,7 @@ require_manager()
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-BACKEND_DIR = Path(__file__).resolve().parents[1] / "backend"
+BACKEND_DIR = Path(__file__).resolve().parents[2] / "backend"
 DEFAULT_CSV = BACKEND_DIR / "galaxy_s25_data.csv"
 DEFAULT_DATASET = BACKEND_DIR / "chat" / "tests" / "evals" / "dataset.jsonl"
 
@@ -190,8 +190,28 @@ with st.sidebar:
             selected_models.append(key)
 
     st.divider()
+    st.subheader("데이터 소스")
+    uploaded_csv = st.file_uploader(
+        "CSV 업로드 (선택)",
+        type=["csv"],
+        help="미업로드 시 backend/galaxy_s25_data.csv 사용.",
+    )
 
-    csv_path = str(DEFAULT_CSV) if DEFAULT_CSV.exists() else ""
+    csv_path = ""
+    if uploaded_csv is not None:
+        import tempfile
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=".csv", mode="wb",
+        ) as tmp:
+            tmp.write(uploaded_csv.getvalue())
+            csv_path = tmp.name
+        st.caption(f"업로드: {uploaded_csv.name} ({len(uploaded_csv.getvalue())} bytes)")
+    elif DEFAULT_CSV.exists():
+        csv_path = str(DEFAULT_CSV)
+        st.caption(f"기본: {DEFAULT_CSV.name}")
+    else:
+        st.warning(f"기본 CSV 없음: {DEFAULT_CSV}")
+
     dataset_path = DEFAULT_DATASET
 
     run = st.button("평가 실행", type="primary", use_container_width=True)
