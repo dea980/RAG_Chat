@@ -5,8 +5,10 @@
 > 작업할 때 맥락이 흩어지지 않도록.
 >
 > 🗺 **한 페이지 시각 요약**: [reports/project_journey.html](reports/project_journey.html)
-> 👉 **다음 세션 진입점**: [sessions/handoff.md](sessions/handoff.md) — env/provider 현재 상태 + 즉시 처리할 것
-> 🔧 **커밋 분할 핸드오프**: [sessions/commit_split_plan.md](sessions/commit_split_plan.md)
+> 🧭 **개념 정리 (입문 ~ 중급)**: [../../docs/concepts/](../../docs/concepts/) — Hybrid Search · Reranker · Persona ACL · 4-boundary Moderation · Embedding Eval · IR Metrics
+> 🏛 **시스템 아키텍처**: [../../../ARCHITECTURE.md](../../../ARCHITECTURE.md) (top-level) — system map · layers · decisions · lifecycle
+> 📒 **학습 노트 인덱스**: [learning/_index.md](learning/_index.md) — 토픽별 그룹핑
+> 🗂 **세션 핸드오프 (보관)**: [_archive/handoff.md](_archive/handoff.md) · [_archive/missions.md](_archive/missions.md) · [_archive/commit_split_plan.md](_archive/commit_split_plan.md)
 > 🌙 **2026-05-27 밤 (4-에이전트 병렬)**: [sessions/2026-05-27-night-parallel.md](sessions/2026-05-27-night-parallel.md) — 깨어났을 때 1페이지 요약은 [sessions/handoff_night.md](sessions/handoff_night.md)
 > 🎨 **Design system 단일 출처**: [../../../DESIGN.md](../../../DESIGN.md) — 모든 UI·시각 결정은 여기. 챗·docs site·포트폴리오 공용 토큰. 짝꿍 문서: [architecture/security.md](architecture/security.md)(4경계 방어·운영자 설정).
 
@@ -120,13 +122,11 @@
 
 | 문서 | 상태 | 역할 |
 |---|---|---|
-| [handoff.md](sessions/handoff.md) | 🟢 | 다음 세션 진입점 — env/provider 현재 상태 + 즉시 처리 |
-| [handoff_night.md](sessions/handoff_night.md) | 🟢 | 2026-05-27 야간 4-에이전트 병렬 결과 1페이지 요약 (깨어났을 때) |
-| [commit_split_plan.md](sessions/commit_split_plan.md) | 🟢 | `feature/onnx-reranker` 잔여 변경분 커밋 분할 계획 |
+| [handoff_night.md](sessions/handoff_night.md) | 📝 | 2026-05-27 야간 4-에이전트 병렬 결과 1페이지 요약 |
 | [2026-05-27.md](sessions/2026-05-27.md) | 📝 | 2026-05-27 낮 작업 로그 |
-| [2026-05-27-night-parallel.md](sessions/2026-05-27-night-parallel.md) | 🟢 | 2026-05-27 밤 — 4-에이전트 병렬 작업 narrative + 학습 포인트 |
-| [missions.md](sessions/missions.md) | 🟢 | 야간 병렬 세션 공유 임무판. `/nightwork <Tn>` 진입점 |
-| `night/<Tn>.work.md` · `<Tn>.learning.md` | 🟢 | 야간 작업 로그 + 학습 노트 (frontmatter + body). `build_night_report.py` 가 HTML 빌드 |
+| [2026-05-27-night-parallel.md](sessions/2026-05-27-night-parallel.md) | 📝 | 2026-05-27 밤 — 4-에이전트 병렬 작업 narrative + 학습 포인트 |
+| `night/<Tn>.work.md` · `<Tn>.learning.md` | 📝 | 야간 작업 로그 + 학습 노트 (frontmatter + body). `build_night_report.py` 가 HTML 빌드 |
+| [_archive/](_archive/) | 🗂 | 보관 — `handoff.md`, `missions.md`, `commit_split_plan.md` (작업 완료) |
 
 ---
 
@@ -196,9 +196,12 @@ frontend/pages/
 ## 9. 외부 문서
 
 루트(`Rag_Chat/`):
-- [README.md](../../README.md) — 프로젝트 외부 소개
-- [ARCHITECTURE.md](../../ARCHITECTURE.md) — 상위 아키텍처
-- [프로젝트현황.md](../../프로젝트현황.md) — 진행 상황 한국어 정리
+- [README.md](../../README.md) — frontend/backend 모듈 README
+- 프로젝트 루트 외부 (`Rag_Chat/../`):
+  - [README.md](../../../README.md) — 프로젝트 외부 소개 (recruiter 진입점)
+  - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — 상위 아키텍처 (engineer 진입점)
+  - [DESIGN.md](../../../DESIGN.md) — UI·시각 결정 단일 출처
+- [docs/_archive/프로젝트현황.md](../../docs/_archive/프로젝트현황.md) — 2026-05-18 스냅샷 (보관)
 
 ### 9.1 정적 컨셉 사이트 — `Rag_Chat/docs/`
 

@@ -1,151 +1,114 @@
-# Triple Chat — Internal RAG Q&A System
-Prototype that tackles a real bootcamp-team problem: non-engineering teams (sales, support) waste hours digging through product docs to answer routine spec/price questions. This is a Django + LangChain RAG chatbot we built end-to-end to make those lookups conversational, with traceable logs so the answers can be audited later.
+# Triple Chat — Internal RAG Q&A
 
-## 1) Motivation
-- **The pain point**: sales reps repeatedly ask "what's the camera spec on S25 Ultra 1TB?" — answers exist in product CSVs and PDFs but live in too many places.
-- **What we built**: a chatbot that retrieves the right product chunks and answers in natural language, with every (question → retrieved context → answer) tuple logged for review.
-- **Out of scope (deliberate)**: auth/RBAC, forbidden-term filtering — designed but left for the [internal-chat](Rag_Chat/internal-chat/) iteration.
+> 영업·지원팀이 제품 스펙·정책·매뉴얼을 자연어로 묻고, **출처와 함께** 답변받는 사내 RAG 챗봇.
 
-## 2) Problem Focus
-Most RAG demos chase model output quality; we focused on the parts that decide whether a chatbot is actually usable in a company:
-- **Retrieval accuracy** — measured via a [chunk-size A/B harness](Rag_Chat/backend/docs/chunk_experiment.md) on a real eval set (영업팀 시나리오 12문항). chunk_size=150 lifted recall@5 from 0.789 → 0.833 vs the legacy 1000-char setting.
-- **Traceability** — every answer writes a Chat + SearchLog row, so any response can be replayed.
-- **Provider flexibility** — 5 providers (Gemini, Qwen, OpenRouter, Ollama, HuggingFace) swappable via env vars only, no code change.
+Django + DRF · Streamlit · Postgres+pgvector · Redis · Celery · ONNX `bge-reranker-v2-m3` · 5 LLM providers (env-swap)
 
-## 3) Architecture (current)
-- Frontend: Streamlit (Redis Pub/Sub aware)
-- Backend: Django REST Framework
-- Async: Celery worker + beat (vector build, session cleanup)
-- Session/Cache: Redis (TTL aligned with DB `User.expired_datetime`)
-- **Database**: PostgreSQL 16 (SQLite fallback for local dev)
-- Vector Store: FAISS / Chroma
-- LLM: env-pluggable across Gemini, Qwen, OpenRouter, Ollama (local), HuggingFace — embedding and reasoning/generation chosen independently (current default: Gemini embeddings + OpenRouter generation)
-- CI: GitHub Actions — lint, Django tests against Postgres+Redis services, retrieval A/B harness, Docker image build
+[**Architecture**](./ARCHITECTURE.md) · [**Concept docs**](./Rag_Chat/docs/concepts/) · [**Design system**](./DESIGN.md) · [**Backend docs index**](./Rag_Chat/backend/docs/_index.md)
 
-### High-level flow
-1) User question in Streamlit → 2) Vector search → 3) LLM generation → 4) Log question/context/response (session state in Redis)
+---
 
-### Reranker
+## What makes it different
 
-After dense vector retrieval, an ONNX cross-encoder (`BAAI/bge-reranker-v2-m3`)
-rescores the top-N candidates and selects the top-K for the LLM. The model
-downloads on first run to `~/.cache/huggingface/` (~568 MB). To disable,
-set `RERANKER_ENABLED=0`.
+1. **출처가 본문이다** — 답변 바로 아래 amber `#E89B3C` **citation chip ribbon**. 푸터·툴팁에 숨기지 않는다. 답을 의심하는 순간 한 클릭으로 원 chunk 까지 추적.
+2. **운영자가 코드 없이 튜닝하는 4경계 모더레이션** — **업로드 · 질문 · 검색 · 답변** 동일 스키마 필터. `/admin/moderation/` UI 에서 카테고리 · regex/keyword · severity · 적용 경계 체크박스 + **실시간 테스트 패널**. 무성 드롭 금지 — 차단된 chunk 는 `[수정됨·1건]` 으로 가시화.
+3. **검색 품질을 숫자로 입증** — 영업팀 시나리오 12 문항 + labeled embedding eval dataset → **Recall@K · MRR · nDCG** harness. chunk_size 결정 ("1000 → 150 으로 recall@5 0.789 → 0.833"), reranker 도입, persona ACL 결정 모두 anecdote 아니라 metric.
 
-## 4) Data Model (summary)
-- User(user_id, created_datetime, expired_datetime)
-- Chat(question_id, user_id, question_text, response_text, created_datetime, data_id)
-- SearchLog(search_log_id, question_id, data_id, searching_time)
-- RagData(data_id, data_text, image_urls)
-Traceability: who asked what, with which data, and when.
+추가 결정 근거 · tradeoff 표 → [ARCHITECTURE.md §3](./ARCHITECTURE.md#3-key-decisions).
 
-## 5) Key Design Choices
-- Django: structured API/persistence; future-ready for auth/RBAC.
-- Redis: session cache + Pub/Sub.
-- Celery: keeps logging/vector tasks off the request path.
-- Provider abstraction (`chat/providers/manager.py`): env-driven embedding/reasoning/generation across 5 providers, each role configurable independently.
-- **Design system**: 모든 시각·UI 결정의 단일 출처는 [DESIGN.md](./DESIGN.md) — Quiet Utilitarian 다크 우선, Pretendard + Geist Mono, 액센트 = molten amber `#E89B3C`. 시그니쳐 = answer 밑 horizontal **citation chip ribbon**(출처 추적 가시화). Streamlit · 포트폴리오 · 미래 Next.js 세 표면 공용 토큰. 새 UI 만들기 전 반드시 참조.
-- **Moderation 운영자 권한**: 욕설·대외비·PII 필터는 **운영자가 코드 없이 튜닝**(`/admin/moderation/` 카테고리·임계값·실시간 테스트 패널). 4경계(업로드·질문·검색·답변) 동일 스키마 감사 로그.
+---
 
-## 6) Implemented
-- Session-based RAG chat (Streamlit + Django)
-- Vector search + context injection
-- Chat/SearchLog persistence
-- Env-based provider switching
-- **PostgreSQL** as the primary DB (SQLite kept as dev fallback)
-- **Healthcheck endpoints** `/api/v1/triple/health/` (liveness) and `/health/ready/` (DB+Redis+provider readiness)
-- **Session expiry alignment** — Redis TTL and DB `User.expired_datetime` share a single `SESSION_TIMEOUT` window via `refresh_user_session()`
-- **Retrieval A/B harness** + 12-question eval set under [Rag_Chat/backend/chat/tests/evals/](Rag_Chat/backend/chat/tests/evals/)
-- **GitHub Actions CI** — lint, Postgres+Redis integration tests, chunk A/B report as workflow artifact, backend+frontend Docker build
-- **Role-based User** (USER/MANAGER/ADMIN) + department FK on `chat.User`
-- **Knowledge base** — `Department`/`Contact`/`Product` models + `/api/v1/knowledge/products/`, `/contacts/`, `/departments/` 검색 API + Django Admin CRUD
-- **Forbidden-word moderation** — multi-stage filter (BLOCK / MASK / WARN) hooked into chat pipeline both inbound and outbound; Django Admin `/admin/moderation/` 검수 페이지로 운영자가 단어 등록·로그 검수
-- **Audit logging** — `AuditLogMiddleware`가 모든 API 호출 기록 (action/path/status/user/ip)
-- **Security posture** — DEBUG=0에서 default SECRET_KEY 거부, CORS allowlist env-driven
-- **Ingest layer** — `chat/ingest/` 패키지 (`loaders` / `splitters` / `sinks` / `manifest`); 새 포맷 추가는 `@register` 데코레이터 한 줄로 끝나는 플러그인 구조 ([ingest_layer.md](Rag_Chat/backend/docs/ingest_layer.md))
-- **Ingest dedup** — `IngestManifest` 모델 + 결정론적 청크 id 로 같은 파일 재실행 시 자동 skip, 옛 버전 청크 자동 제거 (`build_vectors --rebuild` 으로 전체 초기화)
-- **Chunk Lab 페이지** — `/api/v1/triple/ingest/preview/` + Streamlit `pages/chunk_lab.py` — chunk_size/overlap/splitter 결과를 저장·임베딩 없이 즉시 비교
-- **Token Lab 페이지** — `/api/v1/triple/tokens/estimate/` + Streamlit `pages/token_lab.py` — 모델·언어별 토큰화 비교 (한국어 토큰 효율 검증)
-- Run scripts: `run_local_fixed.sh`, Docker Compose
+## Quick Start
 
-## 7) Known Limits
-- JWT는 의존성에 있지만 endpoint protection 미적용 (Phase 1 예정)
-- Single node; no HA/auto-scale
-- Minimal streaming/concurrency
-- Production chunk_size still 1000; eval suggests 150 — pending controlled rollout
-- 외부 LLM(Gemini/Qwen) 의존 — 대외비 등급 상향 시 로컬 LLM 전환 필요 ([security.md](Rag_Chat/backend/docs/security.md) §4 참조)
-
-## 8) How to Run
-
-### Docker (recommended — full stack: Postgres + Redis + Backend + Celery + Frontend)
 ```bash
-cd Rag_Chat
-# create Rag_Chat/.env (gitignored) — set GOOGLE_API_KEY and/or OPENROUTER_API_KEY (see §5)
-docker-compose up --build
-# UI:        http://localhost:8501
-# API:       http://localhost:8000
-# Liveness:  http://localhost:8000/api/v1/triple/health/
-# Readiness: http://localhost:8000/api/v1/triple/health/ready/
+# 1) clone
+git clone <repo>; cd RAG_Chat
+
+# 2) .env (Rag_Chat/.env, gitignored)
+#    GOOGLE_API_KEY 또는 OPENROUTER_API_KEY 1개 이상 필요
+cat > Rag_Chat/.env <<'EOF'
+PROVIDER=openrouter
+OPENROUTER_API_KEY=sk-or-...
+EOF
+
+# 3) full stack (Postgres + Redis + Backend + Celery + Streamlit)
+cd Rag_Chat && docker-compose up --build
+
+# 4) open
+# UI         http://localhost:8501
+# API        http://localhost:8000
+# Readiness  http://localhost:8000/api/v1/triple/health/ready/
+# Admin      http://localhost:8000/admin/   (moderation 운영자 UI 포함)
 ```
 
-### Local dev script
+로컬 SQLite fallback (LLM 만 필요):
 ```bash
-chmod +x Rag_Chat/run_local_fixed.sh
-cd Rag_Chat && ./run_local_fixed.sh    # SQLite fallback
+cd Rag_Chat && ./run_local_fixed.sh
 ```
 
-### Retrieval A/B (no API key needed — uses BM25)
+평가 (no API key, BM25 backend):
 ```bash
 cd Rag_Chat/backend
 ./venv/bin/python -m chat.tests.evals.run_chunk_ab \
-    --sizes 80,150,250,500,1000 \
-    --overlaps 0,30,80,150 \
-    --k 5
+    --sizes 80,150,250,500,1000 --overlaps 0,30,80,150 --k 5
 ```
 
-## 8.1) Demo Scenarios (영업팀 use case)
+---
 
-영업팀이 "Galaxy S25 라인업의 카메라/가격/스토리지"를 물어본다고 가정한 12개 질문이 [`dataset.jsonl`](Rag_Chat/backend/chat/tests/evals/dataset.jsonl)에 있습니다. 데모 시연 흐름:
+## Architecture (1-line)
 
-1. `docker-compose up` → 챗봇 UI 띄우기 (http://localhost:8501)
-2. 다음 같은 질문을 차례로 입력:
-   - "갤럭시 S25 기본형 팬텀 블랙 256GB 가격이 얼마인가요?" → 1199.99 답변 + 행 소스
-   - "S25 Ultra 페리스코프 카메라 스펙은?" → 10MP Periscope + 200MP Main 컨텍스트
-   - "16GB RAM 가지는 모델 모두 알려주세요" → 다행(多行) 검색
-3. 응답마다 Django Admin (또는 `/api/v1/triple/search-logs/`)에서 SearchLog row 확인 — 어느 RagData가 답변 근거였는지 추적 가능
+```
+Streamlit ─→ Django REST ─→ {Auth, Persona ACL, Retrieval (dense → rerank → ACL), Moderation×4, Audit}
+                                                          │
+                                       Postgres(pgvector) · Redis · Celery
+                                                          │
+                                              5 LLM providers (env-swap)
+```
 
-## 9) Logs & Governance
-- Each question writes Chat + SearchLog; session in Redis; history in SQLite.
-- Enables review of question → context → answer for audits.
+전체 system map · layers · decisions · request lifecycle → [**ARCHITECTURE.md**](./ARCHITECTURE.md).
 
-## 10) Documentation Map
+---
 
-**전체 문서 인덱스: [Rag_Chat/backend/docs/_index.md](Rag_Chat/backend/docs/_index.md)** — 시작점. Phase 진행 상태, 카테고리별 doc map, 코드↔문서 매핑.
+## Tech deep-dive
 
-docs는 테마별 그룹으로 정리되어 있습니다:
+학습 가능한 개념 카드 (정의 + 비유 + 우리 시스템 적용 + 측정 방법 + FAQ):
 
-### architecture/
-- [ingest_layer.md](Rag_Chat/backend/docs/architecture/ingest_layer.md) — 4분류 데이터 수집·정규화 전체 설계 (loaders/splitters/sinks/manifest)
-- [core_concepts.md](Rag_Chat/backend/docs/architecture/core_concepts.md) — RAG/dispatch/멱등성 등 시스템 개념
-- [security.md](Rag_Chat/backend/docs/architecture/security.md) — 대외비 위협 모델 + 다층 방어 + 로컬 LLM 전환 경로
-- [architect_readme.md](Rag_Chat/backend/docs/architecture/architect_readme.md) — 상위 아키텍처 개요
+| Concept | What |
+|---|---|
+| [Hybrid Search](./Rag_Chat/docs/concepts/hybrid-search.md) | Dense + BM25 RRF — 고유명사·동의어 둘 다 잡기 |
+| [Reranker](./Rag_Chat/docs/concepts/reranker.md) | Cross-encoder 로 top-N 재정렬. 왜 ONNX `bge-reranker-v2-m3` |
+| [Persona ACL](./Rag_Chat/docs/concepts/persona-acl.md) | namespace × role × confidentiality label. retrieval-side filter |
+| [4-boundary Moderation](./Rag_Chat/docs/concepts/moderation-4boundary.md) | 업로드·질문·검색·답변 동일 스키마 + 운영자 튜닝 |
+| [Embedding Eval Harness](./Rag_Chat/docs/concepts/embedding-eval.md) | Labeled YAML dataset → metric 으로 모델 결정 |
+| [IR Metrics](./Rag_Chat/docs/concepts/ir-metrics.md) | Recall@K · MRR · nDCG · p95 latency 정의·해석 |
 
-### guides/
-- [run_local_script_fixes.md](Rag_Chat/backend/docs/guides/run_local_script_fixes.md) — 로컬 실행 스크립트 수정 기록
-- [test_fixtures.md](Rag_Chat/backend/docs/guides/test_fixtures.md) — ingest 테스트 픽스처 가이드
+운영 narrative · phase 진행 · 학습 노트 → [backend/docs/_index.md](./Rag_Chat/backend/docs/_index.md).
 
-### reports/
-- [work_distribution.md](Rag_Chat/backend/docs/reports/work_distribution.md) — 여러 agent (Claude Code / Codex / 다른 Claude) 분담 매트릭스
-- [architect.md](Rag_Chat/backend/docs/reports/architect.md)
+---
 
-### sessions/
-- [handoff.md](Rag_Chat/backend/docs/sessions/handoff.md) — 세션 핸드오프 스냅샷
-- [2026-05-27.md](Rag_Chat/backend/docs/sessions/2026-05-27.md) — 세션 작업 기록
+## Status
 
-### 기타
-- [Rag_Chat/frontend/README.md](Rag_Chat/frontend/README.md) — 프런트엔드 요약
-- [Rag_Chat/프로젝트현황.md](Rag_Chat/프로젝트현황.md) — 한국어 진행 현황
-- [.github/workflows/ci.yml](.github/workflows/ci.yml) — CI pipeline
+**Implemented**
+- Session-based RAG chat (Streamlit + Django) with **citation chip ribbon**
+- **Conversation thread** model (persona 별 history)
+- **Persona ACL** — namespace × role × confidentiality, retrieval-side drop/mask, `[수정됨·N건]` 가시화
+- **ONNX reranker** (`BAAI/bge-reranker-v2-m3`, `RERANKER_ENABLED=0` 으로 끔)
+- **4-boundary Moderation** — KW + regex pattern type, severity BLOCK/MASK/WARN, 운영자 Admin + 실시간 테스트 패널
+- **Embedding eval harness** — labeled YAML dataset → Recall@K · MRR
+- **5-provider env-swap** (Gemini · Qwen · OpenRouter · Ollama · HuggingFace)
+- **pgvector** 마이그레이션 (FAISS legacy fallback 유지)
+- **Postgres 16** primary (SQLite dev fallback)
+- **Audit middleware** — 모든 API 호출 row
+- **GitHub Actions CI** — lint · Postgres+Redis 통합 테스트 · chunk A/B artifact · Docker build
+- **Ingest plugin layer** — `@register` 1줄로 새 포맷, SHA256 dedup
+- **Lab pages** — Chunk Lab · Token Lab · Embedding Lab
 
-## 11) Design Philosophy
-Prioritize deployability, traceability, and reliability over raw model scores or UI polish.
+**Known limits** → [ARCHITECTURE.md §7](./ARCHITECTURE.md#7-known-limits)
+
+---
+
+## Design philosophy
+
+Deployability · traceability · reliability **>** raw model score · UI polish.
+
+UI 결정의 단일 출처는 [DESIGN.md](./DESIGN.md) — Quiet Utilitarian, Pretendard + Geist Mono, 액센트 amber `#E89B3C`. citation ribbon · `[수정됨·N건]` · warning border 가 시그니쳐.
