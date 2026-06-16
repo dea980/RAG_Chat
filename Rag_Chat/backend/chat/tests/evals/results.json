@@ -1,0 +1,282 @@
+[
+  {
+    "chunk_size": 200,
+    "chunk_overlap": 0,
+    "num_chunks": 14,
+    "avg_recall_at_k": 0.6667,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "chunk_size": 200,
+    "chunk_overlap": 100,
+    "num_chunks": 14,
+    "avg_recall_at_k": 0.7083,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.5,
+      1.0,
+      1.0
+    ]
+  },
+  {
+    "chunk_size": 500,
+    "chunk_overlap": 0,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7306,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      0.5,
+      1.0,
+      0.6
+    ]
+  },
+  {
+    "chunk_size": 500,
+    "chunk_overlap": 100,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7306,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      0.5,
+      1.0,
+      0.6
+    ]
+  },
+  {
+    "chunk_size": 500,
+    "chunk_overlap": 200,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7306,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      0.5,
+      1.0,
+      0.6
+    ]
+  },
+  {
+    "chunk_size": 500,
+    "chunk_overlap": 300,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7306,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      0.5,
+      1.0,
+      0.6
+    ]
+  },
+  {
+    "chunk_size": 1000,
+    "chunk_overlap": 0,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7306,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      0.5,
+      1.0,
+      0.6
+    ]
+  },
+  {
+    "chunk_size": 1000,
+    "chunk_overlap": 100,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7306,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      0.5,
+      1.0,
+      0.6
+    ]
+  },
+  {
+    "chunk_size": 1000,
+    "chunk_overlap": 200,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7306,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      0.5,
+      1.0,
+      0.6
+    ]
+  },
+  {
+    "chunk_size": 1000,
+    "chunk_overlap": 300,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7306,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      0.5,
+      1.0,
+      0.6
+    ]
+  },
+  {
+    "chunk_size": 1500,
+    "chunk_overlap": 0,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7306,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      0.5,
+      1.0,
+      0.6
+    ]
+  },
+  {
+    "chunk_size": 1500,
+    "chunk_overlap": 100,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7306,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      0.5,
+      1.0,
+      0.6
+    ]
+  },
+  {
+    "chunk_size": 1500,
+    "chunk_overlap": 200,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7306,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      0.5,
+      1.0,
+      0.6
+    ]
+  },
+  {
+    "chunk_size": 1500,
+    "chunk_overlap": 300,
+    "num_chunks": 7,
+    "avg_recall_at_k": 0.7306,
+    "per_question_recall": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.667,
+      0.0,
+      1.0,
+      0.5,
+      1.0,
+      0.6
+    ]
+  }
+]

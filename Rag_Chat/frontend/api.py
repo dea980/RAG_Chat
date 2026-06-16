@@ -12,6 +12,38 @@ logger = logging.getLogger(__name__)
 
 # Use consistent API URL format between frontend and backend
 API_BASE_URL = os.getenv("BACKEND_URL", "http://localhost:8000") + "/api/v1/triple"
+
+
+def upload_knowledge_files(uploaded_files):
+    """
+    Upload one or more knowledge files to the backend ingest endpoint.
+    Returns the backend JSON result, or None on failure.
+    """
+    if not uploaded_files:
+        return None
+
+    files = [
+        (
+            "files",
+            (
+                uploaded.name,
+                uploaded.getvalue(),
+                uploaded.type or "application/octet-stream",
+            ),
+        )
+        for uploaded in uploaded_files
+    ]
+
+    try:
+        response = requests.post(f"{API_BASE_URL}/ingest/upload/", files=files)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to upload knowledge files: {e}")
+        logger.error(f"Error uploading knowledge files: {e}")
+        return None
+
+
 def load_phone_data():
     """
     Call the backend to load and process the phone data from xlsx file.
@@ -121,18 +153,26 @@ def get_provider_selection(user_id: str):
         return None
 
 
-def set_provider_combo(user_id: str, provider_combo: str):
-    """Apply a provider combo for the session/user"""
+def set_provider_selection(user_id: str, reasoning: str, generation: str):
+    """Apply explicit reasoning + generation provider choice for the session/user.
+
+    Embedding provider stays system-wide because switching it would invalidate
+    the existing vector index (dimensions change → searches return empty).
+    """
     try:
         response = requests.post(
             f"{API_BASE_URL}/providers/",
-            json={"user_id": user_id, "provider_combo": provider_combo},
+            json={
+                "user_id": user_id,
+                "reasoning_provider": reasoning,
+                "generation_provider": generation,
+            },
             headers={"Content-Type": "application/json"},
             timeout=5,
         )
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        logger.error(f"Failed to set provider combo: {e}")
+        logger.error(f"Failed to set provider selection: {e}")
         st.sidebar.error("Failed to update provider settings.")
         return None

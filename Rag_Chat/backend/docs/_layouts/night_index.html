@@ -1,0 +1,18 @@
+{% extends "night_base.html" %}
+{% block title %}야간 작업 대시보드{% endblock %}
+{% block content %}
+<h1>🌙 야간 작업 대시보드</h1>
+<p class="muted">자는 동안 돌린 터미널별 작업 + 학습. 깼을 때 여기서 시작.</p>
+{% if not summaries %}
+<p class="muted">아직 완료된 터미널 없음.</p>
+{% endif %}
+{% for s in summaries %}
+<div class="card">
+  <h3>{{ s.terminal }} · {{ s.title }}
+    <span class="status-pill {{ s.status_class }}">{{ s.status }}</span>
+  </h3>
+  <p class="muted">임무: {{ s.mission }} · 업데이트 {{ s.updated }}</p>
+  <p><a href="{{ s.report }}">작업 리포트 →</a> · <a href="{{ s.learning }}">학습 문서 →</a></p>
+</div>
+{% endfor %}
+{% endblock %}

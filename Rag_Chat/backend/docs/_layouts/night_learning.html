@@ -1,0 +1,9 @@
+{% extends "night_base.html" %}
+{% block title %}{{ doc.terminal }} 학습 — {{ doc.title }}{% endblock %}
+{% block content %}
+<p class="muted"><a href="index.html">← 대시보드</a> · <a href="{{ doc.terminal }}.html">작업 리포트 →</a></p>
+<h1>📚 {{ doc.title }}</h1>
+<p class="muted">{{ doc.terminal }} · 임무: {{ doc.mission }} · 업데이트 {{ doc.updated }}</p>
+<hr>
+{{ body|safe }}
+{% endblock %}

@@ -1,0 +1,110 @@
+# Embedding evaluation dataset — labeled pair fixtures
+#
+# 목적: embedding 모델별 한국어 RAG 적합도 정량 평가. eval harness 가 이 파일을
+# 읽어 모델마다 cosine 점수를 산출하고 카테고리/버킷별 통계 생성.
+#
+# 버킷 정의:
+#   positive       — 의미 유사. 점수 **높을수록** 좋다 (목표 > 0.75)
+#   negative       — 의미 무관. 점수 **낮을수록** 좋다 (목표 < 0.40)
+#   hard_negative  — 어휘 겹치지만 의미 다름 (부정/동음이의/반의). 점수 **낮을수록** 좋다
+#                    단, positive 보다는 안 낮아도 OK — 변별력 자체가 어려운 케이스
+#
+# 카테고리:
+#   hr       — 인사 (휴가·급여·출퇴근·복지)
+#   finance  — 재무 (매출·예산·정산)
+#   legal    — 사규/법규 (조항·약관)
+#   it       — IT/보안 (시스템·네트워크·계정)
+#   general  — 일반 (시제·다국어·일상)
+#
+# tags: 추가 분석용 라벨 (synonym / paraphrase / cross_lingual / negation / homonym / antonym)
+#
+# 운영자가 코드 없이 편집 가능 — YAML 한 줄 추가 = 데이터셋 확장.
+
+version: 1
+language_primary: ko
+last_updated: 2026-05-28
+
+positive:
+  # --- hr ---
+  - {text1: "연차 휴가", text2: "연차 사용", category: hr, tags: [synonym]}
+  - {text1: "월차 신청 방법", text2: "월차 어떻게 신청하나요", category: hr, tags: [paraphrase]}
+  - {text1: "출장비 정산 절차", text2: "출장 후 비용 청구 방법", category: hr, tags: [paraphrase]}
+  - {text1: "재택근무 신청", text2: "원격근무 신청", category: hr, tags: [synonym]}
+  - {text1: "퇴직금 지급", text2: "퇴직 시 보상금 지급", category: hr, tags: [paraphrase]}
+  - {text1: "병가 사용 가능 일수", text2: "병가 며칠 쓸 수 있나요", category: hr, tags: [paraphrase]}
+  - {text1: "급여 명세서 확인", text2: "월급 명세 조회", category: hr, tags: [synonym]}
+
+  # --- finance ---
+  - {text1: "3분기 매출", text2: "Q3 revenue", category: finance, tags: [cross_lingual]}
+  - {text1: "분기 매출 보고서", text2: "quarterly revenue report", category: finance, tags: [cross_lingual]}
+  - {text1: "예산 편성", text2: "budget planning", category: finance, tags: [cross_lingual]}
+  - {text1: "법인카드 사용 한도", text2: "회사 카드 결제 한도", category: finance, tags: [synonym]}
+  - {text1: "영업이익률", text2: "operating profit margin", category: finance, tags: [cross_lingual]}
+  - {text1: "회계연도 종료", text2: "fiscal year end", category: finance, tags: [cross_lingual]}
+
+  # --- legal ---
+  - {text1: "제29조 (연차)", text2: "연차에 관한 조항", category: legal, tags: [paraphrase]}
+  - {text1: "근로계약 해지 사유", text2: "고용 계약 종료 요건", category: legal, tags: [synonym]}
+  - {text1: "비밀유지 의무", text2: "기밀 보호 의무", category: legal, tags: [synonym]}
+  - {text1: "약관 동의 철회", text2: "약관 동의 취소", category: legal, tags: [synonym]}
+
+  # --- it ---
+  - {text1: "비밀번호 재설정", text2: "패스워드 변경", category: it, tags: [synonym, cross_lingual]}
+  - {text1: "VPN 접속 방법", text2: "사내망 원격 연결 절차", category: it, tags: [paraphrase]}
+  - {text1: "이메일 첨부파일 차단", text2: "메일 attachment 필터링", category: it, tags: [cross_lingual]}
+  - {text1: "2단계 인증 설정", text2: "MFA 활성화", category: it, tags: [synonym]}
+
+  # --- general ---
+  - {text1: "가격이 얼마인가요", text2: "What is the price", category: general, tags: [cross_lingual]}
+  - {text1: "오늘 날씨 어때", text2: "How's the weather today", category: general, tags: [cross_lingual]}
+  - {text1: "회의 시간 변경", text2: "미팅 시간 조정", category: general, tags: [synonym]}
+
+negative:
+  # 카테고리 다른 무관 쌍
+  - {text1: "연차 휴가 신청", text2: "VPN 접속 오류 해결", category_pair: [hr, it], tags: []}
+  - {text1: "출장비 정산", text2: "비밀번호 재설정", category_pair: [hr, it], tags: []}
+  - {text1: "3분기 매출 보고", text2: "재택근무 신청서", category_pair: [finance, hr], tags: []}
+  - {text1: "법인카드 한도", text2: "이메일 첨부파일 차단", category_pair: [finance, it], tags: []}
+  - {text1: "근로계약 해지", text2: "분기 예산 편성", category_pair: [legal, finance], tags: []}
+  - {text1: "약관 동의 철회", text2: "회의실 예약", category_pair: [legal, general], tags: []}
+  - {text1: "2단계 인증 설정", text2: "퇴직금 지급일", category_pair: [it, hr], tags: []}
+  - {text1: "월차 며칠 남았나요", text2: "회계연도 마감일", category_pair: [hr, finance], tags: []}
+  - {text1: "VPN 비밀번호", text2: "출장 숙소 예약", category_pair: [it, hr], tags: []}
+  - {text1: "영업이익률", text2: "병가 신청 양식", category_pair: [finance, hr], tags: []}
+  - {text1: "Q3 revenue", text2: "이메일 차단 정책", category_pair: [finance, it], tags: []}
+  - {text1: "오늘 날씨", text2: "법인 카드 결제 한도", category_pair: [general, finance], tags: []}
+  - {text1: "회의 시간 변경", text2: "근로계약 해지 사유", category_pair: [general, legal], tags: []}
+  - {text1: "사규 제29조", text2: "VPN 설정 가이드", category_pair: [legal, it], tags: []}
+  - {text1: "출장비 한도", text2: "운영체제 업데이트", category_pair: [hr, it], tags: []}
+
+hard_negative:
+  # negation — 어휘 겹치는데 부정/긍정 반전
+  - {text1: "휴가 신청 승인", text2: "휴가 신청 거부", category: hr, tags: [negation]}
+  - {text1: "출장 가능", text2: "출장 불가", category: hr, tags: [negation]}
+  - {text1: "월급 인상", text2: "월급 동결", category: hr, tags: [antonym]}
+  - {text1: "매출 증가", text2: "매출 감소", category: finance, tags: [antonym]}
+  - {text1: "VPN 접속 성공", text2: "VPN 접속 실패", category: it, tags: [negation]}
+  - {text1: "비밀번호 일치", text2: "비밀번호 불일치", category: it, tags: [negation]}
+  - {text1: "예산 승인", text2: "예산 반려", category: finance, tags: [negation]}
+  - {text1: "계약 체결", text2: "계약 파기", category: legal, tags: [antonym]}
+
+  # homonym — 같은 단어 다른 의미
+  - {text1: "사과를 먹다", text2: "사과를 받다", category: general, tags: [homonym]}     # 과일 vs apology
+  - {text1: "은행에서 인출", text2: "강 옆 은행나무", category: general, tags: [homonym]}   # bank vs tree
+  - {text1: "회사 차를 마시다", text2: "회사 차를 운전하다", category: general, tags: [homonym]} # tea vs car
+
+  # 같은 도메인이나 의미 미세 차이 (lexical overlap, semantic shift)
+  - {text1: "연차 휴가", text2: "연차 평가", category: hr, tags: [semantic_shift]}        # 휴가 vs 인사평가
+  - {text1: "출장비 한도", text2: "출장지 한도", category: hr, tags: [semantic_shift]}     # 비용 vs 지역
+  - {text1: "분기 매출", text2: "분기 회의", category: finance, tags: [semantic_shift]}
+  - {text1: "약관 동의", text2: "약관 위반", category: legal, tags: [antonym]}
+  - {text1: "재택근무 가능", text2: "재택근무 금지", category: hr, tags: [negation]}
+
+  # 다국어 false friend
+  - {text1: "salary 조정", text2: "celery 조달", category: general, tags: [false_friend]}  # 영문 단어 발음 유사
+
+# 향후 추가 예정 (placeholder)
+# retrieval_golden:    # PDF 청크 → 쿼리 매핑 (top-k accuracy 용)
+#   - query: "출장비 한도는?"
+#     positive_chunk_ids: ["사규_v3_chunk_42", "사규_v3_chunk_43"]
+#     hard_negative_chunk_ids: ["사규_v3_chunk_99"]

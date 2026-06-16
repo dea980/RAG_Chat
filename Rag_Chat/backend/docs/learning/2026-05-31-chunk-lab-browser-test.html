@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chunk Lab 브라우저 테스트 — Collection picker 검증</title>
+<style>
+  :root {
+    --bg: #fafafa; --fg: #1a1a1a; --muted: #666; --border: #e1e1e1;
+    --accent: #E89B3C; --warn-bg: #fef3c7; --warn-fg: #92400e;
+    --good-bg: #ecfdf5; --good-fg: #065f46; --bad-bg: #fee2e2; --bad-fg: #991b1b;
+    --note: #fff5e8; --code-bg: #f3f4f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0A0B0D; --fg: #e6edf3; --muted: #8b949e; --border: #30363d;
+      --accent: #E89B3C; --warn-bg: #3a2a08; --warn-fg: #fde68a;
+      --good-bg: #0a2a1c; --good-fg: #86efac; --bad-bg: #3a1212; --bad-fg: #fca5a5;
+      --note: #1a1208; --code-bg: #161b22;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont,
+                 "Apple SD Gothic Neo", sans-serif;
+    max-width: 880px; margin: 0 auto; padding: 40px 24px;
+    line-height: 1.75; font-size: 16px;
+  }
+  h1 { font-size: 30px; margin-bottom: 4px; letter-spacing: -.5px; }
+  p.lead { color: var(--muted); margin-top: 0; font-size: 16px; }
+  h2 {
+    font-size: 22px; margin-top: 56px; padding-bottom: 8px;
+    border-bottom: 3px solid var(--accent);
+  }
+  h2 .num {
+    display: inline-block; width: 36px; height: 36px;
+    background: var(--accent); color: #0A0B0D; border-radius: 50%;
+    text-align: center; line-height: 36px; font-size: 16px; margin-right: 10px;
+    font-weight: 700;
+  }
+  h3 { font-size: 18px; margin-top: 28px; color: var(--accent); }
+  h4 { font-size: 15px; margin: 16px 0 4px; color: var(--muted); }
+  code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: 14px;
+    font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  pre {
+    background: var(--code-bg); padding: 14px 18px; border-radius: 6px;
+    overflow-x: auto; font-size: 13px; line-height: 1.6;
+    font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
+  .lead-box { background: var(--note); padding: 14px 18px; border-radius: 6px;
+              border-left: 3px solid var(--accent); margin: 16px 0; }
+  .good { background: var(--good-bg); color: var(--good-fg); padding: 12px 16px;
+          border-radius: 6px; border-left: 4px solid var(--good-fg); margin: 12px 0; }
+  .warn { background: var(--warn-bg); color: var(--warn-fg); padding: 12px 16px;
+          border-radius: 6px; border-left: 4px solid var(--warn-fg); margin: 12px 0; }
+  .bad  { background: var(--bad-bg);  color: var(--bad-fg);  padding: 12px 16px;
+          border-radius: 6px; border-left: 4px solid var(--bad-fg);  margin: 12px 0; }
+  .step {
+    background: var(--code-bg); padding: 16px 22px;
+    border-radius: 8px; margin: 14px 0;
+    border-left: 3px solid var(--accent);
+  }
+  .step h4 { margin-top: 0; color: var(--fg); font-size: 14px;
+             letter-spacing: 0.06em; text-transform: uppercase; }
+  .ascii {
+    background: #0A0B0D; color: #E89B3C; padding: 16px 20px;
+    border-radius: 6px; font-size: 12px; line-height: 1.5;
+    font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+  }
+  @media (prefers-color-scheme: light) {
+    .ascii { background: #1a1208; }
+  }
+  .toc { background: var(--note); padding: 18px 24px; border-radius: 8px;
+         margin: 24px 0; font-size: 14px; }
+  .toc ol { margin: 8px 0; padding-left: 20px; }
+  .toc li { margin: 3px 0; }
+  .toc a { color: var(--fg); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 4px;
+          font-family: "Geist Mono", monospace; font-size: 11px;
+          letter-spacing: 0.05em; font-variant-numeric: tabular-nums; }
+  .chip-good { background: var(--good-bg); color: var(--good-fg); }
+  .chip-warn { background: var(--warn-bg); color: var(--warn-fg); }
+  .chip-bad  { background: var(--bad-bg);  color: var(--bad-fg);  }
+  .chip-key  { background: var(--accent); color: #0A0B0D; font-weight: 600; }
+  kbd {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 3px; padding: 1px 6px; font-size: 12px;
+    font-family: "Geist Mono", monospace;
+  }
+</style>
+</head>
+<body>
+
+<h1>🧪 Chunk Lab 브라우저 테스트 가이드</h1>
+<p class="lead">
+  Phase A 작업으로 추가된 <code>collection</code> picker 가 실제로 다른 값을
+  DB 에 박는지 브라우저에서 클릭만으로 검증하는 절차.
+</p>
+
+<div class="lead-box">
+  <strong>전제</strong> — Backend (포트 8000) + Streamlit (포트 8501) + Redis 모두
+  살아있음. 적재 후 백엔드 쿼리로 검증 (CLI 한줄, 누가 돌려도 OK).
+</div>
+
+<div class="toc">
+  <strong>목차</strong>
+  <ol>
+    <li><a href="#step1">로그인 (MANAGER+ 권한)</a></li>
+    <li><a href="#step2">chunk_lab 진입 + 새 picker 확인</a></li>
+    <li><a href="#step3">테스트 A — sales 로 적재 (다른 collection 박기)</a></li>
+    <li><a href="#step4">테스트 B — training 으로 다른 파일 적재</a></li>
+    <li><a href="#step5">테스트 C — 같은 파일 재적재 (SHA256 dedup 동작)</a></li>
+    <li><a href="#step6">백엔드 쿼리로 검증</a></li>
+    <li><a href="#step7">트러블슈팅</a></li>
+  </ol>
+</div>
+
+<h2 id="step1"><span class="num">1</span>로그인</h2>
+
+<p>chunk_lab 페이지는 <code>require_manager()</code> 로 보호됨. USER 권한은 진입 차단.</p>
+
+<table>
+  <tr><th>email</th><th>password</th><th>role</th><th>chunk_lab 진입</th></tr>
+  <tr>
+    <td><code>admin@triplechat.test</code></td>
+    <td><code>Triple!23</code></td>
+    <td><span class="chip chip-key">ADMIN</span></td>
+    <td><span class="chip chip-good">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>manager.sales@triplechat.test</code></td>
+    <td><code>Triple!23</code></td>
+    <td><span class="chip chip-key">MANAGER</span></td>
+    <td><span class="chip chip-good">OK</span></td>
+  </tr>
+  <tr>
+    <td><code>user.internal@triplechat.test</code></td>
+    <td><code>Triple!23</code></td>
+    <td><span class="chip">USER</span></td>
+    <td><span class="chip chip-bad">차단됨</span></td>
+  </tr>
+</table>
+
+<div class="step">
+  <h4>액션</h4>
+  <ol>
+    <li><a href="http://localhost:8501">http://localhost:8501</a> 열기</li>
+    <li>이메일 칸 완전히 비우고 직접 타이핑: <code>admin@triplechat.test</code></li>
+    <li>비번 칸 직접 타이핑: <code>Triple!23</code> (대문자 T, 느낌표)</li>
+    <li><kbd>Sign in</kbd> 클릭</li>
+  </ol>
+</div>
+
+<div class="bad">
+  <strong>"invalid credentials" 뜨면</strong> — 브라우저 autofill 의심.
+  필드 클릭 → <kbd>Cmd</kbd>+<kbd>A</kbd> → <kbd>Delete</kbd> → 직접 타이핑 재시도.
+</div>
+
+<h2 id="step2"><span class="num">2</span>chunk_lab 진입 + picker 확인</h2>
+
+<div class="step">
+  <h4>액션</h4>
+  <ol>
+    <li>좌측 사이드바에서 <kbd>Chunk Lab</kbd> 또는 <code>🧪</code> 페이지 선택</li>
+    <li>제목이 "🧪 Chunk Lab" 보라색 divider 아래 보임</li>
+    <li>좌측 사이드바 아래로 스크롤하면 새로 추가된 섹션 "<strong>실제 적재</strong>" 보임</li>
+  </ol>
+</div>
+
+<p><strong>새 picker 2개 확인</strong>:</p>
+
+<div class="ascii">
+사이드바 ── 실제 적재
+⚠️ DB·벡터 저장 발생. 좌측 splitter/size 설정은 무시됨...
+
+Collection (도메인 분류)
+[ policy — 사규·정책        ▾ ]   ← default
+
+Sensitivity (열람 등급)
+[ internal — 사내 공유      ▾ ]   ← default
+
+[ 이 파일을 실제 적재 ]  (회색 — 파일 업로드 전)
+</div>
+
+<div class="good">
+  picker 가 안 보이면 페이지 reload (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>).
+  Streamlit 캐시 무효화.
+</div>
+
+<h2 id="step3"><span class="num">3</span>테스트 A — sales 적재</h2>
+
+<p><strong>목적</strong>: default <code>policy</code> 외 다른 값이 실제 DB 에 박히는지 검증.</p>
+
+<div class="step">
+  <h4>액션</h4>
+  <ol>
+    <li>사이드바 "소스" → <kbd>파일 업로드</kbd> 선택</li>
+    <li>아무 작은 파일 업로드 (csv / txt / md — 200KB 이하 권장)
+      <ul>
+        <li>예: <code>backend/galaxy_s25_data.csv</code> 같은 기존 영업 데이터</li>
+      </ul>
+    </li>
+    <li><strong>Collection</strong> = <code>sales — 영업 데이터</code> 선택</li>
+    <li><strong>Sensitivity</strong> = <code>confidential — 대외비</code> 선택</li>
+    <li><kbd>이 파일을 실제 적재</kbd> (회색 → 보라색 활성)</li>
+  </ol>
+</div>
+
+<p><strong>UI 확인</strong>:</p>
+
+<table>
+  <tr><th>위치</th><th>기대 표시</th></tr>
+  <tr>
+    <td>스피너</td>
+    <td>"적재 중... (filename.csv)"</td>
+  </tr>
+  <tr>
+    <td>결과 헤더</td>
+    <td><code>📥 실제 적재 결과</code> 아래 caption: <code>collection=sales · sensitivity=confidential</code></td>
+  </tr>
+  <tr>
+    <td>메트릭 3개</td>
+    <td>처리됨: 1 · 신규 청크: N · 실패: 0</td>
+  </tr>
+  <tr>
+    <td>JSON 상세</td>
+    <td><code>[{"filename": "...", "status": "ok", "chunks": N}]</code></td>
+  </tr>
+</table>
+
+<div class="warn">
+  <strong>처음엔 OK → 두번째 시도엔 "skipped"</strong>. 정상. SHA256 동일 →
+  manifest dedup 작동. <a href="#step5">테스트 C</a> 참고.
+</div>
+
+<h2 id="step4"><span class="num">4</span>테스트 B — training 적재</h2>
+
+<p><strong>목적</strong>: 또 다른 collection 값 검증 + 다중 collection 공존 확인.</p>
+
+<div class="step">
+  <h4>액션</h4>
+  <ol>
+    <li>"새 파일" 선택 (다른 파일 — 같은 파일이면 dedup 됨)</li>
+    <li>Collection = <code>training — 학습 자료</code></li>
+    <li>Sensitivity = <code>internal — 사내 공유</code></li>
+    <li><kbd>이 파일을 실제 적재</kbd></li>
+  </ol>
+</div>
+
+<h2 id="step5"><span class="num">5</span>테스트 C — 같은 파일 재적재 (dedup)</h2>
+
+<p><strong>목적</strong>: SHA256 dedup 으로 같은 파일을 다른 collection 으로 재적재해도 새 청크 안 생기는지 확인.</p>
+
+<div class="step">
+  <h4>액션</h4>
+  <ol>
+    <li>테스트 A 에서 올린 같은 파일 재업로드</li>
+    <li>Collection 을 이번엔 <code>user</code> 로 변경</li>
+    <li><kbd>이 파일을 실제 적재</kbd></li>
+  </ol>
+</div>
+
+<table>
+  <tr><th>지표</th><th>기대값</th><th>의미</th></tr>
+  <tr>
+    <td>신규 청크</td>
+    <td><code>0</code></td>
+    <td>SHA256 동일 → manifest 가 skip</td>
+  </tr>
+  <tr>
+    <td>JSON status</td>
+    <td><code>"skipped"</code></td>
+    <td>중복 적재 방지 정상 작동</td>
+  </tr>
+  <tr>
+    <td>info 메시지</td>
+    <td>"모두 dedup skip — 동일 SHA256 manifest 존재."</td>
+    <td>운영자 가시화</td>
+  </tr>
+</table>
+
+<div class="warn">
+  <strong>주의</strong>: 같은 파일은 <em>가장 먼저 박힌 collection</em> 으로 유지.
+  나중 picker 변경은 무시됨. 이건 의도적 — manifest 기반 dedup 의 정상 동작.
+  collection 을 바꾸려면 별도 admin UI 필요 (Phase C).
+</div>
+
+<h2 id="step6"><span class="num">6</span>백엔드 쿼리로 검증</h2>
+
+<p>UI 표시는 호스트 쪽 메시지일 뿐. 진짜 DB 에 박혔는지 직접 확인:</p>
+
+<h3>한 줄 검증</h3>
+
+<pre>cd /Users/daeyeop/Desktop/AI/RAG_Chat/Rag_Chat/backend
+venv/bin/python manage.py shell -c "
+from knowledge.models import VectorChunk
+from django.db.models import Count
+rows = VectorChunk.objects.values('collection','sensitivity').annotate(n=Count('id')).order_by('collection','sensitivity')
+for r in rows: print(r)
+print('total:', VectorChunk.objects.count())
+"</pre>
+
+<p><strong>기대 출력</strong> (이전 + 새로 적재한 것들):</p>
+
+<pre>{'collection': 'policy',   'sensitivity': 'confidential', 'n': 24}
+{'collection': 'policy',   'sensitivity': 'internal',     'n': 116}
+{'collection': 'sales',    'sensitivity': 'confidential', 'n': N1}   ← 테스트 A
+{'collection': 'training', 'sensitivity': 'internal',     'n': N2}   ← 테스트 B
+total: 140 + N1 + N2</pre>
+
+<h3>최근 적재만 확인</h3>
+
+<pre>venv/bin/python manage.py shell -c "
+from knowledge.models import VectorChunk
+qs = VectorChunk.objects.order_by('-created_at')[:5]
+for c in qs:
+    print(f'{c.collection:10} | {c.sensitivity:13} | {c.source_file[-50:]}')
+"</pre>
+
+<p>최근 5개 청크의 collection / sensitivity / source_file 확인.</p>
+
+<h3>특정 collection 만</h3>
+
+<pre>venv/bin/python manage.py shell -c "
+from knowledge.models import VectorChunk
+for c in ['training','policy','sales','user']:
+    print(f'{c:10}: {VectorChunk.objects.filter(collection=c).count()} chunks')
+"</pre>
+
+<h2 id="step7"><span class="num">7</span>트러블슈팅</h2>
+
+<table>
+  <tr><th>증상</th><th>원인</th><th>해결</th></tr>
+  <tr>
+    <td>"invalid credentials"</td>
+    <td>autofill 공백 / 오타 / 백엔드 다운</td>
+    <td>필드 비우고 직접 타이핑. <code>curl localhost:8000</code> 으로 backend 확인.</td>
+  </tr>
+  <tr>
+    <td>chunk_lab 진입 시 "접근 차단" 배너</td>
+    <td>USER 권한 로그인</td>
+    <td>로그아웃 후 manager/admin 계정 재로그인.</td>
+  </tr>
+  <tr>
+    <td>picker 안 보임</td>
+    <td>Streamlit 캐시 stale</td>
+    <td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> 하드 리로드. 그래도 안 보이면 streamlit 재시작.</td>
+  </tr>
+  <tr>
+    <td>적재 버튼 회색</td>
+    <td>파일 업로드 모드 아님 OR 파일 미업로드</td>
+    <td>좌측 "소스" → <kbd>파일 업로드</kbd> → 파일 선택.</td>
+  </tr>
+  <tr>
+    <td>적재 시 "backend 500"</td>
+    <td>Postgres 연결 / 임베딩 API quota</td>
+    <td>backend 로그 확인. Gemini 429 면 <code>OPENROUTER_*</code> 로 provider 스왑.</td>
+  </tr>
+  <tr>
+    <td>DB 쿼리 결과에 collection 없음</td>
+    <td>마이그레이션 미적용</td>
+    <td><code>venv/bin/python manage.py migrate knowledge</code></td>
+  </tr>
+</table>
+
+<h2>완료 체크리스트</h2>
+
+<div class="good">
+  <ul style="margin: 0; padding-left: 24px;">
+    <li><span class="chip chip-good">PASS</span> 로그인 (MANAGER+)</li>
+    <li><span class="chip chip-good">PASS</span> chunk_lab 사이드바에 Collection + Sensitivity picker 표시</li>
+    <li><span class="chip chip-good">PASS</span> sales 적재 → UI 결과 헤더에 <code>collection=sales</code> 표시</li>
+    <li><span class="chip chip-good">PASS</span> DB 쿼리에서 새 row <code>{collection: 'sales', ...}</code> 확인</li>
+    <li><span class="chip chip-good">PASS</span> 같은 파일 재적재 → "skipped" + 신규 청크 0</li>
+  </ul>
+</div>
+
+<p>전부 PASS 면 Phase A end-to-end 검증 완료. 다음은 <strong>Phase B</strong> —
+retrieval 시 <code>user.role × collection × sensitivity</code> SQL WHERE 필터.</p>
+
+</body>
+</html>

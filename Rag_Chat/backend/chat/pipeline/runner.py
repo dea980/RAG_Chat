@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Dict, Iterable, List, Sequence, Union
 
 from .base import ModuleContext, PipelineModule, ModuleError
-from .modules import GenerationModule, ReasoningModule, RetrieveModule
+from .modules import GenerationModule, ReasoningModule, RerankModule, RetrieveModule
 
 
 ModuleConfig = Union[PipelineModule, Dict[str, object]]
@@ -13,6 +13,7 @@ ModuleConfig = Union[PipelineModule, Dict[str, object]]
 
 DEFAULT_REGISTRY = {
     "retrieve": RetrieveModule,
+    "rerank": RerankModule,
     "reasoning": ReasoningModule,
     "generation": GenerationModule,
 }

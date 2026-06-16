@@ -33,16 +33,87 @@ ensure_directory() {
     fi
 }
 
-# Ensure Redis container exists and can be reached
-check_redis() {
-    echo "Ensuring Redis container is running..."
+# Ensure Postgres container exists and can be reached (opt-in via USE_POSTGRES=1).
+# Reuses an existing container on the target port (e.g. docker-compose's
+# rag_chat-postgres-1) before creating a fresh sh-managed one.
+check_postgres() {
+    local pg_db=${POSTGRES_DB:-triple_chat}
+    local pg_user=${POSTGRES_USER:-postgres}
+    local pg_password=${POSTGRES_PASSWORD:-postgres}
+    local pg_host_port=${POSTGRES_HOST_PORT:-5434}
 
+    echo "Ensuring Postgres is running on localhost:${pg_host_port}..."
+
+    # 1) Reuse: any container already publishing the target host port
+    local existing
+    existing=$(docker ps --format '{{.Names}} {{.Ports}}' \
+        | awk -v p=":${pg_host_port}->" '$0 ~ p {print $1; exit}')
+    if [ -n "$existing" ]; then
+        echo "Reusing running Postgres container '${existing}' on port ${pg_host_port}."
+        export DATABASE_URL="postgres://${pg_user}:${pg_password}@localhost:${pg_host_port}/${pg_db}"
+        return 0
+    fi
+
+    # 2) Otherwise manage a dedicated container
+    if ! docker ps -a --format '{{.Names}}' | grep -wq '^triple_chat_postgres$'; then
+        echo "Creating postgres:16-alpine container 'triple_chat_postgres'..."
+        docker run -d \
+            -p "${pg_host_port}:5432" \
+            -e POSTGRES_DB="$pg_db" \
+            -e POSTGRES_USER="$pg_user" \
+            -e POSTGRES_PASSWORD="$pg_password" \
+            -v triple_chat_postgres_data:/var/lib/postgresql/data \
+            --name triple_chat_postgres \
+            postgres:16-alpine >/dev/null
+        sleep 5
+    elif ! docker ps --format '{{.Names}}' | grep -wq '^triple_chat_postgres$'; then
+        echo "Starting existing 'triple_chat_postgres' container..."
+        docker start triple_chat_postgres >/dev/null
+        sleep 3
+    fi
+
+    local retries=10
+    while ! docker exec triple_chat_postgres pg_isready -U "$pg_user" -d "$pg_db" >/dev/null 2>&1; do
+        retries=$((retries - 1))
+        if [ "$retries" -le 0 ]; then
+            echo "Failed to reach Postgres container 'triple_chat_postgres'."
+            return 1
+        fi
+        sleep 1
+    done
+
+    echo "Postgres container is running on localhost:${pg_host_port}."
+    export DATABASE_URL="postgres://${pg_user}:${pg_password}@localhost:${pg_host_port}/${pg_db}"
+    return 0
+}
+
+# Ensure Redis container exists and can be reached.
+# Reuses any running container publishing port 6379 (e.g. docker-compose's
+# rag_chat-redis-1) before creating a fresh sh-managed one.
+check_redis() {
+    local redis_host_port=${REDIS_HOST_PORT:-6379}
+    echo "Ensuring Redis is running on localhost:${redis_host_port}..."
+
+    # 1) Reuse: any container already publishing the target port
+    local existing
+    existing=$(docker ps --format '{{.Names}} {{.Ports}}' \
+        | awk -v p=":${redis_host_port}->" '$0 ~ p {print $1; exit}')
+    if [ -n "$existing" ]; then
+        if docker exec "$existing" redis-cli ping >/dev/null 2>&1; then
+            echo "Reusing running Redis container '${existing}'."
+            return 0
+        fi
+        echo "Container '${existing}' is on port ${redis_host_port} but not responding to PING."
+        return 1
+    fi
+
+    # 2) Otherwise manage a dedicated container
     if ! docker ps -a --format '{{.Names}}' | grep -wq '^redis$'; then
-        echo "Redis container not found. Creating redis:7 container..."
-        docker run -d -p 6379:6379 --name redis redis:7 >/dev/null
+        echo "Creating redis:7 container 'redis'..."
+        docker run -d -p "${redis_host_port}:6379" --name redis redis:7 >/dev/null
         sleep 3
     elif ! docker ps --format '{{.Names}}' | grep -wq '^redis$'; then
-        echo "Starting existing Redis container..."
+        echo "Starting existing 'redis' container..."
         docker start redis >/dev/null
         sleep 3
     fi
@@ -122,13 +193,24 @@ ensure_directory "$BACKEND_DIR/static"
 # Prepare backend environment
 setup_backend_env
 
-# Load environment variables from backend .env using POSIX-safe approach
-if [ -f "$BACKEND_DIR/.env" ]; then
-    echo "Loading environment variables from backend/.env file..."
+# Load environment variables from the single root .env (source of truth).
+# backend/.env was consolidated into Rag_Chat/.env — see backend/README.md
+# "Environment variables" section for the inline template.
+if [ -f "$ROOT_DIR/.env" ]; then
+    echo "Loading environment variables from .env file..."
     set -a
     # shellcheck disable=SC1090
-    source "$BACKEND_DIR/.env"
+    source "$ROOT_DIR/.env"
     set +a
+fi
+
+# Optional Postgres container (USE_POSTGRES=1 for prod parity, default = SQLite).
+# Runs after .env load so POSTGRES_* and USE_POSTGRES can come from .env.
+if [ "${USE_POSTGRES:-0}" = "1" ]; then
+    if ! check_postgres; then
+        echo "Failed to start or connect to Postgres. Exiting."
+        exit 1
+    fi
 fi
 
 # Set environment variables if not already set
@@ -210,39 +292,9 @@ if ! kill -0 "$frontend_pid" 2>/dev/null; then
     exit 1
 fi
 
-echo "Starting Celery worker..."
-(
-    cd "$BACKEND_DIR"
-    PYTHONUNBUFFERED=1 "$BACKEND_PYTHON" -m celery -A triple_chat_pjt worker --loglevel=info
-) &
-worker_pid=$!
-
-sleep 2
-if ! kill -0 "$worker_pid" 2>/dev/null; then
-    echo "Celery worker failed to start"
-else
-    echo "Celery worker PID: $worker_pid"
-fi
-
-echo "Starting Celery beat..."
-(
-    cd "$BACKEND_DIR"
-    PYTHONUNBUFFERED=1 "$BACKEND_PYTHON" -m celery -A triple_chat_pjt beat --loglevel=info
-) &
-beat_pid=$!
-
-sleep 2
-if ! kill -0 "$beat_pid" 2>/dev/null; then
-    echo "Celery beat failed to start"
-else
-    echo "Celery beat PID: $beat_pid"
-fi
-
 echo "==== All services started successfully! ===="
 echo "Django backend PID: $backend_pid (http://localhost:8000)"
 echo "Streamlit frontend PID: $frontend_pid (http://localhost:8501)"
-echo "Celery worker PID: $worker_pid"
-echo "Celery beat PID: $beat_pid"
 echo ""
 echo "Press Ctrl+C to stop all services"
 
@@ -250,8 +302,6 @@ cleanup() {
     echo "Cleaning up processes..."
     [ -n "$backend_pid" ] && kill "$backend_pid" 2>/dev/null
     [ -n "$frontend_pid" ] && kill "$frontend_pid" 2>/dev/null
-    [ -n "$worker_pid" ] && kill "$worker_pid" 2>/dev/null
-    [ -n "$beat_pid" ] && kill "$beat_pid" 2>/dev/null
     exit 0
 }
 
@@ -269,6 +319,6 @@ wait_for_exit() {
     done
 }
 
-wait_for_exit "$backend_pid" "$frontend_pid" "$worker_pid" "$beat_pid"
+wait_for_exit "$backend_pid" "$frontend_pid"
 
 cleanup

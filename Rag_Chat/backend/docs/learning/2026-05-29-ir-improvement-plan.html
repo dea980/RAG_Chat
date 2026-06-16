@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IR 개선 plan — baseline 부터 reranker 까지 6 단계</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+<style>
+  :root {
+    --bg: #0A0B0D;
+    --surface: #14151A;
+    --surface-2: #1C1E26;
+    --fg: #E8E9EC;
+    --muted: #8B8F99;
+    --border: #2A2D36;
+    --accent: #E89B3C;
+    --accent-soft: rgba(232,155,60,.12);
+    --code-bg: #1C1E26;
+    --note: #161821;
+    --good: #4ADE80;
+    --warn: #FACC15;
+    --bad: #F87171;
+    --stage0: #6B7280;
+    --stage1: #E89B3C;
+    --stage2: #60A5FA;
+    --stage3: #A78BFA;
+    --stage4: #34D399;
+    --stage5: #F472B6;
+    --stage6: #FBBF24;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+    max-width: 920px; margin: 0 auto; padding: 56px 28px 120px;
+    line-height: 1.75; font-size: 15.5px;
+    font-feature-settings: "tnum" on;
+  }
+  h1 { font-size: 32px; margin: 0 0 8px; letter-spacing: -.6px; font-weight: 700; }
+  p.lead {
+    color: var(--muted); margin: 0 0 32px; font-size: 15px;
+    border-left: 3px solid var(--accent); padding: 4px 0 4px 14px;
+  }
+  h2 {
+    font-size: 22px; margin: 64px 0 16px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border); font-weight: 600;
+  }
+  h2 .num {
+    display: inline-block; min-width: 30px; height: 30px; padding: 0 10px;
+    background: var(--accent); color: #14151A; border-radius: 6px;
+    text-align: center; line-height: 30px; font-size: 13px;
+    margin-right: 10px; font-weight: 700;
+    font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  }
+  h3 { font-size: 17px; margin: 32px 0 12px; color: var(--accent); font-weight: 600; }
+  h3 .stage-pill {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    background: var(--accent-soft); color: var(--accent);
+    margin-right: 10px; vertical-align: 2px;
+  }
+  h4 { font-size: 14px; margin: 16px 0 6px; color: var(--muted); font-weight: 500; }
+  p { margin: 12px 0; }
+  strong { color: #fff; font-weight: 600; }
+  em { color: var(--accent); font-style: normal; font-weight: 500; }
+  code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: 13.5px;
+    font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+    font-feature-settings: "tnum" on;
+    color: #F4D7A9;
+  }
+  pre {
+    background: var(--code-bg); padding: 16px 18px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.65;
+    border: 1px solid var(--border);
+    font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+    font-feature-settings: "tnum" on;
+  }
+  pre code { background: transparent; padding: 0; color: var(--fg); }
+  blockquote {
+    margin: 14px 0; padding: 8px 16px; border-left: 3px solid var(--accent);
+    background: var(--surface); color: var(--fg); border-radius: 0 6px 6px 0;
+  }
+  table {
+    border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 13.5px;
+    border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+    font-feature-settings: "tnum" on;
+  }
+  th, td {
+    border-top: 1px solid var(--border); border-right: 1px solid var(--border);
+    padding: 10px 14px; text-align: left; vertical-align: top;
+  }
+  th:last-child, td:last-child { border-right: none; }
+  thead th { background: var(--surface-2); font-weight: 600; color: var(--accent); border-top: none; }
+  tbody tr:first-child td { border-top: 1px solid var(--border); }
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .analogy {
+    background: var(--note); padding: 16px 20px; border-radius: 8px;
+    border-left: 3px solid var(--accent); margin: 18px 0;
+  }
+  .analogy strong { color: var(--accent); }
+  .meta {
+    display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px;
+    color: var(--muted); margin: 4px 0 32px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+  }
+  .meta span::before { content: "·"; margin-right: 16px; color: var(--border); }
+  .meta span:first-child::before { content: none; }
+  .toc {
+    background: var(--surface); padding: 18px 24px; border-radius: 10px;
+    margin: 32px 0; font-size: 14px; border: 1px solid var(--border);
+  }
+  .toc h4 { margin: 0 0 8px; color: var(--accent); font-size: 12px;
+            letter-spacing: 0.1em; text-transform: uppercase; }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin: 2px 0; }
+  .toc a { color: var(--fg); }
+  .exercise {
+    background: var(--surface); padding: 18px 22px; border-radius: 8px;
+    margin: 18px 0; border: 1px solid var(--border);
+  }
+  .exercise h4 { margin-top: 0; color: var(--fg); font-size: 14px; }
+  .exercise .level {
+    display: inline-block; padding: 2px 10px; border-radius: 4px;
+    font-family: "Geist Mono", ui-monospace, monospace; font-size: 11px;
+    letter-spacing: 0.06em; background: var(--accent-soft); color: var(--accent);
+    margin-left: 8px; font-weight: 600;
+  }
+  .exercise .hint {
+    margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border);
+    color: var(--muted); font-size: 13.5px;
+  }
+  .impact-pill {
+    display: inline-block; padding: 1px 8px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent);
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 11px; font-weight: 700; margin-left: 6px;
+  }
+
+  /* ========= Flow diagram ========= */
+  .flow-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 28px 24px; margin: 24px 0;
+  }
+  .flow-title {
+    text-align: center; color: var(--muted); font-size: 11px;
+    letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 18px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+  }
+  .flow {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .node {
+    display: flex; align-items: center; gap: 10px;
+    min-width: 320px; padding: 12px 16px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px;
+    position: relative;
+  }
+  .node .tag {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent);
+    letter-spacing: 0.06em; white-space: nowrap;
+  }
+  .node .body { flex: 1; }
+  .node .body strong { display: block; font-size: 14px; color: #fff; }
+  .node .body small { color: var(--muted); font-size: 12px;
+                      font-family: "Geist Mono", ui-monospace, monospace; }
+
+  .node.user { border-color: var(--muted); background: var(--note); }
+  .node.stage0 .tag { background: rgba(107,114,128,.18); color: var(--stage0); }
+  .node.stage0 { border-left: 3px solid var(--stage0); }
+  .node.stage1 .tag { background: rgba(232,155,60,.18); color: var(--stage1); }
+  .node.stage1 { border-left: 3px solid var(--stage1); }
+  .node.stage2 .tag { background: rgba(96,165,250,.18); color: var(--stage2); }
+  .node.stage2 { border-left: 3px solid var(--stage2); }
+  .node.stage3 .tag { background: rgba(167,139,250,.18); color: var(--stage3); }
+  .node.stage3 { border-left: 3px solid var(--stage3); }
+  .node.fusion {
+    background: linear-gradient(135deg, rgba(96,165,250,.10), rgba(232,155,60,.10));
+    border: 1px dashed var(--accent);
+  }
+  .node.output {
+    background: var(--accent); color: #14151A; border-color: var(--accent);
+  }
+  .node.output strong { color: #14151A; }
+  .node.output small { color: rgba(20,21,26,.7); }
+  .node.output .tag { background: rgba(20,21,26,.18); color: #14151A; }
+
+  .arrow {
+    width: 2px; height: 18px; background: var(--border); position: relative;
+  }
+  .arrow::after {
+    content: ""; position: absolute; bottom: -6px; left: -4px;
+    width: 0; height: 0; border-left: 5px solid transparent;
+    border-right: 5px solid transparent; border-top: 8px solid var(--border);
+  }
+  .parallel {
+    display: flex; gap: 18px; align-items: flex-start;
+  }
+  .parallel .col {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+    margin-top: 22px; padding-top: 18px; border-top: 1px dashed var(--border);
+    font-size: 11.5px; color: var(--muted);
+    font-family: "Geist Mono", ui-monospace, monospace;
+  }
+  .legend .item { display: flex; align-items: center; gap: 6px; }
+  .legend .dot { width: 10px; height: 10px; border-radius: 2px; }
+  .legend .dot.s0 { background: var(--stage0); }
+  .legend .dot.s1 { background: var(--stage1); }
+  .legend .dot.s2 { background: var(--stage2); }
+  .legend .dot.s3 { background: var(--stage3); }
+</style>
+</head>
+<body>
+
+<h1>IR 개선 plan — baseline 부터 reranker 까지 6 단계</h1>
+<div class="meta">
+  <span>2026-05-29</span>
+  <span>Triple Chat / 실행 가이드</span>
+  <span>관련: <a href="./2026-05-29-ir-rag-concepts.html">개념 정리</a></span>
+</div>
+
+<p class="lead">
+  <strong>측정 없는 개선은 추측이다.</strong> 먼저 labeled QA 30개로 baseline (MRR, Recall@5) 을 잡고,
+  그 다음 <em>reranker → hybrid → metadata filter → 청크 정규화 → query rewriting</em> 순으로 하나씩
+  켜고 끄며 효과를 측정한다. 이 순서가 ROI 최적.
+</p>
+
+<div class="toc">
+  <h4>목차</h4>
+  <ol>
+    <li><a href="#analogy">비유 — 자동차 튜닝 다이노</a></li>
+    <li><a href="#diff">왜 이게 필요한가 — 현재 vs 개선 후</a></li>
+    <li><a href="#stages">6 단계 (ROI 순)</a></li>
+    <li><a href="#flow">데이터 흐름 (개선 후)</a></li>
+    <li><a href="#verify">확인 방법</a></li>
+    <li><a href="#exercises">연습 문제</a></li>
+    <li><a href="#checklist">다음 단계 체크리스트</a></li>
+  </ol>
+</div>
+
+<hr>
+
+<h2 id="analogy"><span class="num">비유</span>자동차 튜닝 다이노</h2>
+
+<p>엔진 출력 측정기를 안 달고 부품을 갈면 "느낌상 빨라진 것 같다" 가 한계다.
+<em>다이노 (dynamometer)</em> 에 올려서 출력 곡선을 찍고,
+<strong>부품 하나 갈 때마다 같은 조건에서 다시 찍어야</strong>
+"이 부품이 +12hp 줬구나" 가 증명된다.</p>
+
+<div class="analogy">
+  <strong>매핑.</strong> labeled QA dataset = 다이노. 거기 안 올리고 reranker, hybrid, 청크 변경 다 해봐야
+  "좋아진 것 같다" 까지가 한계.
+</div>
+
+<hr>
+
+<h2 id="diff"><span class="num">DIFF</span>왜 이게 필요한가 — 현재 vs 개선 후</h2>
+
+<table>
+  <thead><tr><th>항목</th><th>현재 (2026-05-29)</th><th>개선 후 (목표)</th></tr></thead>
+  <tbody>
+    <tr><td>코퍼스</td><td><code>97 chunks</code> (samples + bundled)</td><td>동일 또는 정규화 후 <code>~120</code></td></tr>
+    <tr><td>Embedding</td><td>OpenAI 1536d (text-embedding-3-small)</td><td>동일 (필요 시 large 3072)</td></tr>
+    <tr><td>검색</td><td>dense cosine top-k=4</td><td>dense 20 → cross-encoder rerank → 5</td></tr>
+    <tr><td>키워드 매칭</td><td>없음 (모델명 정확 매칭 약함)</td><td>BM25 + RRF 융합</td></tr>
+    <tr><td>카테고리 필터</td><td>없음 (폰/탭/버즈 섞임)</td><td>metadata filter 사전 적용</td></tr>
+    <tr><td>평가</td><td>eyeball 4 쿼리</td><td>MRR / Recall@5 자동 측정</td></tr>
+    <tr><td>개선 의사결정</td><td>추측</td><td>숫자 기반 A/B</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2 id="stages"><span class="num">PLAN</span>6 단계 (ROI 순)</h2>
+
+<h3><span class="stage-pill">STAGE 0</span>측정 — blocker, 다른 모든 단계의 전제</h3>
+
+<p><strong>작업:</strong></p>
+<ol>
+  <li><code>backend/data/embedding_eval/sales_qa.yaml</code> 작성 — 영업팀 실제 질문 30~50개.</li>
+  <li>각 질문에 정답 청크 식별자 라벨 (source_file + section).</li>
+  <li><code>chat/embedding_eval.py</code> (이미 untracked 에 존재) 에 mgmt cmd wiring.</li>
+  <li>baseline 측정: MRR, Recall@5, Recall@10.</li>
+</ol>
+
+<p><strong>예시 dataset (5개):</strong></p>
+
+<pre><code>- query: "Galaxy Z Fold6 가격 알려줘"
+  expected_source: "data/samples/foldable_handbook.md"
+  expected_section_contains: ["가격", "$1,899"]
+
+- query: "Buds3 Pro ANC 되나"
+  expected_source: "data/samples/buds_lineup.csv"
+  expected_row_contains: ["Buds3 Pro", "ANC"]
+
+- query: "Tab S10 Ultra DeX 무선"
+  expected_source: "data/samples/tab_handbook.md"
+  expected_section_contains: ["무선 DeX"]
+
+- query: "A55 카메라 OIS"
+  expected_source: "data/samples/a_series_handbook.md"
+  expected_section_contains: ["OIS"]
+
+- query: "S25 Ultra 무게"
+  expected_source: "data/samples/galaxy_lineup.csv"
+  expected_row_contains: ["Galaxy S25 Ultra", "Weight"]</code></pre>
+
+<p><strong>비용:</strong> 2~3시간 · <strong>완료 조건:</strong> baseline 숫자 1개 (e.g. MRR=0.42)</p>
+
+<h3><span class="stage-pill">STAGE 1</span>Reranker <span class="impact-pill">MRR +20~30%p</span></h3>
+
+<p><strong>왜:</strong> single-lever 효과 최대. cross-encoder 가 query·doc 을 함께 보고 점수화 → bi-encoder 의 약점 보완.</p>
+<p><strong>작업:</strong></p>
+<ul>
+  <li><code>.env</code> 의 <code>RERANKER_ENABLED=0</code> → <code>RERANKER_ENABLED=1</code> 토글</li>
+  <li>ONNX 모델 <code>BAAI/bge-reranker-v2-m3</code> 는 이미 repo 에 준비 (현 브랜치 = <code>feature/onnx-reranker</code>)</li>
+  <li>파이프라인: dense top-20 → cross-encoder rerank → top-5</li>
+</ul>
+
+<pre><code># chat/pipeline/modules.py — RetrievalModule
+dense_hits = vector_store.similarity_search(query, k=20)
+if RERANKER_ENABLED:
+    reranked = reranker.rerank(query, dense_hits)  # ONNX cross-encoder
+    return reranked[:5]
+return dense_hits[:5]</code></pre>
+
+<p><strong>비용:</strong> 1시간 (env 토글 + import + smoke test)</p>
+
+<h3><span class="stage-pill">STAGE 2</span>Hybrid 검색 (Dense + BM25) <span class="impact-pill">MRR +5~15%p</span></h3>
+
+<p><strong>왜:</strong> dense embedding 은 "Galaxy A55" 같은 <em>정확 명사</em> 에 약하다.
+BM25 는 keyword 검색 — 정확 단어 일치에 강함.</p>
+<p><strong>작업:</strong></p>
+<ul>
+  <li><code>pip install rank_bm25</code> (또는 langchain BM25Retriever)</li>
+  <li>ingest 시 BM25 인덱스 추가 빌드</li>
+  <li>검색: dense top-20 + BM25 top-20 → <strong>RRF (Reciprocal Rank Fusion)</strong></li>
+</ul>
+
+<pre><code>score(doc) = sum( 1 / (60 + rank_in_each_retriever) )</code></pre>
+
+<p><strong>비용:</strong> 0.5 day</p>
+
+<h3><span class="stage-pill">STAGE 3</span>Category metadata + pre-filter <span class="impact-pill">MRR +5~10%p</span></h3>
+
+<p><strong>왜:</strong> 현재 청크 메타에 <code>product_category</code> 없음. "태블릿 추천" 물으면 폰/버즈까지 섞임.</p>
+<p><strong>작업:</strong></p>
+<ul>
+  <li>ingest 시 파일 경로에서 category 자동 부여:
+    <code>foldable_*</code> → <code>foldable</code>, <code>a_series_*</code> → <code>smartphone_midrange</code>,
+    <code>tab_*</code> → <code>tablet</code>, <code>buds_*</code>/<code>watch_*</code> → <code>accessory</code>,
+    <code>galaxy_*</code> → <code>smartphone_flagship</code></li>
+  <li>검색 시 LLM 1콜로 쿼리 → category 추정 → chroma filter 적용 후 similarity</li>
+</ul>
+
+<pre><code># chat/ingest/sinks/chroma.py — _to_lc_document
+flat_meta["category"] = _infer_category(doc.source_file)
+
+# retrieval
+category = classify_query(query)            # 짧은 prompt → "tablet"
+hits = vs.similarity_search(query, k=5,
+                            filter={"category": category})</code></pre>
+
+<p><strong>리스크:</strong> category 오분류 → false-negative. fallback (filter 없이 재검색) 권장. <strong>비용:</strong> 0.5 day</p>
+
+<h3><span class="stage-pill">STAGE 4</span>청크 단위 정규화 <span class="impact-pill">MRR +0~5%p</span></h3>
+
+<p><strong>현재 mixed:</strong></p>
+<ul>
+  <li><code>lineup.csv</code> row = ~50~100 토큰 (얇음)</li>
+  <li><code>handbook.md</code> heading = ~200~1500 토큰 (들쭉날쭉)</li>
+</ul>
+<p>청크 길이 편차 크면 embedding vector 가 같은 "밀도" 가 아니라서 cosine 비교 비정상.</p>
+<p><strong>작업:</strong> handbook heading 청크 800 토큰 넘는 건 sub-split. lineup csv row 는 얇으면 묶기 (또는 metadata 강화). 목표 ~300~500 토큰 균질.</p>
+<p><strong>비용:</strong> 1 day</p>
+
+<h3><span class="stage-pill">STAGE 5</span>Query rewriting / HyDE <span class="impact-pill">MRR +0~10%p</span></h3>
+
+<p><strong>언제:</strong> 0~4 다 했는데도 MRR 부족할 때 마지막 카드.</p>
+<ul>
+  <li><strong>Query rewriting:</strong> 짧은 한국어 쿼리 → LLM 확장 ("Z Fold6 얼마" → "Galaxy Z Fold6 시작가 launch price 출고가")</li>
+  <li><strong>HyDE:</strong> LLM 이 가설 답변 생성 → 그 답변 embed → 검색. 짧은 쿼리 vs 긴 청크 거리 단축.</li>
+</ul>
+<p><strong>비용:</strong> 0.5 day. <strong>리스크:</strong> 매 쿼리당 LLM 1콜 → 비싸고 느림.</p>
+
+<h3><span class="stage-pill">STAGE 6</span>코퍼스 품질 (지속)</h3>
+<ul>
+  <li><strong>caveat N/A 보완:</strong> Z Flip6 dimensions, Tab USD 가격, A16 칩셋 변형, Watch FE 충전 W</li>
+  <li><strong>사실 표현 통일:</strong> handbook 과 csv 가 같은 fact 다르게 쓰면 RAG 헷갈림</li>
+  <li><strong>FAQ 청크 추가:</strong> 영업이 자주 받는 Q→A 쌍 자체를 청크화 (<code>sales_faq.md</code>)</li>
+</ul>
+
+<hr>
+
+<h2 id="flow"><span class="num">FLOW</span>데이터 흐름 (개선 후)</h2>
+
+<div class="flow-wrap">
+  <div class="flow-title">사용자 질문 → 답변 — 6 stages applied</div>
+
+  <div class="flow">
+
+    <div class="node user">
+      <span class="tag">USER</span>
+      <div class="body">
+        <strong>사용자 질문</strong>
+        <small>"A55 OIS 지원해?"</small>
+      </div>
+    </div>
+
+    <div class="arrow"></div>
+
+    <div class="node stage3">
+      <span class="tag">STAGE 3</span>
+      <div class="body">
+        <strong>Classify query</strong>
+        <small>LLM ~50 토큰 · category = "smartphone_midrange"</small>
+      </div>
+    </div>
+
+    <div class="arrow"></div>
+
+    <div class="parallel">
+      <div class="col">
+        <div class="node stage3">
+          <span class="tag">FILTER</span>
+          <div class="body">
+            <strong>Dense retrieval</strong>
+            <small>cosine top-20 · filter(category)</small>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="node stage2">
+          <span class="tag">STAGE 2</span>
+          <div class="body">
+            <strong>BM25 retrieval</strong>
+            <small>keyword top-20 · 정확 매칭 보완</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow"></div>
+
+    <div class="node fusion">
+      <span class="tag">RRF</span>
+      <div class="body">
+        <strong>Reciprocal Rank Fusion</strong>
+        <small>sum( 1 / (60 + rank) ) → 통합 top-20</small>
+      </div>
+    </div>
+
+    <div class="arrow"></div>
+
+    <div class="node stage1">
+      <span class="tag">STAGE 1</span>
+      <div class="body">
+        <strong>Cross-encoder rerank</strong>
+        <small>bge-reranker-v2-m3 ONNX · top-20 → top-5</small>
+      </div>
+    </div>
+
+    <div class="arrow"></div>
+
+    <div class="node stage0">
+      <span class="tag">GEN</span>
+      <div class="body">
+        <strong>GenerationModule</strong>
+        <small>LLM + Korean prompt + top-5 청크 augment</small>
+      </div>
+    </div>
+
+    <div class="arrow"></div>
+
+    <div class="node output">
+      <span class="tag">OUT</span>
+      <div class="body">
+        <strong>답변 + citation</strong>
+        <small>"A55 카메라는 50MP f/1.8 OIS 지원합니다."</small>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <div class="item"><span class="dot s1"></span>Stage 1 — Reranker</div>
+    <div class="item"><span class="dot s2"></span>Stage 2 — Hybrid BM25</div>
+    <div class="item"><span class="dot s3"></span>Stage 3 — Category filter</div>
+    <div class="item"><span class="dot s0"></span>Generation / Output</div>
+  </div>
+</div>
+
+<hr>
+
+<h2 id="verify"><span class="num">RUN</span>확인 방법</h2>
+
+<pre><code>cd Rag_Chat/backend
+
+# STAGE 0 — baseline
+./venv/bin/python manage.py embedding_eval \
+    --dataset data/embedding_eval/sales_qa.yaml \
+    --report-path docs/reports/2026-05-29-ir-baseline.json
+
+# STAGE 1 — reranker on
+# .env: RERANKER_ENABLED=1
+./venv/bin/python manage.py embedding_eval \
+    --dataset data/embedding_eval/sales_qa.yaml \
+    --report-path docs/reports/2026-05-29-ir-reranker.json
+
+# 비교
+diff docs/reports/2026-05-29-ir-{baseline,reranker}.json</code></pre>
+
+<div class="analogy">
+  <strong>기록 원칙.</strong> 단계마다 결과 JSON 1개. 변경 1개만 켜고 측정 — confounded 측정 금지.
+</div>
+
+<hr>
+
+<h2 id="exercises"><span class="num">EX</span>연습 문제</h2>
+
+<div class="exercise">
+  <h4>문제 1 <span class="level">쉬움</span></h4>
+  <p>baseline MRR = <code>0.42</code>. reranker 켰더니 MRR = <code>0.61</code>. <strong>개선폭 (%p)</strong> 와
+     <strong>상대 개선률 (%)</strong> 둘 다 계산하라.</p>
+  <div class="hint"><strong>힌트.</strong> %p = 단순 차. 상대 = (new - old) / old × 100.</div>
+</div>
+
+<div class="exercise">
+  <h4>문제 2 <span class="level">중간</span></h4>
+  <p>"Galaxy A55 카메라 OIS 지원?" 질문에 top-1 결과가 <code>a_series_lineup.csv</code> A55 행이지만 OIS 명시 없음.
+     LLM 이 어떤 답을 할 위험이 있나? 어떻게 막을 수 있나? <strong>두 개 이상의 layer</strong> 에서 답하라.</p>
+  <div class="hint"><strong>힌트.</strong> STAGE 6 (corpus 사실 표현 통일), STAGE 1~3 (reranker/handbook 청크 상위로),
+       Korean prompt 의 "자료에 없으면 모른다고 답하라".</div>
+</div>
+
+<div class="exercise">
+  <h4>문제 3 <span class="level">어려움</span></h4>
+  <p>1~6 모두 켜서 MRR oracle 대비 90% 도달. 그래도 영업팀 만족도 낮다.
+     <strong>어떤 차원의 문제가 남았을까?</strong> 3가지 이상.</p>
+  <div class="hint"><strong>힌트.</strong> retrieval 만 RAG 가 아님. generation 품질, corpus 누락, citation UX, latency.</div>
+</div>
+
+<hr>
+
+<h2 id="checklist"><span class="num">DO</span>다음 단계 체크리스트</h2>
+
+<ul>
+  <li>☐ <strong>STAGE 0:</strong> <code>sales_qa.yaml</code> 30개 질문 + 정답 라벨링</li>
+  <li>☐ <strong>STAGE 0:</strong> <code>embedding_eval</code> mgmt cmd 와이어링 + baseline JSON</li>
+  <li>☐ <strong>STAGE 1:</strong> <code>RERANKER_ENABLED=1</code> 토글 + 재측정</li>
+  <li>☐ <strong>STAGE 2:</strong> BM25 + RRF 구현 + 재측정</li>
+  <li>☐ <strong>STAGE 3:</strong> category metadata + pre-filter + 재측정</li>
+  <li>☐ <strong>STAGE 4:</strong> 청크 정규화 (handbook sub-split, csv row grouping) + 재측정</li>
+  <li>☐ <strong>STAGE 5:</strong> (필요 시) HyDE / query rewriting</li>
+  <li>☐ <strong>STAGE 6:</strong> caveat 보완 + 사실 표현 통일 + FAQ 청크</li>
+</ul>
+
+<p style="color: var(--muted); font-size: 13px;">각 단계 완료 시 <code>backend/docs/reports/YYYY-MM-DD-ir-stepN.json</code> 기록.</p>
+
+<hr>
+
+<h2><span class="num">REF</span>관련 문서</h2>
+<ul>
+  <li>개념 정리: <a href="./2026-05-29-ir-rag-concepts.html">2026-05-29-ir-rag-concepts.html</a></li>
+  <li>마크다운 원본: <code>backend/docs/learning/2026-05-29-ir-improvement-plan.md</code></li>
+  <li>코드: <code>chat/ingest/</code>, <code>chat/pipeline/modules.py</code>, <code>chat/embedding_eval.py</code></li>
+  <li>환경: <code>Rag_Chat/.env</code> (<code>RERANKER_ENABLED</code>, <code>EMBEDDING_PROVIDER</code>)</li>
+  <li>데이터셋 위치: <code>backend/data/embedding_eval/</code></li>
+</ul>
+
+</body>
+</html>

@@ -11,25 +11,60 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
 from pathlib import Path
-from celery.schedules import crontab
-
-# Load Gemini API key from environment
-GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY', '')
-
+from urllib.parse import urlparse
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# ---------------------------------------------------------------------------
+# Single source of truth for env vars: Rag_Chat/.env (one directory above
+# the Django project). docker-compose loads the same file automatically.
+# Falls back silently when python-dotenv is missing (e.g. minimal CI image).
+# ---------------------------------------------------------------------------
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR.parent / ".env")
+except ImportError:  # pragma: no cover
+    pass
+
+# Load Gemini API key from environment (kept for backwards compat;
+# new code reads via provider_manager → OPENROUTER_API_KEY etc.)
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY', '')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-n#&9eyax6nle6pk*6(!0hnvi-g4-+c-#ps&=*%5wn++dzvdlw8"
+SECRET_KEY = os.getenv(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-n#&9eyax6nle6pk*6(!0hnvi-g4-+c-#ps&=*%5wn++dzvdlw8",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "1") not in ("0", "false", "False", "")
 
-ALLOWED_HOSTS = []
+# Refuse to boot in production with the insecure default key — the chatbot
+# handles 대외비 product data, so a leaked default key is unacceptable.
+if not DEBUG and SECRET_KEY.startswith("django-insecure-"):
+    raise RuntimeError(
+        "DEBUG=0 requires a non-default DJANGO_SECRET_KEY. "
+        "Set DJANGO_SECRET_KEY before booting."
+    )
+
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,backend").split(",")
+    if host.strip()
+]
+
+# Frontend (Streamlit / Next.js) is on a different host in production —
+# CORS allowlist is env-driven so prod stays tight while dev stays simple.
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:8501,http://localhost:3000").split(",")
+    if origin.strip()
+]
+CORS_ALLOW_CREDENTIALS = True
 
 
 # Application definition
@@ -42,21 +77,22 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    
+
     # Third-Party
     "rest_framework",
-    
+    "corsheaders",
     # Triple
     "chat",
-    # Celery Beat setup
-    "django_celery_beat",
+    "knowledge",
+    "moderation",
+    "audit",
 ]
 
-# Redis + Celery settings
-CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
+# Custom auth user — chat.User inherits AbstractBaseUser + PermissionsMixin.
+# Set BEFORE any migration that references settings.AUTH_USER_MODEL.
+AUTH_USER_MODEL = "chat.User"
 
+# Redis settings
 # Get Redis host and port from environment
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
 REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
@@ -68,23 +104,23 @@ REDIS_MESSAGE_TTL = 60 * 60 * 24 * 7  # 7 days in seconds
 # Session settings
 SESSION_TIMEOUT = int(os.getenv('SESSION_TIMEOUT', '300'))  # Default: 5 minutes
 
-# Celery Beat settings
-CELERY_BEAT_SCHEDULE = {
-    'check-session-expiry-every-minute': {
-        'task': 'chat.tasks.check_session_expiry',
-        'schedule': crontab(minute='*/5'),  # Update chat data every 5 minutes
-    },
-}
-
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Whitenoise serves /static/ assets straight from gunicorn — required for
+    # Django admin CSS when DEBUG=0. Must come right after SecurityMiddleware.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "audit.middleware.AuditLogMiddleware",
 ]
+
+# Whitenoise — compress + cache busting for static files.
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 ROOT_URLCONF = "triple_chat_pjt.urls"
 
@@ -109,13 +145,45 @@ WSGI_APPLICATION = "triple_chat_pjt.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+#
+# Selection rule:
+#   1. DATABASE_URL=postgres://user:pass@host:port/dbname  → PostgreSQL
+#   2. POSTGRES_HOST set                                    → PostgreSQL via discrete vars
+#   3. otherwise                                            → local SQLite (dev fallback)
 
-DATABASES = {
-    "default": {
+def _database_config():
+    database_url = os.getenv("DATABASE_URL", "").strip()
+    if database_url.startswith(("postgres://", "postgresql://")):
+        parsed = urlparse(database_url)
+        return {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": parsed.path.lstrip("/") or "triple_chat",
+            "USER": parsed.username or "postgres",
+            "PASSWORD": parsed.password or "",
+            "HOST": parsed.hostname or "localhost",
+            "PORT": str(parsed.port or 5432),
+            "CONN_MAX_AGE": 60,
+        }
+
+    if os.getenv("POSTGRES_HOST"):
+        return {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("POSTGRES_DB", "triple_chat"),
+            "USER": os.getenv("POSTGRES_USER", "postgres"),
+            "PASSWORD": os.getenv("POSTGRES_PASSWORD", "postgres"),
+            "HOST": os.getenv("POSTGRES_HOST"),
+            "PORT": os.getenv("POSTGRES_PORT", "5432"),
+            "CONN_MAX_AGE": 60,
+        }
+
+    # Dev fallback — keeps `manage.py runserver` working without Postgres
+    return {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
-}
+
+
+DATABASES = {"default": _database_config()}
 
 
 # Password validation
@@ -152,13 +220,17 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 
 # Static files configuration
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
+
+# User-uploaded chat attachments. Layout: media/uploads/<conv_uuid>/<msg_uuid>/<name>
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

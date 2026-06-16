@@ -1,0 +1,20 @@
+{"id": "gx01", "question": "Galaxy S25 기본형 배터리 용량은?", "expected_keywords": ["Galaxy S25", "4000mAh"], "scenario": "기본 스펙 질문", "source": "gsmarena_13610"}
+{"id": "gx02", "question": "Galaxy S25 Plus 의 무게는 몇 그램인가?", "expected_keywords": ["Galaxy S25", "Plus", "190"], "scenario": "기본 스펙 질문", "source": "gsmarena_13609"}
+{"id": "gx03", "question": "Galaxy S25 Ultra 메인 카메라 화소수는?", "expected_keywords": ["Galaxy S25 Ultra", "200MP"], "scenario": "카메라 사양", "source": "gsmarena_13322"}
+{"id": "gx04", "question": "S25 시리즈의 프로세서 이름은?", "expected_keywords": ["Snapdragon 8 Elite"], "scenario": "공통 스펙", "source": "gsmarena_13610"}
+{"id": "gx05", "question": "Galaxy S25 시작 가격은 미화로 얼마인가?", "expected_keywords": ["Galaxy S25", "434.95"], "scenario": "가격 문의", "source": "gsmarena_13610"}
+{"id": "gx06", "question": "Galaxy S25 Ultra 의 페리스코프 망원 렌즈 광학 줌 배수는?", "expected_keywords": ["Galaxy S25 Ultra", "5x", "periscope"], "scenario": "카메라 사양", "source": "gsmarena_13322"}
+{"id": "gx07", "question": "S25 Plus 유선 충전 속도는?", "expected_keywords": ["Galaxy S25", "Plus", "45W"], "scenario": "배터리/충전", "source": "gsmarena_13609"}
+{"id": "gx08", "question": "Galaxy S25 시리즈는 언제 출시되었나?", "expected_keywords": ["2025", "February"], "scenario": "출시일", "source": "wikipedia"}
+{"id": "gx09", "question": "S25 Ultra 의 프레임 소재는?", "expected_keywords": ["titanium", "Galaxy S25 Ultra"], "scenario": "디자인", "source": "gsmarena_13322"}
+{"id": "gx10", "question": "Galaxy S25 시리즈 OS 업데이트 보장 기간은?", "expected_keywords": ["7", "Android"], "scenario": "소프트웨어 지원", "source": "wikipedia"}
+{"id": "gx11", "question": "S25 기본형 디스플레이 크기는?", "expected_keywords": ["Galaxy S25", "6.2"], "scenario": "디스플레이", "source": "gsmarena_13610"}
+{"id": "gx12", "question": "S25 Ultra 1TB 모델만 RAM 이 다른가?", "expected_keywords": ["Galaxy S25 Ultra", "16GB", "1TB"], "scenario": "메모리 옵션", "source": "wikipedia"}
+{"id": "gx13", "question": "S25 시리즈의 방수 등급은?", "expected_keywords": ["IP68", "1.5m"], "scenario": "내구성", "source": "gsmarena_13610"}
+{"id": "gx14", "question": "S25 Plus 의 디스플레이 해상도는?", "expected_keywords": ["Galaxy S25", "Plus", "1440", "3120"], "scenario": "디스플레이", "source": "gsmarena_13609"}
+{"id": "gx15", "question": "S25 Ultra 의 무게는?", "expected_keywords": ["Galaxy S25 Ultra", "218"], "scenario": "디자인", "source": "gsmarena_13322"}
+{"id": "gx16", "question": "S25 시리즈는 어떤 Wi-Fi 규격을 지원하나?", "expected_keywords": ["Wi-Fi 7"], "scenario": "연결성", "source": "gsmarena_13610"}
+{"id": "gx17", "question": "S25 Ultra 의 화면 보호 유리는 무엇인가?", "expected_keywords": ["Gorilla Armor 2", "Galaxy S25 Ultra"], "scenario": "디스플레이", "source": "gsmarena_13322"}
+{"id": "gx18", "question": "Galaxy S25 시리즈 USB 포트 규격은?", "expected_keywords": ["USB Type-C", "3.2"], "scenario": "연결성", "source": "gsmarena_13610"}
+{"id": "gx19", "question": "Galaxy S25 출시 색상에는 무엇이 있나?", "expected_keywords": ["Galaxy S25", "Icy Blue", "Mint", "Navy"], "scenario": "색상 옵션", "source": "gsmarena_13610"}
+{"id": "gx20", "question": "S25 시리즈에서 microSD 카드를 지원하나?", "expected_keywords": ["No", "microSD"], "scenario": "메모리 확장", "source": "gsmarena_13610"}

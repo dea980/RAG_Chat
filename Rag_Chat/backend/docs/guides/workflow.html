@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Triple Chat — 단일 요청 워크플로우 (swimlane)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --ink: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #ffffff;
+    --bg-soft: #f8fafc;
+    --browser: #ede9fe; --browser-ink: #5b21b6;
+    --django:  #ecfeff; --django-ink:  #155e75;
+    --db:      #ecfdf5; --db-ink:      #166534;
+    --ext:     #fef2f2; --ext-ink:     #991b1b;
+    --warn:    #fef3c7; --warn-ink:    #92400e;
+    --secure:  #16a34a;
+    --danger:  #dc2626;
+    --mono: "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Noto Sans KR", sans-serif;
+    color: var(--ink); background: var(--bg); font-size: 14px; line-height: 1.55;
+  }
+  header.top { padding: 22px 36px 16px; border-bottom: 1px solid var(--line); background: #fafbff; }
+  header.top h1 { margin: 0 0 4px; font-size: 22px; }
+  header.top p { margin: 0; color: var(--muted); font-size: 13px; }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: 12px; }
+  .legend .item { padding: 3px 10px; border-radius: 999px; font-weight: 600; border: 1px solid var(--line); }
+  .legend .browser  { background: var(--browser);  color: var(--browser-ink); }
+  .legend .django   { background: var(--django);   color: var(--django-ink); }
+  .legend .db       { background: var(--db);       color: var(--db-ink); }
+  .legend .ext      { background: var(--ext);      color: var(--ext-ink); }
+  .legend .warn     { background: var(--warn);     color: var(--warn-ink); }
+
+  main { padding: 28px 36px 80px; max-width: 1280px; }
+  h2 { font-size: 18px; margin: 42px 0 8px; padding-top: 20px; border-top: 1px solid var(--line); }
+  h2:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+  h3 { font-size: 15px; margin: 18px 0 6px; }
+  .lede { color: var(--muted); margin: 0 0 14px; font-size: 13px; }
+
+  /* ============ Swimlane ============ */
+  .swimlane {
+    border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    background: white;
+  }
+  .swimlane .head {
+    display: grid; grid-template-columns: 40px repeat(4, 1fr);
+    background: var(--bg-soft); border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 5;
+  }
+  .swimlane .head .col {
+    padding: 12px 14px; font-weight: 700; font-size: 13px;
+    border-left: 1px solid var(--line); text-align: center;
+  }
+  .swimlane .head .col:first-child { border-left: 0; color: var(--muted); }
+  .swimlane .head .col.browser  { color: var(--browser-ink); background: var(--browser); }
+  .swimlane .head .col.django   { color: var(--django-ink);  background: var(--django); }
+  .swimlane .head .col.db       { color: var(--db-ink);      background: var(--db); }
+  .swimlane .head .col.ext      { color: var(--ext-ink);     background: var(--ext); }
+
+  .swimlane .body { position: relative; }
+  .swimlane .row {
+    display: grid; grid-template-columns: 40px repeat(4, 1fr);
+    align-items: stretch; min-height: 56px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .swimlane .row:last-child { border-bottom: 0; }
+  .swimlane .row .tick {
+    background: var(--bg-soft); color: var(--muted);
+    display: grid; place-items: center;
+    font-family: var(--mono); font-size: 12px; font-weight: 700;
+    border-right: 1px solid var(--line);
+  }
+  .swimlane .row .cell {
+    border-left: 1px dashed var(--line);
+    padding: 8px 10px;
+    position: relative;
+  }
+  .swimlane .row .cell:first-of-type { border-left: 0; }
+
+  /* Message box — spans grid-column to imply a message between actors */
+  .msg {
+    position: relative;
+    padding: 8px 12px 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.45;
+    background: white;
+    border: 1px solid var(--line);
+    box-shadow: 0 1px 2px rgba(15,23,42,.04);
+  }
+  .msg.browser  { background: var(--browser);  border-color: rgba(91,33,182,.25); }
+  .msg.django   { background: var(--django);   border-color: rgba(21,94,117,.25); }
+  .msg.db       { background: var(--db);       border-color: rgba(22,101,52,.25); }
+  .msg.ext      { background: var(--ext);      border-color: rgba(153,27,27,.25); color: var(--ext-ink); }
+  .msg.warn     { background: var(--warn);     border-color: rgba(146,64,14,.3); }
+  .msg .label   { font-weight: 700; font-size: 12.5px; }
+  .msg .what    { font-size: 12.5px; color: #334155; margin-top: 2px; }
+  .msg code     { font-family: var(--mono); background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 4px; font-size: 11.5px; }
+  .msg .arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono); font-weight: 700; color: var(--ink);
+    background: white; padding: 0 6px; border-radius: 4px;
+    font-size: 11px;
+  }
+  .msg .arrow.right { right: -16px; }
+  .msg .arrow.left  { left:  -16px; }
+  .msg .tag {
+    display: inline-block; padding: 1px 7px; border-radius: 999px;
+    font-weight: 700; font-size: 10.5px; margin-left: 4px;
+  }
+  .tag.llm    { background: rgba(220,38,38,.15);  color: var(--danger); }
+  .tag.sec    { background: rgba(22,163,74,.15);  color: var(--secure); }
+  .tag.write  { background: rgba(15,23,42,.12);   color: var(--ink); }
+  .tag.read   { background: rgba(100,116,139,.18);color: var(--muted); }
+
+  /* spans */
+  .span-1 { grid-column: 2 / 3; }
+  .span-2 { grid-column: 3 / 4; }
+  .span-3 { grid-column: 4 / 5; }
+  .span-4 { grid-column: 5 / 6; }
+  .span-12 { grid-column: 2 / 4; }
+  .span-23 { grid-column: 3 / 5; }
+  .span-34 { grid-column: 4 / 6; }
+  .span-13 { grid-column: 2 / 5; }
+  .span-24 { grid-column: 3 / 6; }
+  .span-14 { grid-column: 2 / 6; }
+
+  /* ============ Tables ============ */
+  table.matrix { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13.5px; }
+  table.matrix th, table.matrix td {
+    border: 1px solid var(--line); padding: 8px 10px; vertical-align: top; text-align: left;
+  }
+  table.matrix th { background: var(--bg-soft); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .yes { color: var(--secure); font-weight: 700; }
+  .no  { color: var(--danger);  font-weight: 700; }
+  .partial { color: var(--warn-ink); font-weight: 700; }
+
+  .boundary { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0; }
+  .boundary .box { border: 2px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .boundary .box.inside  { border-color: var(--secure); background: rgba(22,163,74,.04); }
+  .boundary .box.outside { border-color: var(--danger);  background: rgba(220,38,38,.04); }
+  .boundary h4 { margin: 0 0 6px; font-size: 13.5px; }
+  .boundary ul { padding-left: 18px; margin: 6px 0; font-size: 13px; }
+
+  .scenarios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 14px 0; }
+  .scenario  { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--bg-soft); }
+  .scenario h4 { margin: 0 0 4px; font-size: 13px; }
+  .scenario p  { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+  pre.code {
+    background: #0b1020; color: #cdd6f4; padding: 12px 14px; border-radius: 8px;
+    overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.5;
+  }
+  pre.code .c { color: #6b7280; }
+  pre.code .k { color: #c4b5fd; }
+
+  @media print {
+    main { padding: 0; max-width: none; }
+    .swimlane .head { position: static; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>Triple Chat — 단일 요청 워크플로우 (swimlane)</h1>
+  <p>"S25 Ultra 1TB 가격이 얼마야?" 한 줄을 챗봇에 보낼 때, 4개 actor 사이에서 일어나는 12 step. 빨간 박스 = 외부 LLM 송신, 노란 박스 = 보안 체크포인트.</p>
+  <div class="legend">
+    <span class="item browser">Browser / Streamlit</span>
+    <span class="item django">Django (사내)</span>
+    <span class="item db">Postgres / Redis / FAISS</span>
+    <span class="item ext">External LLM (Gemini)</span>
+    <span class="item warn">Security gate</span>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ 1) Swimlane ============ -->
+<h2>1 · Swimlane — 한 호출의 전체 흐름</h2>
+<p class="lede">시간은 위 → 아래. 화살표(→/←/⤓)는 actor 간 메시지 방향. 박스가 두 컬럼에 걸쳐 있으면 그 사이에서 일어나는 호출.</p>
+
+<div class="swimlane">
+  <div class="head">
+    <div class="col">t</div>
+    <div class="col browser">Browser / Streamlit</div>
+    <div class="col django">Django (chat / mw)</div>
+    <div class="col db">Postgres · Redis · FAISS</div>
+    <div class="col ext">External LLM (Gemini)</div>
+  </div>
+  <div class="body">
+
+    <!-- 1 -->
+    <div class="row">
+      <div class="tick">1</div>
+      <div class="cell span-1">
+        <div class="msg browser">
+          <div class="label">사용자 입력</div>
+          <div class="what">질문 텍스트 + 세션 ID (cookie / session_state)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2: Browser → Django -->
+    <div class="row">
+      <div class="tick">2</div>
+      <div class="cell span-12">
+        <div class="msg browser">
+          <div class="label">POST <code>/api/v1/triple/chat/</code> <span class="tag write">HTTP</span></div>
+          <div class="what">Body: <code>{user_id, question}</code></div>
+          <span class="arrow right">→</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3: Django security gate (CORS + audit enter) -->
+    <div class="row">
+      <div class="tick">3</div>
+      <div class="cell span-2">
+        <div class="msg warn">
+          <div class="label">CORS + AuditLogMiddleware (enter) <span class="tag sec">gate #1·2</span></div>
+          <div class="what">Origin allowlist 확인. 응답 후 단계 12에서 AuditLog 1행 insert.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4: Django → DB (Chat row) -->
+    <div class="row">
+      <div class="tick">4</div>
+      <div class="cell span-23">
+        <div class="msg django">
+          <div class="label">Chat row 저장 <span class="tag write">write</span></div>
+          <div class="what"><code>chat.Chat(user, question_text)</code> — 모든 후속 trace의 anchor.</div>
+          <span class="arrow right">→</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5: Inbound moderation (security gate) -->
+    <div class="row">
+      <div class="tick">5</div>
+      <div class="cell span-2">
+        <div class="msg warn">
+          <div class="label">INBOUND moderation <span class="tag sec">gate #3</span></div>
+          <div class="what">BLOCK → 403 즉시 / MASK → <code>[REDACTED]</code> 치환 / WARN → 통과. <code>ModerationLog</code> 기록.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6: Django → Storage (vector search local) -->
+    <div class="row">
+      <div class="tick">6</div>
+      <div class="cell span-23">
+        <div class="msg db">
+          <div class="label">Vector similarity search <span class="tag read">read</span></div>
+          <div class="what">FAISS/Chroma → top-k chunk (k=3). embedding은 단계 7에서 외부 호출.</div>
+          <span class="arrow left">←</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7: Django → External LLM (embedding) -->
+    <div class="row">
+      <div class="tick">7</div>
+      <div class="cell span-24">
+        <div class="msg ext">
+          <div class="label">Gemini embedding <span class="tag llm">외부 호출</span></div>
+          <div class="what">sanitized 질문 → 768-dim 벡터. 사내 → 외부 첫 송신.</div>
+          <span class="arrow right">→</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8: Django → External LLM (reasoning + generation) -->
+    <div class="row">
+      <div class="tick">8</div>
+      <div class="cell span-24">
+        <div class="msg ext">
+          <div class="label">Gemini reasoning → generation <span class="tag llm">외부 호출 × 2</span></div>
+          <div class="what">송신: sanitized 질문 + top-k chunk + system prompt. 응답: sanitized 답변 후보.</div>
+          <span class="arrow right">→</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9: Outbound moderation -->
+    <div class="row">
+      <div class="tick">9</div>
+      <div class="cell span-2">
+        <div class="msg warn">
+          <div class="label">OUTBOUND moderation <span class="tag sec">gate #4</span></div>
+          <div class="what">LLM 응답에 hallucinated 기밀어가 섞여도 여기서 차단/마스킹.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10: Django → DB (RagData + SearchLog + Chat update) -->
+    <div class="row">
+      <div class="tick">10</div>
+      <div class="cell span-23">
+        <div class="msg db">
+          <div class="label">RagData + SearchLog + Chat 갱신 <span class="tag write">write</span></div>
+          <div class="what">"어느 답변이 어느 chunk를 근거로 했는가" 재현 가능.</div>
+          <span class="arrow right">→</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 11: Django → DB (Redis session refresh) -->
+    <div class="row">
+      <div class="tick">11</div>
+      <div class="cell span-23">
+        <div class="msg db">
+          <div class="label">refresh_user_session() <span class="tag write">write</span></div>
+          <div class="what">Redis TTL ↔ DB <code>expired_datetime</code> 단일 SESSION_TIMEOUT 윈도우 동기화.</div>
+          <span class="arrow right">→</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 12: Django → Browser response -->
+    <div class="row">
+      <div class="tick">12</div>
+      <div class="cell span-12">
+        <div class="msg django">
+          <div class="label">200 응답 <span class="tag write">HTTP</span></div>
+          <div class="what">Body: <code>{response, chat_id, images}</code>. Streamlit이 마크다운 렌더링.</div>
+          <span class="arrow left">←</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 12a: Audit post -->
+    <div class="row">
+      <div class="tick">12a</div>
+      <div class="cell span-23">
+        <div class="msg warn">
+          <div class="label">AuditLogMiddleware (post) <span class="tag sec">gate #5</span></div>
+          <div class="what">status_code · method · path · user · ip를 <code>audit.AuditLog</code>에 insert. 실패해도 응답엔 영향 없음.</div>
+          <span class="arrow right">→</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============ 2) Data flow ============ -->
+<h2>2 · 데이터는 어디에 사는가</h2>
+<table class="matrix">
+  <thead>
+    <tr><th>데이터</th><th>저장 위치</th><th>외부 LLM 송신?</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>원본 질문 (사용자 입력 그대로)</td><td>Postgres <code>Chat.question_text</code></td><td><span class="no">아니오</span></td></tr>
+    <tr><td>Sanitized 질문 (MASK 후)</td><td>요청 메모리만</td><td><span class="yes">예 — 단계 7, 8</span></td></tr>
+    <tr><td>RAG top-k chunk 텍스트</td><td>FAISS/Chroma · Postgres <code>RagData</code></td><td><span class="yes">예 — 단계 8 프롬프트에 포함</span></td></tr>
+    <tr><td>LLM 원본 응답 (마스킹 전)</td><td>요청 메모리만</td><td><span class="no">아니오</span></td></tr>
+    <tr><td>Sanitized 응답</td><td>Postgres <code>Chat.response_text</code></td><td><span class="no">아니오</span></td></tr>
+    <tr><td>ModerationLog</td><td>Postgres <code>moderation_moderationlog</code></td><td><span class="no">절대 X</span></td></tr>
+    <tr><td>AuditLog</td><td>Postgres <code>audit_auditlog</code></td><td><span class="no">절대 X</span></td></tr>
+    <tr><td>Redis 세션 상태</td><td>Redis (사내 6379)</td><td><span class="no">아니오</span></td></tr>
+    <tr><td>지식베이스 (Department/Contact/Product)</td><td>Postgres <code>knowledge_*</code></td><td><span class="partial">간접</span> — RAG 컨텍스트로 묶이면 LLM에 포함될 수 있음</td></tr>
+  </tbody>
+</table>
+
+<!-- ============ 3) Security gates ============ -->
+<h2>3 · 보안 체크포인트 (5단계)</h2>
+<table class="matrix">
+  <thead><tr><th>#</th><th>게이트</th><th>방어 대상</th><th>운영 위치</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>CORS allowlist</td><td>외부 도메인 직접 호출</td><td><code>settings.CORS_ALLOWED_ORIGINS</code> (env)</td></tr>
+    <tr><td>2</td><td>AuditLogMiddleware enter</td><td>추적 불가 호출</td><td>모든 mutating 경로</td></tr>
+    <tr><td>3</td><td>INBOUND moderation</td><td>대외비/PII 외부 LLM 송신</td><td>Admin → <code>ForbiddenWord</code> 운영</td></tr>
+    <tr><td>4</td><td>OUTBOUND moderation</td><td>LLM 응답 누출</td><td>같은 테이블 (direction=OUTBOUND/BOTH)</td></tr>
+    <tr><td>5</td><td>AuditLogMiddleware exit</td><td>incident 사후 재구성</td><td>status_code/ip/user 기록</td></tr>
+  </tbody>
+</table>
+<h3>아직 *없는* 게이트 (정직하게)</h3>
+<ul style="font-size:13px">
+  <li><b>JWT/Role 기반 endpoint 보호</b> — 데이터 모델만 있고 강제 안 됨. 다음 마일스톤.</li>
+  <li><b>HTTPS / Redis AUTH / DB 컬럼 암호화</b> — Stage 2/3.</li>
+  <li><b>금지어 단어 경계 정규식</b> — 현재 substring → false positive 가능.</li>
+</ul>
+
+<!-- ============ 4) LLM boundary ============ -->
+<h2>4 · LLM은 어디에서 호출되는가</h2>
+<div class="boundary">
+  <div class="box inside">
+    <h4>사내 (네트워크 안) ✓ SAFE</h4>
+    <ul>
+      <li>Streamlit · Django · Celery · Postgres · Redis · FAISS/Chroma</li>
+      <li>원본 질문 · 원본 응답 · ModerationLog · AuditLog · 지식베이스</li>
+    </ul>
+  </div>
+  <div class="box outside">
+    <h4>외부 (Gemini로 송신) ⚠ EXTERNAL</h4>
+    <ul>
+      <li>단계 7: sanitized 질문 (embedding 1회)</li>
+      <li>단계 8: sanitized 질문 + top-k chunk + 시스템 프롬프트 (reasoning + generation 2회)</li>
+      <li>그 외 — 송신 없음</li>
+    </ul>
+  </div>
+</div>
+<h3>한 질문당 외부 LLM 호출: <span style="color:var(--danger)">3회</span> (BLOCK이면 0회)</h3>
+<pre class="code"><span class="c"># Provider 추상화 — 환경변수 한 줄로 외부 LLM 의존 제거</span>
+EMBEDDING_PROVIDER=ollama
+REASONING_PROVIDER=ollama
+GENERATION_PROVIDER=ollama
+OLLAMA_BASE=http://ollama.internal:11434/v1</pre>
+
+<!-- ============ 5) Scenarios ============ -->
+<h2>5 · 시나리오별 분기</h2>
+<div class="scenarios">
+  <div class="scenario"><h4>정상 응답</h4><p>금지어 없음 → 1~12 통과 → Chat / SearchLog / AuditLog 1행씩, ModerationLog 0행.</p></div>
+  <div class="scenario"><h4>MASK 발동</h4><p>PII 포함 → 단계 5에서 치환 → 마스킹된 텍스트만 LLM에 송신 → 정상 응답 + MASKED 로그.</p></div>
+  <div class="scenario"><h4>BLOCK 발동</h4><p>기밀 코드네임 → 단계 5에서 short-circuit → 403, LLM 호출 0회, BLOCKED 로그.</p></div>
+  <div class="scenario"><h4>OUTBOUND BLOCK</h4><p>LLM이 hallucinate한 기밀어 → 단계 9에서 차단 → 사용자에겐 "표시 불가" 안내 → 운영자 검수.</p></div>
+  <div class="scenario"><h4>지식베이스 직접 검색</h4><p>"S25 담당자 누구?"는 <code>GET /api/v1/knowledge/contacts/?q=S25</code> 1번이면 끝. LLM 호출 0회.</p></div>
+  <div class="scenario"><h4>세션 만료</h4><p>Redis TTL 만료 → 다음 호출 401. Celery beat 5분마다 일괄 정리.</p></div>
+</div>
+
+<!-- ============ 6) Try it ============ -->
+<h2>6 · 직접 따라 해보기</h2>
+<pre class="code">cd Rag_Chat
+# .env 작성 (backend/README.md inline 템플릿 참조)
+docker-compose up --build
+docker-compose exec backend python manage.py createsuperuser
+
+<span class="c"># 정상 호출</span>
+USER=$(curl -s -X POST http://localhost:8000/api/v1/triple/chat-user/ \
+  -H 'Content-Type: application/json' -d '{}' | jq -r .user_id)
+
+curl -s -X POST http://localhost:8000/api/v1/triple/chat/ \
+  -H 'Content-Type: application/json' \
+  -d "{\"user_id\":\"$USER\",\"question\":\"S25 Ultra 1TB 가격이 얼마야?\"}" | jq
+
+<span class="c"># 단계 5/9 결과는 /admin/moderation/moderationlog/ 에서 확인</span>
+<span class="c"># 단계 12a 결과는 /admin/audit/auditlog/ 에서 확인</span></pre>
+
+<p style="margin-top:24px; color:var(--muted); font-size:12.5px; border-top:1px solid var(--line); padding-top:10px">
+실제 동작은 <code>backend/chat/views.py::ChatAPIView</code>를 따릅니다.
+관련: <a href="prd.html">prd.html</a> · <a href="backend/docs/security.md">security.md</a> · <a href="ArchitectReadme.md">ArchitectReadme.md</a>
+</p>
+
+</main>
+</body>
+</html>

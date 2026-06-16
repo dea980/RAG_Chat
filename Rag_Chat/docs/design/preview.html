@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Triple Chat · Design System Preview</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root[data-theme="dark"] {
+  --bg: #0A0B0D;
+  --surface: #131418;
+  --surface-2: #16171B;
+  --border: #25262B;
+  --border-hi: #34353B;
+  --fg: #F3F2EE;
+  --fg-muted: #8B8B93;
+  --fg-dim: #5C5D63;
+  --accent: #E89B3C;
+  --accent-bg: rgba(232,155,60,0.08);
+  --accent-border: rgba(232,155,60,0.35);
+  --success: #4F9D7A;
+  --warning: #D9A441;
+  --error: #C24A4A;
+  --info: #6B8AB8;
+}
+:root[data-theme="light"] {
+  --bg: #F7F6F2;
+  --surface: #FFFFFF;
+  --surface-2: #F0EFEA;
+  --border: #DCDBD4;
+  --border-hi: #C2C1BA;
+  --fg: #1A1B1F;
+  --fg-muted: #6B6C72;
+  --fg-dim: #9C9DA3;
+  --accent: #B8771F;
+  --accent-bg: rgba(184,119,31,0.08);
+  --accent-border: rgba(184,119,31,0.30);
+  --success: #3E7D60;
+  --warning: #A8801F;
+  --error: #9B3939;
+  --info: #4E6D9A;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--fg); font-family: 'Pretendard Variable', Pretendard, -apple-system, sans-serif; font-feature-settings: 'ss05'; line-height: 1.5; }
+body { padding: 0; }
+.mono { font-family: 'Geist Mono', ui-monospace, monospace; font-feature-settings: 'tnum' 1; }
+.muted { color: var(--fg-muted); }
+.dim { color: var(--fg-dim); }
+.label-mono { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); }
+
+.shell { max-width: 1180px; margin: 0 auto; padding: 64px 32px; }
+section { margin-bottom: 96px; }
+hr { border: 0; border-top: 1px solid var(--border); margin: 48px 0; }
+
+/* Top bar */
+.topbar { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--border); padding: 12px 32px; display: flex; align-items: center; justify-content: space-between; }
+.topbar .brand { display: flex; align-items: center; gap: 10px; }
+.brand-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 2px; }
+.brand-name { font-weight: 600; font-size: 14px; letter-spacing: -0.005em; }
+.brand-tag { color: var(--fg-muted); font-size: 13px; }
+.theme-toggle { background: var(--surface); border: 1px solid var(--border); color: var(--fg); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: 'Geist Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+.theme-toggle:hover { border-color: var(--border-hi); }
+
+/* Hero */
+.hero { padding: 80px 0 32px; }
+.hero .eyebrow { color: var(--fg-muted); font-family: 'Geist Mono', monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 24px; }
+.hero h1 { font-size: 64px; line-height: 1.05; letter-spacing: -0.025em; font-weight: 600; margin-bottom: 24px; max-width: 880px; }
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero p.lead { font-size: 20px; line-height: 1.5; color: var(--fg-muted); max-width: 640px; }
+
+/* Section header */
+.section-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.section-head .num { font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--fg-muted); }
+.section-head h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; }
+.section-head .meta { margin-left: auto; font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* Type scale */
+.type-row { display: grid; grid-template-columns: 80px 1fr; align-items: baseline; gap: 24px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.type-row .label { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--fg-muted); }
+.type-row.s-display { font-size: 48px; line-height: 1.08; letter-spacing: -0.02em; font-weight: 600; }
+.type-row.s-h1 { font-size: 32px; line-height: 1.15; letter-spacing: -0.015em; font-weight: 600; }
+.type-row.s-h2 { font-size: 24px; line-height: 1.2; letter-spacing: -0.01em; font-weight: 600; }
+.type-row.s-h3 { font-size: 20px; line-height: 1.3; font-weight: 600; }
+.type-row.s-body { font-size: 16px; line-height: 1.55; }
+.type-row.s-small { font-size: 14px; line-height: 1.5; color: var(--fg-muted); }
+.type-row.s-tiny { font-size: 12px; line-height: 1.4; color: var(--fg-muted); font-family: 'Geist Mono', monospace; text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* Color palette */
+.color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.swatch { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
+.swatch .chip { width: 100%; height: 64px; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 12px; }
+.swatch .name { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+.swatch .val { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--fg-muted); }
+
+/* Spacing scale */
+.space-grid { display: flex; flex-direction: column; gap: 8px; }
+.space-row { display: grid; grid-template-columns: 96px 64px 1fr; align-items: center; gap: 16px; padding: 10px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
+.space-row .name { font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--fg); font-weight: 500; }
+.space-row .px { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--fg-muted); font-feature-settings: 'tnum' 1; }
+.space-row .bar { height: 12px; background: var(--accent); border-radius: 2px; opacity: 0.9; }
+
+/* Components row */
+.comp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.comp-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 24px; }
+.comp-card h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); font-family: 'Geist Mono', monospace; margin-bottom: 16px; font-weight: 500; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 150ms ease-out; border: 1px solid transparent; font-family: inherit; }
+.btn-primary { background: var(--accent); color: #1A1B1F; border-color: var(--accent); }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-secondary { background: transparent; color: var(--fg); border-color: var(--border-hi); }
+.btn-secondary:hover { background: var(--surface-2); }
+.btn-ghost { background: transparent; color: var(--fg-muted); }
+.btn-ghost:hover { color: var(--fg); }
+.input { display: block; width: 100%; background: var(--surface-2); border: 1px solid var(--border); color: var(--fg); padding: 10px 12px; border-radius: 6px; font-family: inherit; font-size: 14px; }
+.input:focus { outline: none; border-color: var(--accent-border); }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-family: 'Geist Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
+.badge-default { background: var(--surface-2); border: 1px solid var(--border); color: var(--fg-muted); }
+.badge-accent { background: var(--accent-bg); border: 1px solid var(--accent-border); color: var(--accent); }
+.badge-success { background: rgba(79,157,122,0.08); border: 1px solid rgba(79,157,122,0.3); color: var(--success); }
+.badge-error { background: rgba(194,74,74,0.08); border: 1px solid rgba(194,74,74,0.3); color: var(--error); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.row:last-child { margin-bottom: 0; }
+
+/* Chat mockup — the signature */
+.chat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.chat-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--bg); }
+.chat-header .left { display: flex; align-items: center; gap: 16px; }
+.chat-header .left .status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.chat-header .left .status .dot { width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+.chat-header .meta { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--fg-muted); display: flex; gap: 16px; }
+.chat-header .meta span strong { color: var(--fg); font-weight: 500; }
+
+.chat-body { display: grid; grid-template-columns: 220px 1fr; min-height: 480px; }
+.chat-rail { border-right: 1px solid var(--border); padding: 16px 12px; background: var(--bg); }
+.rail-section { margin-bottom: 24px; }
+.rail-section .head { font-family: 'Geist Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg-dim); padding: 4px 8px; margin-bottom: 4px; }
+.rail-item { padding: 6px 8px; border-radius: 4px; font-size: 13px; color: var(--fg-muted); cursor: pointer; }
+.rail-item.active { background: var(--surface-2); color: var(--fg); }
+.rail-item:hover:not(.active) { background: var(--surface-2); color: var(--fg); }
+.rail-item .when { font-family: 'Geist Mono', monospace; font-size: 10px; color: var(--fg-dim); margin-top: 2px; }
+
+.chat-pane { padding: 24px 32px; overflow-y: auto; }
+.msg { margin-bottom: 28px; }
+.msg.user { display: flex; justify-content: flex-end; }
+.msg.user .bubble { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; max-width: 70%; font-size: 14px; line-height: 1.5; }
+.msg.assistant .role { font-family: 'Geist Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.msg.assistant .role .dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+.msg.assistant .answer { font-size: 15px; line-height: 1.6; color: var(--fg); }
+.msg.assistant .answer p { margin-bottom: 10px; }
+.msg.assistant .answer strong { color: var(--fg); font-weight: 600; }
+.msg.assistant .answer .num { font-family: 'Geist Mono', monospace; font-feature-settings: 'tnum' 1; color: var(--accent); }
+
+/* Citation ribbon — the signature */
+.citations { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); }
+.cite { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--accent-bg); border: 1px solid var(--accent-border); border-radius: 4px; cursor: pointer; transition: all 150ms ease-out; }
+.cite:hover { background: rgba(232,155,60,0.14); border-color: var(--accent); }
+.cite .src { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--accent); }
+.cite .loc { font-family: 'Geist Mono', monospace; font-size: 10px; color: var(--fg-muted); }
+.cite .score { font-family: 'Geist Mono', monospace; font-size: 10px; color: var(--fg-dim); padding-left: 6px; border-left: 1px solid var(--accent-border); margin-left: 2px; }
+
+.chat-input { border-top: 1px solid var(--border); padding: 14px 32px; background: var(--bg); display: flex; gap: 12px; align-items: center; }
+.chat-input input { flex: 1; background: var(--surface-2); border: 1px solid var(--border); color: var(--fg); padding: 10px 14px; border-radius: 6px; font-family: inherit; font-size: 14px; }
+.chat-input input::placeholder { color: var(--fg-dim); }
+.chat-input .meta { font-family: 'Geist Mono', monospace; font-size: 10px; color: var(--fg-dim); display: flex; gap: 12px; }
+
+/* Dashboard mockup */
+.dash { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
+.dash-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; }
+.dash-head h3 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.metric { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
+.metric .label { font-family: 'Geist Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); margin-bottom: 6px; }
+.metric .val { font-family: 'Geist Mono', monospace; font-size: 28px; font-weight: 500; color: var(--fg); font-feature-settings: 'tnum' 1; letter-spacing: -0.01em; }
+.metric .val .unit { font-size: 14px; color: var(--fg-muted); margin-left: 4px; }
+.metric .delta { font-family: 'Geist Mono', monospace; font-size: 11px; margin-top: 4px; }
+.metric .delta.up { color: var(--success); }
+.metric .delta.down { color: var(--error); }
+
+table.dash-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.dash-table th { text-align: left; font-family: 'Geist Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); font-weight: 500; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+table.dash-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+table.dash-table td.mono { font-family: 'Geist Mono', monospace; font-feature-settings: 'tnum' 1; }
+table.dash-table tr:last-child td { border-bottom: 0; }
+table.dash-table tr:hover td { background: var(--surface-2); }
+
+/* Form */
+.form { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 32px; max-width: 520px; }
+.field { margin-bottom: 20px; }
+.field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+.field .hint { font-size: 12px; color: var(--fg-muted); margin-top: 4px; font-family: 'Geist Mono', monospace; }
+.form-actions { display: flex; gap: 8px; margin-top: 8px; }
+
+.toggle { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
+.toggle .sw { width: 36px; height: 20px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; position: relative; transition: all 150ms ease-out; }
+.toggle .sw::after { content: ''; position: absolute; left: 2px; top: 1px; width: 14px; height: 14px; background: var(--fg-muted); border-radius: 50%; transition: all 150ms ease-out; }
+.toggle.on .sw { background: var(--accent-bg); border-color: var(--accent-border); }
+.toggle.on .sw::after { left: 18px; background: var(--accent); }
+
+/* Footer */
+footer { padding: 48px 0 64px; border-top: 1px solid var(--border); color: var(--fg-muted); font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+footer .left { display: flex; gap: 16px; align-items: center; }
+
+/* Chat states (08) */
+.states-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.state-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 20px; min-height: 200px; display: flex; flex-direction: column; }
+.state-card .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.state-card .head .label-mono { margin: 0; }
+.state-card.warn { border-left: 3px solid var(--warning); }
+.state-card.err { border-left: 3px solid var(--error); }
+.state-empty-prompt { font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--fg-muted); text-align: center; padding: 24px 0; }
+.state-empty-prompt .big { display: block; font-size: 18px; color: var(--fg); margin-bottom: 8px; font-family: var(--font-sans, 'Pretendard Variable'); letter-spacing: -0.01em; }
+.state-suggest { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
+.state-suggest .s { font-size: 12px; color: var(--fg-dim); padding: 6px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; }
+.state-suggest .s::before { content: "→  "; color: var(--accent); }
+.state-load { display: flex; flex-direction: column; gap: 10px; padding: 8px 0; }
+.state-load .step { display: grid; grid-template-columns: 16px 1fr 80px; align-items: center; gap: 10px; font-size: 13px; }
+.state-load .step .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+.state-load .step.done .dot { background: var(--success); }
+.state-load .step.active .dot { background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+.state-load .step .t { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--fg-muted); text-align: right; font-feature-settings: 'tnum' 1; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+.state-noresult .answer { font-size: 14px; line-height: 1.55; color: var(--fg-muted); margin-bottom: 14px; }
+.state-noresult .citations-modified { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 12px; border-top: 1px dashed var(--border); }
+.state-noresult .badge-modified { display: inline-flex; gap: 6px; align-items: center; padding: 4px 10px; background: rgba(217,164,65,0.08); border: 1px solid rgba(217,164,65,0.35); border-radius: 4px; font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--warning); }
+.state-err .reason { font-size: 13px; color: var(--fg); margin-bottom: 10px; }
+.state-err .next { font-size: 12px; color: var(--fg-muted); font-family: 'Geist Mono', monospace; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; }
+.state-err .next strong { color: var(--accent); font-weight: 500; }
+
+/* Admin Moderation (09) */
+.mod-layout { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0; overflow: hidden; }
+.mod-left { padding: 20px; border-right: 1px solid var(--border); }
+.mod-right { padding: 20px; background: var(--bg); }
+.mod-tabs { display: flex; gap: 4px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.mod-tab { padding: 6px 12px; border-radius: 4px; font-family: 'Geist Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-muted); cursor: pointer; border: 1px solid transparent; }
+.mod-tab.active { background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent); }
+.mod-tab:hover:not(.active) { color: var(--fg); }
+.mod-toolbar { display: flex; gap: 8px; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.mod-toolbar .count { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--fg-muted); }
+table.mod-rules { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.mod-rules th { text-align: left; font-family: 'Geist Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+table.mod-rules td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+table.mod-rules tr:last-child td { border-bottom: 0; }
+table.mod-rules tr:hover td { background: var(--surface-2); }
+.mod-pattern { font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--fg); }
+.mod-pattern .kind { color: var(--fg-dim); margin-right: 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+.mod-bounds { display: inline-flex; gap: 3px; }
+.mod-bounds .b { width: 18px; height: 18px; border: 1px solid var(--border); border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-family: 'Geist Mono', monospace; font-size: 9px; color: var(--fg-dim); }
+.mod-bounds .b.on { background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent); }
+.sev { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 3px; font-family: 'Geist Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+.sev.block { background: rgba(194,74,74,0.08); border: 1px solid rgba(194,74,74,0.35); color: var(--error); }
+.sev.mask { background: rgba(217,164,65,0.08); border: 1px solid rgba(217,164,65,0.35); color: var(--warning); }
+.sev.warn { background: rgba(107,138,184,0.08); border: 1px solid rgba(107,138,184,0.35); color: var(--info); }
+.mod-test h4 { font-family: 'Geist Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); margin-bottom: 10px; }
+.mod-test textarea { width: 100%; min-height: 80px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--fg); padding: 10px 12px; font-family: inherit; font-size: 13px; resize: vertical; line-height: 1.5; }
+.mod-test textarea:focus { outline: none; border-color: var(--accent-border); }
+.mod-result { margin-top: 12px; }
+.mod-result .out-label { font-family: 'Geist Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+.mod-result .out { padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; line-height: 1.6; }
+.mod-result .out mark { background: rgba(217,164,65,0.18); color: var(--warning); padding: 1px 4px; border-radius: 2px; font-family: 'Geist Mono', monospace; font-size: 12px; }
+.mod-result .verdicts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.mod-result .v { font-family: 'Geist Mono', monospace; font-size: 11px; padding: 3px 8px; border-radius: 3px; background: var(--surface); border: 1px solid var(--border); color: var(--fg-muted); }
+.mod-result .v.fired { background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent); }
+
+/* Aesthetic statement strip */
+.aesthetic-strip { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 4px; padding: 24px 28px; margin-bottom: 32px; }
+.aesthetic-strip .label-mono { margin-bottom: 8px; }
+.aesthetic-strip p { font-size: 17px; line-height: 1.55; color: var(--fg); max-width: 720px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <div class="brand-name">Triple Chat</div>
+    <div class="brand-tag">· Design System Preview</div>
+  </div>
+  <button class="theme-toggle" onclick="toggleTheme()">⏾ DARK / LIGHT</button>
+</div>
+
+<div class="shell">
+
+  <section class="hero">
+    <div class="eyebrow">DESIGN-SYSTEM · v0.1 · 2026-05-28</div>
+    <h1>사내 RAG 챗봇의<br>고요한 <em>실용주의</em>.</h1>
+    <p class="lead">Linear의 폴리쉬와 Raycast의 모노 밀도 사이에서, 출처 추적을 시그니쳐로 삼은 design system.</p>
+  </section>
+
+  <section>
+    <div class="aesthetic-strip">
+      <div class="label-mono">Aesthetic statement</div>
+      <p>Quiet Utilitarian — 답변을 화려하게 포장하지 않는다. 출처 칩이 답변 아래 가로 리본으로 first-class로 자리잡는 것이 이 제품의 얼굴이다. 그라디언트도, 일러스트도, 글로우도 없다. 타이포그래피와 hairline border만으로 진지함을 증명한다.</p>
+    </div>
+  </section>
+
+  <!-- 01 Typography -->
+  <section>
+    <div class="section-head">
+      <span class="num">01</span>
+      <h2>Typography</h2>
+      <span class="meta">PRETENDARD VARIABLE · GEIST MONO</span>
+    </div>
+    <div class="type-row s-display">
+      <span class="label">DISPLAY · 48</span>
+      <span>“S25 Ultra 1TB 카메라 스펙”</span>
+    </div>
+    <div class="type-row s-h1">
+      <span class="label">H1 · 32</span>
+      <span>제품 사양 자동 답변, 출처와 함께.</span>
+    </div>
+    <div class="type-row s-h2">
+      <span class="label">H2 · 24</span>
+      <span>영업·지원팀이 카탈로그를 뒤지지 않아도 됩니다.</span>
+    </div>
+    <div class="type-row s-h3">
+      <span class="label">H3 · 20</span>
+      <span>retrieval_mode=hybrid · top_k=5 · reranker=bge-v2-m3</span>
+    </div>
+    <div class="type-row s-body">
+      <span class="label">BODY · 16</span>
+      <span>Galaxy S25 Ultra 1TB의 후면 메인 카메라는 200MP HP2 센서, ƒ/1.7 조리개, OIS를 지원합니다. 광학 줌은 3×와 5× 두 종류의 망원 모듈을 채택했고, 야간 모드에서는 멀티프레임 합성으로 노이즈를 억제합니다.</span>
+    </div>
+    <div class="type-row s-small">
+      <span class="label">SMALL · 14</span>
+      <span>최근 30일간 영업팀이 가장 많이 질문한 카테고리: 카메라 스펙(38%), 가격(24%), 출시일(15%).</span>
+    </div>
+    <div class="type-row s-tiny mono">
+      <span class="label">MONO · 12</span>
+      <span>RETRIEVED · CONTEXT_LEN=2048 · LATENCY=812MS</span>
+    </div>
+  </section>
+
+  <!-- 02 Color -->
+  <section>
+    <div class="section-head">
+      <span class="num">02</span>
+      <h2>Color</h2>
+      <span class="meta">RESTRAINED · DARK-FIRST · ONE ACCENT</span>
+    </div>
+    <div class="color-grid">
+      <div class="swatch"><div class="chip" style="background:#0A0B0D"></div><div class="name">Background</div><div class="val mono">#0A0B0D</div></div>
+      <div class="swatch"><div class="chip" style="background:#131418"></div><div class="name">Surface</div><div class="val mono">#131418</div></div>
+      <div class="swatch"><div class="chip" style="background:#16171B"></div><div class="name">Surface 2 · code BG</div><div class="val mono">#16171B</div></div>
+      <div class="swatch"><div class="chip" style="background:#25262B"></div><div class="name">Border</div><div class="val mono">#25262B</div></div>
+      <div class="swatch"><div class="chip" style="background:#F3F2EE"></div><div class="name">Text primary · paperwhite</div><div class="val mono">#F3F2EE</div></div>
+      <div class="swatch"><div class="chip" style="background:#8B8B93"></div><div class="name">Text muted</div><div class="val mono">#8B8B93</div></div>
+      <div class="swatch"><div class="chip" style="background:#E89B3C"></div><div class="name">Accent · molten amber</div><div class="val mono">#E89B3C</div></div>
+      <div class="swatch"><div class="chip" style="background:#4F9D7A"></div><div class="name">Success</div><div class="val mono">#4F9D7A</div></div>
+      <div class="swatch"><div class="chip" style="background:#D9A441"></div><div class="name">Warning</div><div class="val mono">#D9A441</div></div>
+      <div class="swatch"><div class="chip" style="background:#C24A4A"></div><div class="name">Error</div><div class="val mono">#C24A4A</div></div>
+      <div class="swatch"><div class="chip" style="background:#6B8AB8"></div><div class="name">Info</div><div class="val mono">#6B8AB8</div></div>
+      <div class="swatch"><div class="chip" style="background:linear-gradient(90deg,#E89B3C 0%,#0A0B0D 100%);border:1px solid var(--border)"></div><div class="name">Accent on bg</div><div class="val mono">amber → near-black</div></div>
+    </div>
+  </section>
+
+  <!-- 03 Spacing -->
+  <section>
+    <div class="section-head">
+      <span class="num">03</span>
+      <h2>Spacing</h2>
+      <span class="meta">4PX BASE · 9-STEP SCALE</span>
+    </div>
+    <div class="space-grid">
+      <div class="space-row"><span class="name">xs</span><span class="px">4 px</span><div class="bar" style="width:4px"></div></div>
+      <div class="space-row"><span class="name">sm</span><span class="px">8 px</span><div class="bar" style="width:8px"></div></div>
+      <div class="space-row"><span class="name">md</span><span class="px">12 px</span><div class="bar" style="width:12px"></div></div>
+      <div class="space-row"><span class="name">lg</span><span class="px">16 px</span><div class="bar" style="width:16px"></div></div>
+      <div class="space-row"><span class="name">xl</span><span class="px">24 px</span><div class="bar" style="width:24px"></div></div>
+      <div class="space-row"><span class="name">2xl</span><span class="px">32 px</span><div class="bar" style="width:32px"></div></div>
+      <div class="space-row"><span class="name">3xl</span><span class="px">48 px</span><div class="bar" style="width:48px"></div></div>
+      <div class="space-row"><span class="name">4xl</span><span class="px">64 px</span><div class="bar" style="width:64px"></div></div>
+      <div class="space-row"><span class="name">5xl</span><span class="px">96 px</span><div class="bar" style="width:96px"></div></div>
+    </div>
+  </section>
+
+  <!-- 04 Components -->
+  <section>
+    <div class="section-head">
+      <span class="num">04</span>
+      <h2>Components</h2>
+      <span class="meta">BUTTONS · BADGES · INPUTS · STATES</span>
+    </div>
+    <div class="comp-grid">
+      <div class="comp-card">
+        <h4>Buttons</h4>
+        <div class="row">
+          <button class="btn btn-primary">Run retrieval</button>
+          <button class="btn btn-secondary">Cancel</button>
+          <button class="btn btn-ghost">Reset</button>
+        </div>
+        <div class="row">
+          <button class="btn btn-secondary mono">⌘ K</button>
+          <button class="btn btn-secondary">Export CSV</button>
+        </div>
+      </div>
+      <div class="comp-card">
+        <h4>Badges · Status</h4>
+        <div class="row">
+          <span class="badge badge-accent">cite · 5</span>
+          <span class="badge badge-default">draft</span>
+          <span class="badge badge-success">indexed</span>
+          <span class="badge badge-error">stale · 3d</span>
+        </div>
+        <div class="row">
+          <span class="badge badge-default">recall@5 · 0.833</span>
+          <span class="badge badge-default">chunk=150</span>
+          <span class="badge badge-accent">reranker · on</span>
+        </div>
+      </div>
+      <div class="comp-card">
+        <h4>Form input</h4>
+        <input class="input" placeholder="질문을 입력하세요 — 예: 'S25 Ultra 1TB 카메라 스펙'" />
+        <div class="row" style="margin-top:12px">
+          <span class="label-mono">CTX_LEN</span>
+          <input class="input mono" value="2048" style="max-width:120px" />
+          <span class="label-mono">TOP_K</span>
+          <input class="input mono" value="5" style="max-width:80px" />
+        </div>
+      </div>
+      <div class="comp-card">
+        <h4>Toggle · Reranker</h4>
+        <div class="toggle on" onclick="this.classList.toggle('on')">
+          <div class="sw"></div>
+          <div>
+            <div style="font-size:14px;font-weight:500">ONNX Reranker</div>
+            <div class="label-mono" style="margin-top:2px">BAAI/BGE-RERANKER-V2-M3</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 Chat — the signature -->
+  <section>
+    <div class="section-head">
+      <span class="num">05</span>
+      <h2>Chat · 시그니쳐 화면</h2>
+      <span class="meta">CITATION RIBBON AS FIRST-CLASS</span>
+    </div>
+    <div class="chat">
+      <div class="chat-header">
+        <div class="left">
+          <span class="status mono"><span class="dot"></span> READY</span>
+          <span class="muted" style="font-size:13px">영업팀 · 신규 문의</span>
+        </div>
+        <div class="meta">
+          <span>MODEL · <strong>openrouter/claude-sonnet-4-5</strong></span>
+          <span>RERANK · <strong>bge-v2-m3</strong></span>
+          <span>LATENCY · <strong>812ms</strong></span>
+        </div>
+      </div>
+      <div class="chat-body">
+        <div class="chat-rail">
+          <div class="rail-section">
+            <div class="head">SESSIONS</div>
+            <div class="rail-item active">S25 카메라 스펙<div class="when">JUST NOW</div></div>
+            <div class="rail-item">노트북 W4 가격<div class="when">2H AGO</div></div>
+            <div class="rail-item">갤럭시 버즈 호환<div class="when">YESTERDAY</div></div>
+          </div>
+          <div class="rail-section">
+            <div class="head">KNOWLEDGE</div>
+            <div class="rail-item">제품 카탈로그</div>
+            <div class="rail-item">FAQ · 2025-Q2</div>
+            <div class="rail-item">계약 템플릿</div>
+          </div>
+          <div class="rail-section">
+            <div class="head">ADMIN</div>
+            <div class="rail-item">금칙어 검수</div>
+            <div class="rail-item">사용자 권한</div>
+          </div>
+        </div>
+        <div class="chat-pane">
+          <div class="msg user">
+            <div class="bubble">S25 Ultra 1TB 카메라 스펙 알려줘. 광학 줌도 포함해서.</div>
+          </div>
+          <div class="msg assistant">
+            <div class="role"><span class="dot"></span> ASSISTANT · 4 SOURCES</div>
+            <div class="answer">
+              <p>Galaxy S25 Ultra 1TB의 후면 카메라 구성은 다음과 같습니다.</p>
+              <p>• 메인: <strong>200MP HP2</strong> 센서 / ƒ/<span class="num">1.7</span> / OIS<br>
+              • 초광각: <span class="num">12</span>MP / ƒ/<span class="num">2.2</span> / <span class="num">120°</span><br>
+              • 망원 1: <span class="num">10</span>MP / ƒ/<span class="num">2.4</span> / <strong>3× 광학</strong> / OIS<br>
+              • 망원 2: <span class="num">50</span>MP / ƒ/<span class="num">3.4</span> / <strong>5× 광학</strong> / OIS</p>
+              <p>야간 모드는 멀티프레임 합성으로 노이즈를 억제하며, 디지털 줌은 최대 <span class="num">100×</span>까지 지원합니다.</p>
+            </div>
+            <div class="citations">
+              <div class="cite"><span class="src">product_specs_2025.csv</span><span class="loc">:row42</span><span class="score">0.94</span></div>
+              <div class="cite"><span class="src">datasheet_s25_camera.pdf</span><span class="loc">:p3</span><span class="score">0.91</span></div>
+              <div class="cite"><span class="src">faq_camera.md</span><span class="loc">:Q14</span><span class="score">0.78</span></div>
+              <div class="cite"><span class="src">marketing_brief_q2.pdf</span><span class="loc">:p7</span><span class="score">0.62</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input">
+        <input placeholder="추가 질문을 입력하세요…" />
+        <div class="meta">
+          <span>⌘ ↵ SEND</span>
+          <span>⌘ K SEARCH</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 Dashboard -->
+  <section>
+    <div class="section-head">
+      <span class="num">06</span>
+      <h2>Dashboard · Chunk Lab</h2>
+      <span class="meta">METRICS WITH TABULAR-NUMS</span>
+    </div>
+    <div class="dash">
+      <div class="dash-head">
+        <h3>Retrieval A/B · last 7d</h3>
+        <span class="label-mono">EVALS · 12 QUESTIONS · 영업팀 시나리오</span>
+      </div>
+      <div class="dash-grid">
+        <div class="metric">
+          <div class="label">RECALL @ 5</div>
+          <div class="val">0.833<span class="unit">↑</span></div>
+          <div class="delta up">+0.044 vs chunk=1000</div>
+        </div>
+        <div class="metric">
+          <div class="label">MRR</div>
+          <div class="val">0.612</div>
+          <div class="delta up">+0.083</div>
+        </div>
+        <div class="metric">
+          <div class="label">LATENCY P50</div>
+          <div class="val">812<span class="unit">ms</span></div>
+          <div class="delta up">−214ms</div>
+        </div>
+        <div class="metric">
+          <div class="label">COST · USD/1K</div>
+          <div class="val">0.018</div>
+          <div class="delta down">+0.003</div>
+        </div>
+      </div>
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>CHUNK</th><th>RECALL@5</th><th>MRR</th><th>P50</th><th>P95</th><th>STATUS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">150</td><td class="mono">0.833</td><td class="mono">0.612</td><td class="mono">812ms</td><td class="mono">1,402ms</td><td><span class="badge badge-success">winner</span></td></tr>
+          <tr><td class="mono">300</td><td class="mono">0.792</td><td class="mono">0.580</td><td class="mono">874ms</td><td class="mono">1,520ms</td><td><span class="badge badge-default">baseline</span></td></tr>
+          <tr><td class="mono">500</td><td class="mono">0.781</td><td class="mono">0.554</td><td class="mono">901ms</td><td class="mono">1,632ms</td><td><span class="badge badge-default">—</span></td></tr>
+          <tr><td class="mono">1000</td><td class="mono">0.789</td><td class="mono">0.529</td><td class="mono">1,026ms</td><td class="mono">1,914ms</td><td><span class="badge badge-error">legacy</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 07 Form -->
+  <section>
+    <div class="section-head">
+      <span class="num">07</span>
+      <h2>Settings · Provider Combo</h2>
+      <span class="meta">FORM · DENSITY · LABELED</span>
+    </div>
+    <div class="form">
+      <div class="field">
+        <label>Embedding provider</label>
+        <input class="input" value="gemini" />
+        <div class="hint">EMBED-001 · ENV: EMBEDDING_PROVIDER</div>
+      </div>
+      <div class="field">
+        <label>Reasoning provider</label>
+        <input class="input" value="openrouter" />
+        <div class="hint">GEN-001 · ENV: REASONING_PROVIDER</div>
+      </div>
+      <div class="field">
+        <label>Session timeout (s)</label>
+        <input class="input mono" value="300" />
+        <div class="hint">REDIS_TTL aligned with User.expired_datetime</div>
+      </div>
+      <div class="field">
+        <div class="toggle on" onclick="this.classList.toggle('on')">
+          <div class="sw"></div>
+          <div>
+            <div style="font-size:14px;font-weight:500">Forbidden-word moderation</div>
+            <div class="label-mono" style="margin-top:2px">INBOUND + OUTBOUND</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary">Save · ⌘ ↵</button>
+        <button class="btn btn-secondary">Discard</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 Chat states -->
+  <section>
+    <div class="section-head">
+      <span class="num">08</span>
+      <h2>Chat states · empty / loading / no-results / error</h2>
+      <span class="meta">GOLDEN PATH ALONE = 미성숙 시그널</span>
+    </div>
+    <div class="states-grid">
+
+      <div class="state-card">
+        <div class="head">
+          <span class="label-mono">EMPTY · 첫 진입</span>
+          <span class="badge badge-default">default</span>
+        </div>
+        <div class="state-empty-prompt">
+          <span class="big">무엇을 찾아드릴까요?</span>
+          영업·지원팀이 가장 많이 묻는 질문부터 시작해보세요.
+        </div>
+        <div class="state-suggest">
+          <div class="s">S25 Ultra 1TB 카메라 스펙 알려줘</div>
+          <div class="s">노트북 W4 가격대별 라인업 비교</div>
+          <div class="s">갤럭시 버즈 호환 모델</div>
+        </div>
+      </div>
+
+      <div class="state-card">
+        <div class="head">
+          <span class="label-mono">LOADING · retrieval in flight</span>
+          <span class="badge badge-accent">812ms · est</span>
+        </div>
+        <div class="state-load">
+          <div class="step done">
+            <span class="dot"></span>
+            <span>임베딩 · query → 1024d vector</span>
+            <span class="t">142ms</span>
+          </div>
+          <div class="step done">
+            <span class="dot"></span>
+            <span>FAISS · top_k=20 검색</span>
+            <span class="t">86ms</span>
+          </div>
+          <div class="step active">
+            <span class="dot"></span>
+            <span>Reranker · BGE-v2-m3 → top_k=5</span>
+            <span class="t">…</span>
+          </div>
+          <div class="step">
+            <span class="dot"></span>
+            <span>LLM · sonnet-4-5 답변 생성</span>
+            <span class="t">—</span>
+          </div>
+          <div class="step">
+            <span class="dot"></span>
+            <span>Moderation · 답변 경계 검수</span>
+            <span class="t">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="state-card state-noresult warn">
+        <div class="head">
+          <span class="label-mono">NO RESULTS · 출처 0 · moderation 발동</span>
+          <span class="badge badge-default">3 redacted</span>
+        </div>
+        <p class="answer">관련된 공개 가능한 출처를 찾지 못했습니다. 일부 결과는 보안 규칙에 의해 가려졌습니다. 권한이 있다면 같은 질문을 admin 채널에서 다시 시도하거나, 검색 범위를 좁혀보세요.</p>
+        <div class="citations-modified">
+          <span class="badge-modified">⌀ 수정됨 · 3건 (대외비)</span>
+          <span class="badge-modified">⌀ 수정됨 · 1건 (PII)</span>
+        </div>
+      </div>
+
+      <div class="state-card state-err err">
+        <div class="head">
+          <span class="label-mono">ERROR · provider unreachable</span>
+          <span class="badge badge-default mono">openrouter</span>
+        </div>
+        <div class="reason">선택된 LLM 제공자(<span class="mono">openrouter/claude-sonnet-4-5</span>)에 연결할 수 없습니다. 네트워크 또는 API 키를 확인하세요.</div>
+        <div class="next">다음 단계 · <strong>fallback → gemini</strong>로 전환하거나, <strong>.env</strong>의 <span class="mono">REASONING_PROVIDER</span> 값을 확인하세요. 마지막 시도: 12:42:08 KST.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 09 Admin · Moderation -->
+  <section>
+    <div class="section-head">
+      <span class="num">09</span>
+      <h2>Admin · Moderation</h2>
+      <span class="meta">4 경계 · 코드 없이 튜닝 · 실시간 테스트</span>
+    </div>
+    <div class="mod-layout">
+
+      <div class="mod-left">
+        <div class="mod-tabs">
+          <div class="mod-tab">업로드</div>
+          <div class="mod-tab">질문</div>
+          <div class="mod-tab active">검색결과</div>
+          <div class="mod-tab">답변</div>
+        </div>
+        <div class="mod-toolbar">
+          <span class="label-mono">RULES · 검색결과 경계</span>
+          <span class="count">12 active · 3 paused</span>
+        </div>
+        <table class="mod-rules">
+          <thead>
+            <tr>
+              <th>CATEGORY</th>
+              <th>PATTERN</th>
+              <th>경계</th>
+              <th>SEV</th>
+              <th>FIRED · 7D</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>대외비</td>
+              <td><span class="mod-pattern"><span class="kind">RE</span>(unreleased|nda|q[34]_roadmap)</span></td>
+              <td><div class="mod-bounds"><span class="b on">U</span><span class="b on">Q</span><span class="b on">R</span><span class="b on">A</span></div></td>
+              <td><span class="sev block">block</span></td>
+              <td class="mono">23</td>
+            </tr>
+            <tr>
+              <td>PII</td>
+              <td><span class="mod-pattern"><span class="kind">RE</span>\b\d{6}[-]?[1-4]\d{6}\b</span></td>
+              <td><div class="mod-bounds"><span class="b on">U</span><span class="b on">Q</span><span class="b on">R</span><span class="b on">A</span></div></td>
+              <td><span class="sev mask">mask</span></td>
+              <td class="mono">7</td>
+            </tr>
+            <tr>
+              <td>욕설</td>
+              <td><span class="mod-pattern"><span class="kind">KW</span>씨X, 좆, fuck, …</span></td>
+              <td><div class="mod-bounds"><span class="b on">U</span><span class="b on">Q</span><span class="b">R</span><span class="b on">A</span></div></td>
+              <td><span class="sev warn">warn</span></td>
+              <td class="mono">2</td>
+            </tr>
+            <tr>
+              <td>자체</td>
+              <td><span class="mod-pattern"><span class="kind">EMB</span>경쟁사 비방 ≥ 0.78</span></td>
+              <td><div class="mod-bounds"><span class="b">U</span><span class="b on">Q</span><span class="b">R</span><span class="b on">A</span></div></td>
+              <td><span class="sev mask">mask</span></td>
+              <td class="mono">11</td>
+            </tr>
+            <tr>
+              <td>대외비</td>
+              <td><span class="mod-pattern"><span class="kind">KW</span>임원 인사, 합병 검토</span></td>
+              <td><div class="mod-bounds"><span class="b on">U</span><span class="b on">Q</span><span class="b on">R</span><span class="b on">A</span></div></td>
+              <td><span class="sev block">block</span></td>
+              <td class="mono">0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mod-right mod-test">
+        <h4>실시간 테스트 · 검색결과 경계</h4>
+        <textarea>2026 Q3 roadmap에 올라온 unreleased S26 라인업, 영업팀 김OO(900101-1234567) 발표 자료에서 발췌.</textarea>
+        <div class="mod-result">
+          <div class="out-label">
+            <span>OUTPUT · 마스킹 결과</span>
+            <span class="mono">3 rules fired</span>
+          </div>
+          <div class="out">
+            <mark>[대외비·차단]</mark> 라인업, 영업팀 김OO(<mark>[PII·마스킹]</mark>) 발표 자료에서 발췌.
+          </div>
+          <div class="verdicts">
+            <span class="v fired">대외비 · BLOCK</span>
+            <span class="v fired">PII · MASK</span>
+            <span class="v">욕설 · —</span>
+            <span class="v">자체 · —</span>
+          </div>
+        </div>
+        <div style="margin-top:18px;font-size:12px;color:var(--fg-muted);line-height:1.55">
+          무성 드롭 금지 · retrieval에서 차단된 chunk는 citation에 <span class="mono" style="color:var(--warning)">[수정됨·N건]</span>으로 가시화. 사용자가 결과 누락을 알아야 신뢰 유지.
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer>
+    <div class="left">
+      <div class="brand-dot"></div>
+      <span>Triple Chat · Internal RAG</span>
+      <span class="mono">v0.1</span>
+    </div>
+    <span class="mono label-mono">DESIGN-SYSTEM · 2026-05-28</span>
+  </footer>
+
+</div>
+
+<script>
+function toggleTheme() {
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,23 @@
-version: '3.8'
-
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-triple_chat}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      # Host:Container — host 5432가 native Postgres / 다른 docker postgres에
+      # 이미 점유돼 있으므로 5433으로 expose. 컨테이너 내부망은 그대로 5432
+      # (backend/celery는 postgres:5432 로 접근).
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-triple_chat}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   redis:
     image: redis:7
     ports:
@@ -14,38 +31,73 @@ services:
       retries: 5
 
   backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     volumes:
       - ./backend:/app
       - static_volume:/app/static
-      - sqlite_data:/app/db
     ports:
+      # Host 8000 freed (DY-ADAS uvicorn taken down 2026-05-27).
       - "8000:8000"
+    env_file:
+      - .env   # All env vars from Rag_Chat/.env injected into the container
     environment:
-      - DEBUG=0
-      - DATABASE_URL=sqlite:///db/db.sqlite3
-      - REDIS_URL=redis://redis:6379/0
+      # Service-internal overrides (these must match docker network, not host)
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-triple_chat}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_URL: redis://redis:6379/0
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 triple_chat_pjt.wsgi:application"
 
   celery:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     command: celery -A triple_chat_pjt worker --loglevel=info
     volumes:
       - ./backend:/app
-      - sqlite_data:/app/db
+    env_file:
+      - .env
     environment:
-      - DEBUG=0
-      - DATABASE_URL=sqlite:///db/db.sqlite3
-      - REDIS_URL=redis://redis:6379/0
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-triple_chat}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_URL: redis://redis:6379/0
     depends_on:
-      - backend
-      - redis
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A triple_chat_pjt beat --loglevel=info
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-triple_chat}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
 
   frontend:
     build:
@@ -56,12 +108,14 @@ services:
     ports:
       - "8501:8501"
     environment:
-      - BACKEND_URL=http://backend:8000
-      - REDIS_URL=redis://redis:6379/0
+      BACKEND_URL: http://backend:8000
+      REDIS_URL: redis://redis:6379/0
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
     depends_on:
       - backend
 
 volumes:
+  postgres_data:
   redis_data:
   static_volume:
-  sqlite_data:

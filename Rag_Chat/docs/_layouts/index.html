@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Triple Chat — 개념 인덱스</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" as="style" crossorigin
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Tokens — synced with DESIGN.md */
+  :root[data-theme="dark"] {
+    --bg: #0A0B0D;
+    --surface: #131418;
+    --surface-2: #16171B;
+    --border: #25262B;
+    --border-hi: #34353B;
+    --fg: #F3F2EE;
+    --fg-muted: #8B8B93;
+    --fg-dim: #5C5D63;
+    --accent: #E89B3C;
+    --accent-bg: rgba(232,155,60,0.08);
+    --accent-border: rgba(232,155,60,0.35);
+    --success: #4F9D7A;
+    --warning: #D9A441;
+    --error: #C24A4A;
+    --info: #6B8AB8;
+  }
+  :root[data-theme="light"] {
+    --bg: #F7F6F2; --surface: #FFFFFF; --surface-2: #F0EFEA;
+    --border: #DCDBD4; --border-hi: #C2C1BA;
+    --fg: #1A1B1F; --fg-muted: #6B6C72; --fg-dim: #9C9DA3;
+    --accent: #B8771F; --accent-bg: rgba(184,119,31,0.08); --accent-border: rgba(184,119,31,0.30);
+    --success: #3E7D60; --warning: #A8801F; --error: #9B3939; --info: #4E6D9A;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    color: var(--fg); background: var(--bg);
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-feature-settings: 'ss05';
+    font-size: 15px; line-height: 1.6;
+  }
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; font-feature-settings: 'tnum' 1; }
+
+  header {
+    padding: 48px 56px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    display: flex; justify-content: space-between; align-items: flex-end;
+    gap: 24px;
+  }
+  header .left h1 {
+    margin: 0; font-size: 32px; font-weight: 600; letter-spacing: -0.02em;
+  }
+  header .left p {
+    margin: 6px 0 0; color: var(--fg-muted); font-size: 14px;
+  }
+  header .right {
+    display: flex; align-items: center; gap: 12px;
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted);
+  }
+  .theme-toggle {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--fg); padding: 6px 12px; border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .theme-toggle:hover { border-color: var(--border-hi); }
+
+  main { padding: 36px 56px 120px; max-width: 1180px; }
+
+  h2 {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--fg-muted);
+    margin: 40px 0 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  h2:first-of-type { margin-top: 8px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 18px;
+    background: var(--surface);
+    text-decoration: none;
+    color: var(--fg);
+    display: block;
+    transition: border-color 150ms ease-out, background 150ms ease-out;
+  }
+  .card:hover {
+    background: var(--surface-2);
+    border-color: var(--border-hi);
+  }
+  .card .title {
+    font-weight: 600; font-size: 15px;
+    margin: 0; letter-spacing: -0.005em;
+  }
+  .card .summary {
+    color: var(--fg-muted); font-size: 13px;
+    margin: 8px 0 0; line-height: 1.5;
+  }
+  .badges { display: flex; gap: 6px; margin-bottom: 10px; }
+  .level-badge {
+    display: inline-block;
+    padding: 2px 8px; border-radius: 4px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    border: 1px solid transparent;
+  }
+  .level-badge.beginner {
+    background: rgba(79,157,122,0.08); border-color: rgba(79,157,122,0.3); color: var(--success);
+  }
+  .level-badge.intermediate {
+    background: rgba(217,164,65,0.08); border-color: rgba(217,164,65,0.3); color: var(--warning);
+  }
+  .level-badge.advanced {
+    background: rgba(194,74,74,0.08); border-color: rgba(194,74,74,0.3); color: var(--error);
+  }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px; border-radius: 4px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; color: var(--fg-muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .empty {
+    color: var(--fg-muted);
+    font-size: 14px;
+    padding: 24px;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+  }
+  .empty code {
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    background: var(--surface-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="left">
+    <h1>Triple Chat <span style="color:var(--fg-muted);font-weight:400">— 개념 인덱스</span></h1>
+    <p>RAG 고도화 학습 노트. 카테고리별로 정리, 필요한 순서대로 읽으세요.</p>
+  </div>
+  <div class="right">
+    <span class="mono">DOCS · v0.1</span>
+    <button class="theme-toggle" onclick="toggleTheme()">⏾ DARK / LIGHT</button>
+  </div>
+</header>
+<main>
+  {% for cat, items in categories %}
+  <h2>{{ cat }}</h2>
+  <div class="grid">
+    {% for c in items %}
+    <a class="card" href="{{ c.slug }}.html">
+      <div class="badges">
+        <span class="level-badge {{ c.level_class }}">{{ c.level }}</span>
+        <span class="tag">{{ c.category }}</span>
+      </div>
+      <div class="title">{{ c.title }}</div>
+      {% if c.summary %}<div class="summary">{{ c.summary }}</div>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty">아직 등록된 개념이 없습니다. <code>docs/concepts/</code> 에 마크다운을 추가하고 <code>python scripts/build_concepts.py</code> 를 실행하세요.</p>
+  {% endfor %}
+</main>
+<script>
+  function toggleTheme(){
+    const r = document.documentElement;
+    r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('triple-theme', r.dataset.theme); } catch(e) {}
+  }
+  try {
+    const saved = localStorage.getItem('triple-theme');
+    if (saved) document.documentElement.dataset.theme = saved;
+  } catch(e) {}
+</script>
+</body>
+</html>

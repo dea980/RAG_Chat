@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T2 학습 — Splitter 4종 — 왜 자동선택 안 하고 사용자가 고르게 했나 학습</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #1a1a1a;
+    --muted: #666;
+    --border: #e1e1e1;
+    --accent: #2563eb;
+    --hl: #fef9c3;
+    --tip: #ecfdf5;
+    --warn: #fef3c7;
+    --note: #eff6ff;
+    --code-bg: #f3f4f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --hl: #3a2a08;
+      --tip: #0a2a1c;
+      --warn: #3a2a08;
+      --note: #0c2545;
+      --code-bg: #161b22;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+    max-width: 820px; margin: 0 auto; padding: 40px 24px;
+    line-height: 1.75; font-size: 16px;
+  }
+  h1 { font-size: 30px; margin-bottom: 4px; letter-spacing: -.5px; }
+  h2 {
+    font-size: 22px; margin-top: 56px; padding-bottom: 8px;
+    border-bottom: 3px solid var(--accent);
+  }
+  h2 .num {
+    display: inline-block; width: 36px; height: 36px;
+    background: var(--accent); color: #fff;
+    border-radius: 50%; text-align: center; line-height: 36px;
+    font-size: 16px; margin-right: 10px;
+  }
+  h3 { font-size: 18px; margin-top: 28px; color: var(--accent); }
+  h4 { font-size: 15px; margin: 16px 0 4px; color: var(--muted); }
+  p.lead { color: var(--muted); font-size: 16px; margin-top: 0; }
+
+  .toc {
+    background: var(--note); padding: 18px 24px; border-radius: 8px;
+    margin: 24px 0; font-size: 14px;
+  }
+  .toc ol { margin: 8px 0; padding-left: 20px; }
+  .toc li { margin: 3px 0; }
+  .toc a { color: var(--fg); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+
+  code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: 14px; font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre {
+    background: var(--code-bg); padding: 14px 18px; border-radius: 6px;
+    overflow-x: auto; font-size: 13px; line-height: 1.6;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre.diff .del { color: #b91c1c; }
+  pre.diff .add { color: #15803d; }
+  @media (prefers-color-scheme: dark) {
+    pre.diff .del { color: #f87171; }
+    pre.diff .add { color: #4ade80; }
+  }
+
+  .analogy {
+    background: var(--hl); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #d97706;
+  }
+  .analogy::before { content: "💡 비유 · "; font-weight: 700; color: #92400e; }
+  @media (prefers-color-scheme: dark) {
+    .analogy::before { color: #fcd34d; }
+  }
+
+  .tip {
+    background: var(--tip); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #16a34a;
+  }
+  .tip::before { content: "✅ 핵심 · "; font-weight: 700; color: #15803d; }
+  @media (prefers-color-scheme: dark) {
+    .tip::before { color: #4ade80; }
+  }
+
+  .warn {
+    background: var(--warn); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #d97706;
+  }
+  .warn::before { content: "⚠️ 주의 · "; font-weight: 700; color: #92400e; }
+
+  .exercise {
+    background: var(--note); padding: 18px 22px; border-radius: 8px;
+    margin: 24px 0; border-left: 4px solid var(--accent);
+  }
+  .exercise h4 { color: var(--accent); margin-top: 0; }
+
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14px;
+  }
+  th, td { padding: 10px 12px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); }
+
+  .keyword {
+    display: inline-block; background: var(--code-bg);
+    padding: 0 6px; border-radius: 3px;
+    font-size: 13px; font-weight: 600;
+  }
+
+  a { color: var(--accent); }
+  .small { font-size: 13px; color: var(--muted); }
+
+  /* night-specific additions */
+  .status-pill { display:inline-block; padding:2px 10px; border-radius:999px;
+    font-size:13px; font-weight:600; }
+  .status-pill.done    { background:#dcfce7; color:#166534; }
+  .status-pill.active  { background:#dbeafe; color:#1e40af; }
+  .status-pill.blocked { background:#fee2e2; color:#991b1b; }
+  .status-pill.planned { background:#f3f4f6; color:#374151; }
+  .card { border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin:14px 0; }
+  .card h3 { margin-top:0; }
+  .muted { color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+
+<p class="muted"><a href="index.html">← 대시보드</a> · <a href="T2.html">작업 리포트 →</a></p>
+<h1>📚 Splitter 4종 — 왜 자동선택 안 하고 사용자가 고르게 했나 학습</h1>
+<p class="muted">T2 · 임무: frontend/pages/chunk_lab.py splitter selectbox에 heading·clause 추가 — Phase 3/4 splitter UI 노출 · 업데이트 2026-05-28 02:24</p>
+<hr>
+<h2>오늘 건드린 개념: "Splitter"</h2>
+<p>RAG 파이프라인의 두 번째 단계인 <strong>청킹(chunking)</strong> 을 담당하는 모듈. 원문서를 어떤 단위로 자르냐가 검색 품질을 좌우한다.</p>
+<div class="analogy">
+<strong>비유 — 김밥집 절단대.</strong><br>
+김밥을 통째로 손님 접시에 올리면 한 입에 들어가지 않는다. 그렇다고 1mm 단위로 다지면 김밥인지 죽인지 모른다. <strong>적절한 두께로, 김밥의 결을 따라</strong> 자르는 게 핵심.<br>
+splitter 는 김밥 종류(=문서 종류)에 따라 절단 방식을 바꾸는 도구다:
+<ul>
+<li><code>recursive</code> = "그냥 일정 두께(예: 1cm)로 자름" — 어떤 김밥이든 통용</li>
+<li><code>row</code> = "초밥 1피스 단위" — 이미 한 입 크기로 만들어진 경우(엑셀 행)</li>
+<li><code>heading</code> = "재료 색깔 바뀌는 지점에서 자름" — 마크다운 헤딩 단위</li>
+<li><code>clause</code> = "단무지 위치 기준" — 사규의 "제N조" 위치를 경계로 자름</li>
+</ul>
+</div>
+
+<h2>왜 4종이나 필요한가</h2>
+<p>청크 경계가 어디에 떨어지냐로 retrieval 품질이 결정된다. 사례:</p>
+<table>
+<thead>
+<tr>
+<th>문서 종류</th>
+<th>잘못된 splitter</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>사규 (제1조 ~ 제48조)</td>
+<td><code>recursive</code> 500자</td>
+<td>"제39조 휴가 조항" 검색 시 38조 끝~39조 앞부분만 잡혀 정답 못 찾음 (7강 강사 사례)</td>
+</tr>
+<tr>
+<td>엑셀 가격표</td>
+<td><code>recursive</code> 1000자</td>
+<td>한 청크에 5~7개 행 섞임 → "A제품 가격" 질의에 B/C/D 가격도 노이즈로 옴</td>
+</tr>
+<tr>
+<td>정돈된 마크다운 문서</td>
+<td><code>recursive</code> 1500자</td>
+<td>섹션 경계를 가로질러 잘림 → "## 보안" 섹션 내용이 두 청크로 쪼개져 일관성↓</td>
+</tr>
+</tbody>
+</table>
+<div class="tip">
+<strong>핵심.</strong> 정답이 들어 있는 청크가 검색 top-k 에 안 들어오면 LLM 이 아무리 똑똑해도 답 못 한다. 청킹은 retrieval 의 <strong>recall ceiling</strong> 을 정한다.
+</div>
+
+<h2>왜 heading/clause 는 자동선택 안 했나</h2>
+<p><code>backend/chat/ingest/splitters/__init__.py</code> 를 보면 <code>DEFAULT_BY_SOURCE</code> dict 가 확장자(csv/pdf/md/…) → splitter 를 매핑하는데, heading/clause 는 일부러 거기서 뺐다.</p>
+<div class="warn">
+<strong>주의 — 자동선택의 함정.</strong><br>
+"md 면 무조건 heading splitter 쓰자" 라고 자동화하면, heading 이 없는 flat markdown (README 줄글) 에서는 splitter 가 한 덩어리만 만들고 끝낸다. 청킹이 사실상 안 일어남.<br>
+"pdf 면 무조건 clause" 도 마찬가지. 사규가 아닌 보고서 PDF 에 `제N조` 가 없으면 splitter 가 빈 결과를 낸다.<br>
+<strong>구조를 가정하는 splitter 는 사용자가 의도적으로 골랐을 때만 안전</strong>하다.
+</div>
+
+<p>그래서 코드 디자인은:
+- <code>DEFAULT_BY_SOURCE</code> — "확장자만 보고 안전하게 자동 선택" → recursive/row 2종만
+- <code>_BY_NAME</code> — "이름으로 명시 호출" → 4종 모두 (opt-in)
+- frontend <code>chunk_lab.py</code> 의 selectbox = opt-in 통로</p>
+<p>T2 임무는 정확히 이 opt-in 통로를 frontend 에 뚫는 일이었다.</p>
+<h2>1줄 패치였는데 왜 임무로 분리됐나</h2>
+<p><code>backend/docs/sessions/2026-05-27-night-parallel.md</code> §7.4 에 분리 사유가 있다 — <strong>수직 격리</strong> 규칙. T1 은 moderation(backend), T2 는 frontend chunk_lab, T3 은 docs 만 손댄다. 1줄짜리라도 frontend 영역이 다른 터미널과 섞이면 야간 병렬 commit 시 충돌. 그래서 "frontend 단독" 으로 도려낸 임무가 됐다.</p>
+<div class="exercise">
+<h4>연습</h4>
+<ol>
+<li><code>backend/chat/ingest/splitters/__init__.py</code> 를 열고, 만약 "txt 파일은 default 로 heading splitter 를 쓰게 하라" 는 PM 요청이 왔다면 어떻게 반박할 것인가? 어떤 문서가 깨질지 한 예시를 들어보자. (힌트: heading 이 하나도 없는 단순 텍스트)</li>
+<li><code>chunk_lab.py</code> 의 selectbox 에 가짜 splitter 이름 `"foo"` 를 임시로 추가하고 streamlit 에서 선택해보자. backend 는 어떻게 반응하는가? (힌트: <code>_BY_NAME.get(name, RecursiveSplitter)</code> 의 default fallback)</li>
+</ol>
+</div>
+
+<footer class="muted" style="margin-top:60px; border-top:1px solid var(--border); padding-top:16px;">
+  생성:  · 야간 자율 멀티에이전트 wrap-up
+</footer>
+</body>
+</html>

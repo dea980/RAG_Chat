@@ -1,0 +1,8 @@
+.DS_Store
+.claude/
+.omc/
+
+# DownSub auto-subtitle dumps at repo root
+*[DownSub.com]*.txt
+.gstack/
+.env

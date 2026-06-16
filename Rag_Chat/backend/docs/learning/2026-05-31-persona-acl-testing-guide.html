@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Persona ACL 테스팅 가이드 — Step by Step</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+<style>
+  :root {
+    --bg: #0A0B0D; --surface: #14151A; --surface-2: #1C1E26;
+    --fg: #E8E9EC; --muted: #8B8F99; --border: #2A2D36;
+    --accent: #E89B3C; --accent-soft: rgba(232,155,60,.12);
+    --code-bg: #1C1E26;
+    --good: #4ADE80; --warn: #FACC15; --bad: #F87171;
+    --p1: #60A5FA; --p2: #34D399; --p3: #A78BFA; --p4: #F472B6;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: "Pretendard", -apple-system, sans-serif;
+    max-width: 940px; margin: 0 auto; padding: 48px 28px 120px;
+    line-height: 1.7; font-size: 15px;
+    font-feature-settings: "tnum" on;
+  }
+  h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -.5px; }
+  .meta { font-size: 12px; color: var(--muted); margin: 0 0 28px;
+          font-family: "Geist Mono", ui-monospace, monospace; }
+  .meta span::before { content: "·"; margin: 0 10px; color: var(--border); }
+  .meta span:first-child::before { content: none; }
+  p.lead {
+    color: var(--muted); border-left: 3px solid var(--accent);
+    padding: 6px 0 6px 14px; margin: 0 0 30px;
+  }
+  h2 {
+    font-size: 20px; margin: 56px 0 14px;
+    padding: 0 0 8px; border-bottom: 1px solid var(--border);
+  }
+  h2 .step {
+    display: inline-block; padding: 4px 12px; border-radius: 6px;
+    background: var(--accent); color: #14151A;
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 12px; margin-right: 12px; font-weight: 700;
+  }
+  h3 { font-size: 16px; margin: 22px 0 10px; color: var(--accent); }
+  code {
+    background: var(--code-bg); padding: 2px 7px; border-radius: 4px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 13px; color: #F4D7A9;
+  }
+  pre {
+    background: var(--code-bg); padding: 14px 18px; border-radius: 8px;
+    overflow-x: auto; font-size: 12.5px; line-height: 1.55;
+    border: 1px solid var(--border);
+    font-family: "Geist Mono", ui-monospace, monospace;
+    margin: 12px 0;
+  }
+  pre code { background: transparent; padding: 0; color: var(--fg); }
+  pre.cmd { border-left: 3px solid var(--accent); }
+  pre.out {
+    background: #0d1117; border-left: 3px solid var(--good); color: #c9d1d9;
+  }
+  pre.bad { border-left: 3px solid var(--bad); }
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 36px 0; }
+  table {
+    border-collapse: collapse; width: 100%; margin: 14px 0;
+    font-size: 13.5px; border: 1px solid var(--border);
+    border-radius: 6px; overflow: hidden;
+  }
+  th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  thead th { background: var(--surface-2); color: var(--accent); font-weight: 600; }
+  tbody tr:last-child td { border-bottom: none; }
+  .yes { color: var(--good); font-weight: 700;
+         font-family: "Geist Mono", ui-monospace, monospace; }
+  .no { color: var(--bad); font-weight: 700;
+        font-family: "Geist Mono", ui-monospace, monospace; }
+  .why {
+    background: var(--surface); padding: 14px 18px; border-radius: 8px;
+    border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    margin: 16px 0; font-size: 13.5px;
+  }
+  .why strong { color: var(--accent); }
+  .expect {
+    background: rgba(74,222,128,.06); padding: 12px 16px; border-radius: 6px;
+    border: 1px solid rgba(74,222,128,.3); margin: 12px 0; font-size: 13px;
+  }
+  .expect strong { color: var(--good); }
+  .trouble {
+    background: rgba(248,113,113,.06); padding: 12px 16px; border-radius: 6px;
+    border: 1px solid rgba(248,113,113,.3); margin: 12px 0; font-size: 13px;
+  }
+  .trouble strong { color: var(--bad); }
+  .p-pill {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    margin-right: 4px;
+  }
+  .p1 { background: rgba(96,165,250,.18); color: var(--p1); }
+  .p2 { background: rgba(52,211,153,.18); color: var(--p2); }
+  .p3 { background: rgba(167,139,250,.18); color: var(--p3); }
+  .p4 { background: rgba(244,114,182,.18); color: var(--p4); }
+  .toc {
+    background: var(--surface); padding: 16px 22px; border-radius: 10px;
+    margin: 24px 0; font-size: 14px; border: 1px solid var(--border);
+  }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin: 3px 0; }
+  .toc a { color: var(--fg); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+  .checklist input { margin-right: 8px; }
+</style>
+</head>
+<body>
+
+<h1>Persona ACL 테스팅 가이드</h1>
+<div class="meta">
+  <span>2026-05-31</span>
+  <span>Step-by-step</span>
+  <span>대상: 처음 코드 보는 사람</span>
+</div>
+
+<p class="lead">
+  pgvector wipe + User.persona migration + Generation prompt 분기까지 끝났다.
+  이 문서는 <strong>당신이 직접 동작을 확인</strong> 하는 절차 가이드.
+  각 step 마다 <em>왜 이게 중요한지</em> + <em>실행 명령</em> + <em>기대 출력</em> + <em>실패 시 원인</em>.
+</p>
+
+<div class="toc">
+  <strong>목차</strong>
+  <ol>
+    <li><a href="#prep">사전 준비 (환경 점검)</a></li>
+    <li><a href="#s1">Step 1 — pgvector drift 해결 확인</a></li>
+    <li><a href="#s2">Step 2 — User.persona 필드 사용</a></li>
+    <li><a href="#s3">Step 3 — ACL filter 동작 (P1 vs P3 비교)</a></li>
+    <li><a href="#s4">Step 4 — Persona 별 답변 톤 비교</a></li>
+    <li><a href="#s5">Step 5 — End-to-end API 호출 (Streamlit/curl)</a></li>
+    <li><a href="#s6">Step 6 — EscalationAttempt audit log 확인</a></li>
+    <li><a href="#tear">정리·체크리스트</a></li>
+  </ol>
+</div>
+
+<hr>
+
+<h2 id="prep"><span class="step">PREP</span>사전 준비</h2>
+
+<div class="why">
+  <strong>왜.</strong> ollama 가 떠 있고 EMBEDDING_PROVIDER 가 ollama 여야 검색이 동작.
+  gemini quota 죽어서 그쪽으로 가면 모든 step 이 fail. 한 번만 점검.
+</div>
+
+<pre class="cmd"><code>cd /Users/daeyeop/Desktop/AI/RAG_Chat/Rag_Chat/backend
+
+# 1. ollama 가 떠있는지
+curl -s http://localhost:11434/api/tags | grep nomic-embed
+# 출력: "name":"nomic-embed-text:latest" → OK
+
+# 2. .env 의 embedding provider 확인 (gemini quota dead, ollama 권장)
+grep "^EMBEDDING_PROVIDER" ../.env
+# 권장 출력: EMBEDDING_PROVIDER=ollama
+
+# 3. (gemini 로 되어있다면 임시 override 가능 — 이 가이드는 ollama 가정)</code></pre>
+
+<div class="trouble">
+  <strong>실패 시.</strong>
+  ollama 안 떠있으면 <code>ollama serve</code> 별도 터미널에서 실행.
+  nomic-embed-text 없으면 <code>ollama pull nomic-embed-text</code> (274MB).
+</div>
+
+<hr>
+
+<h2 id="s1"><span class="step">S1</span>pgvector drift 해결 확인</h2>
+
+<div class="why">
+  <strong>왜.</strong> pgvector 에 옛 gemini 3072-dim chunk 가 있으면
+  ollama 768-dim 쿼리가 dim mismatch 로 fail.
+  <code>get_rag_context</code> 가 pgvector 우선이라 빈 결과 → Chroma 도달 못 함.
+</div>
+
+<pre class="cmd"><code>EMBEDDING_PROVIDER=ollama ./venv/bin/python -c "
+import os, django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'triple_chat_pjt.settings')
+django.setup()
+from knowledge.models import VectorChunk
+print('pgvector chunks:', VectorChunk.objects.count())
+"</code></pre>
+
+<div class="expect">
+  <strong>기대 출력.</strong>
+  <pre class="out"><code>pgvector chunks: 0</code></pre>
+  0 이면 OK — get_rag_context 가 Chroma fallback path 로 감.
+</div>
+
+<div class="trouble">
+  <strong>0 이 아니면.</strong> 다시 wipe:
+  <pre class="cmd"><code>EMBEDDING_PROVIDER=ollama ./venv/bin/python -c "
+import django; django.setup()
+from knowledge.models import VectorChunk
+VectorChunk.objects.all().delete()"</code></pre>
+</div>
+
+<hr>
+
+<h2 id="s2"><span class="step">S2</span>User.persona 필드 — 테스트 유저 4개 만들기</h2>
+
+<div class="why">
+  <strong>왜.</strong> ACL filter 가 동작하려면 <em>실제 사용자에게 persona 가 박혀있어야</em>.
+  null 이면 가장 보수적 fallback (public+retail) 만 노출. 4 페르소나 각각의 동작을 비교하려면 4명 필요.
+</div>
+
+<pre class="cmd"><code>EMBEDDING_PROVIDER=ollama ./venv/bin/python -c "
+import os, django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'triple_chat_pjt.settings')
+django.setup()
+from chat.models import User
+
+# 4 페르소나 테스트 유저 생성 (이미 있으면 update_or_create)
+fixtures = [
+    ('p1@test.kr', 'P1_RETAIL'),
+    ('p2@test.kr', 'P2_B2B'),
+    ('p3@test.kr', 'P3_HQ'),
+    ('p4@test.kr', 'P4_OUTBOUND'),
+]
+for email, persona in fixtures:
+    u, created = User.objects.update_or_create(
+        email=email,
+        defaults={'persona': persona, 'access_level': 'internal'},
+    )
+    print(f'  {\"NEW\" if created else \"UPD\"} {u.email:14} persona={u.persona}')
+"</code></pre>
+
+<div class="expect">
+  <strong>기대 출력.</strong>
+  <pre class="out"><code>  NEW p1@test.kr     persona=P1_RETAIL
+  NEW p2@test.kr     persona=P2_B2B
+  NEW p3@test.kr     persona=P3_HQ
+  NEW p4@test.kr     persona=P4_OUTBOUND</code></pre>
+</div>
+
+<hr>
+
+<h2 id="s3"><span class="step">S3</span>ACL filter 동작 — P1 vs P3 같은 쿼리 비교</h2>
+
+<div class="why">
+  <strong>왜.</strong> 핵심 검증. 같은 질문 <em>"iPhone 16 카메라"</em> 를
+  <span class="p-pill p1">P1 매장</span> 과 <span class="p-pill p3">P3 본사</span> 가 했을 때
+  결과 chunk 의 tier 가 달라야 함:
+  P1 는 competitive tier 차단됨 → public/retail 만 옴.
+  P3 는 competitive 보임. <strong>이게 안 되면 ACL 가 무용지물.</strong>
+</div>
+
+<pre class="cmd"><code>EMBEDDING_PROVIDER=ollama ./venv/bin/python -c "
+import os, django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'triple_chat_pjt.settings')
+django.setup()
+from chat.providers import provider_manager
+from chat.persona import Persona, chroma_filter_for_persona
+
+vs = provider_manager.get_vector_store()
+queries = ['iPhone 16 카메라', 'Knox Vault 보안', 'Tab S10 Ultra DeX']
+
+for q in queries:
+    print(f'\n=== {q} ===')
+    for p in [Persona.P1_RETAIL, Persona.P3_HQ]:
+        filt = chroma_filter_for_persona(p)
+        hits = vs.similarity_search(q, k=3, filter=filt)
+        for h in hits:
+            tier = h.metadata.get('audience_tier','?')
+            src = h.metadata.get('source_file','?').split('/')[-1]
+            print(f'  [{p.value:11}][{tier:11}] {src}: {h.page_content[:50]}')
+"</code></pre>
+
+<div class="expect">
+  <strong>기대 출력 (예시).</strong>
+  <pre class="out"><code>=== iPhone 16 카메라 ===
+  [P1_RETAIL  ][public     ] galaxy_handbook.md: ...           # competitive 못 봄
+  [P1_RETAIL  ][retail     ] selling_points.md: ...
+  [P3_HQ      ][competitive] competitive_handbook.md: iPhone 16 시리즈... # ✓ 정답
+  [P3_HQ      ][competitive] competitive_handbook.md: ...
+
+=== Knox Vault 보안 ===
+  [P1_RETAIL  ][public     ] ...                # b2b 못 봄
+  [P3_HQ      ][b2b        ] b2b_handbook.md: Knox Vault ...</code></pre>
+  <strong>합격 조건:</strong> P1 결과의 tier 가 <code>public/retail/carrier</code> 중에만 있으면 OK.
+  competitive/b2b 가 P1 결과에 절대 나오면 안 됨.
+</div>
+
+<div class="trouble">
+  <strong>P1 결과에 competitive/b2b 가 보이면.</strong>
+  → infer_tier 매핑 또는 ChromaSink._to_lc_document 메타 부여 잘못. ingest 재실행:
+  <pre class="cmd"><code>EMBEDDING_PROVIDER=ollama ./venv/bin/python manage.py build_vectors --rebuild</code></pre>
+</div>
+
+<hr>
+
+<h2 id="s4"><span class="step">S4</span>Persona 별 답변 톤 비교 — 같은 질문 4 페르소나</h2>
+
+<div class="why">
+  <strong>왜.</strong> ACL filter 가 chunk 만 거름. 그 위에 <em>답변 길이·톤</em> 도 페르소나 따라 달라야:
+  P1 매장 = 1~2 문장 친근체. P3 본사 = 표·수치 무제한. P4 외판 = 1 문장 음성친화.
+  같은 질문 4번 돌려서 출력 길이·톤 차이 눈으로 확인.
+</div>
+
+<pre class="cmd"><code>EMBEDDING_PROVIDER=ollama ./venv/bin/python -c "
+import os, django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'triple_chat_pjt.settings')
+django.setup()
+from chat.pipeline import ModuleContext, PipelineRunner
+
+QUESTION = 'Galaxy S25 Ultra 카메라 어때?'
+PERSONAS = ['P1_RETAIL', 'P2_B2B', 'P3_HQ', 'P4_OUTBOUND', None]
+
+for p in PERSONAS:
+    print(f'\n========== persona={p} ==========')
+    ctx = ModuleContext(
+        question=QUESTION,
+        session_id='test_session',
+        user_id='test_user',
+        history=[],
+        user_access_level='internal',
+        extra={'persona': p},
+    )
+    pipeline = PipelineRunner([
+        {'type': 'retrieve'},
+        {'type': 'rerank'},
+        {'type': 'reasoning'},
+        {'type': 'generation'},
+    ])
+    try:
+        ctx = pipeline.run(ctx)
+        print(ctx.response[:400])
+    except Exception as e:
+        print(f'ERROR: {e}')
+" 2>&1 | grep -v "Deprecation\|telemetry\|return Chroma\|return Ollama"</code></pre>
+
+<div class="expect">
+  <strong>기대 차이.</strong>
+  <table>
+    <thead><tr><th>persona</th><th>길이</th><th>톤</th></tr></thead>
+    <tbody>
+      <tr><td><span class="p-pill p1">P1</span></td><td>1~2 문장</td><td>친근체, 즉답</td></tr>
+      <tr><td><span class="p-pill p2">P2</span></td><td>3~10 문장 + 표/bullet</td><td>격식, 전문</td></tr>
+      <tr><td><span class="p-pill p3">P3</span></td><td>제한없음, 수치 위주</td><td>데이터 중립</td></tr>
+      <tr><td><span class="p-pill p4">P4</span></td><td>1 문장</td><td>음성 친화, 마크다운 없음</td></tr>
+      <tr><td>None</td><td>2~3 문장</td><td>가장 보수적</td></tr>
+    </tbody>
+  </table>
+  <strong>실제 LLM 출력은 항상 가이드 100% 따르진 않음.</strong> 차이가 <em>분명히 보이면</em> OK.
+  완벽 일치 안 됨 = LLM 한계 (Ollama gpt-oss 의 instruction following).
+</div>
+
+<div class="trouble">
+  <strong>4 페르소나 출력이 다 똑같으면.</strong>
+  → <code>chat/pipeline/modules.py</code> 의 GenerationModule 이 persona_style 호출 안 함.
+  코드 확인:
+  <pre class="cmd"><code>grep "prompt_style_for_persona" chat/pipeline/modules.py</code></pre>
+  결과 1줄 이상 나와야 함.
+</div>
+
+<hr>
+
+<h2 id="s5"><span class="step">S5</span>End-to-end API 호출 (실제 사용자 경로)</h2>
+
+<div class="why">
+  <strong>왜.</strong> 위 step 들은 Python 직접 호출. 실제 사용자는 <strong>frontend 로그인 → API 호출</strong> 경로.
+  ChatAPIView 가 <code>request.user.persona</code> 를 ModuleContext.extra 에 주입하는지 확인.
+</div>
+
+<h3>5a. 백엔드 + 프런트 가동</h3>
+
+<pre class="cmd"><code># 터미널 1 — 백엔드
+cd /Users/daeyeop/Desktop/AI/RAG_Chat/Rag_Chat/backend
+./venv/bin/python manage.py runserver 0.0.0.0:8000
+
+# 터미널 2 — Streamlit
+cd /Users/daeyeop/Desktop/AI/RAG_Chat/Rag_Chat
+./run_local_fixed.sh   # 또는 streamlit run frontend/app.py</code></pre>
+
+<h3>5b. 4 페르소나 각각 로그인 → 같은 질문</h3>
+
+<ol>
+  <li>Streamlit 브라우저 (localhost:8501) 에서 <code>p1@test.kr</code> 로 로그인 (비밀번호는 dev seed).</li>
+  <li>"iPhone 16 Pro 카메라" 질문 → <strong>"자료에 없습니다" 또는 일반 답변</strong> 기대 (P1 는 competitive 못 봄).</li>
+  <li>로그아웃 → <code>p3@test.kr</code> 로 로그인.</li>
+  <li>같은 질문 → <strong>iPhone 16 본문 인용된 답변</strong> 기대 (P3 는 competitive 가능).</li>
+</ol>
+
+<div class="expect">
+  <strong>합격 조건.</strong>
+  P1 와 P3 의 답변 본문에 차이가 명확 (P1 = iPhone 정보 없음 / P3 = iPhone 스펙 인용).
+  Citation chip 도 다르게 (P3 만 competitive_handbook.md 표시).
+</div>
+
+<div class="trouble">
+  <strong>비밀번호 모름.</strong>
+  dev seed 확인:
+  <pre class="cmd"><code>./venv/bin/python -c "
+import django; django.setup()
+from chat.models import User
+u = User.objects.get(email='p1@test.kr')
+u.set_password('test1234'); u.save()
+print('p1@test.kr password set: test1234')
+"</code></pre>
+  같은 패턴으로 4명 다 비번 셋업.
+</div>
+
+<hr>
+
+<h2 id="s6"><span class="step">S6</span>EscalationAttempt audit log 확인</h2>
+
+<div class="why">
+  <strong>왜.</strong> ACL filter 가 chunk 를 차단하는 건 정상 동작.
+  하지만 <em>P1 매장이 자꾸 b2b/competitive 요청한다</em> 면 운영자가 알아야 함.
+  <code>EscalationAttempt</code> 테이블에 매 시도 1행 누적. 패턴 발견 시 운영자가 룰 조정 or 사용자 교육.
+</div>
+
+<h3>6a. 의도적으로 권한 위반 query 발사</h3>
+
+<pre class="cmd"><code>EMBEDDING_PROVIDER=ollama ./venv/bin/python -c "
+import os, django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'triple_chat_pjt.settings')
+django.setup()
+from chat.pipeline import ModuleContext, PipelineRunner
+from chat.models import EscalationAttempt, User
+
+# 테스트 유저 (Step 2 에서 만든 거)
+u = User.objects.get(email='p1@test.kr')
+
+# P1 매장이 권한 밖 정보 시도
+queries = [
+    'Knox Vault EAL4 인증',      # b2b
+    '이번달 마진율 알려줘',          # internal_only
+    'iPhone 16 Pro 카메라',      # competitive
+    'S25 가격',                  # 정상 — 로그 안 됨
+]
+for q in queries:
+    ctx = ModuleContext(
+        question=q,
+        session_id='test_session',
+        user_id=u.user_id,
+        history=[],
+        user_access_level='internal',
+        extra={'persona': u.persona},
+    )
+    PipelineRunner([{'type': 'retrieve'}]).run(ctx)
+    print(f'  fired: {q}')
+
+print(f'\nEscalationAttempt 누적: {EscalationAttempt.objects.count()}')
+" 2>&1 | grep -v "Deprecation\|telemetry\|return Chroma\|return Ollama"</code></pre>
+
+<div class="expect">
+  <strong>기대 출력.</strong>
+  <pre class="out"><code>  fired: Knox Vault EAL4 인증
+  fired: 이번달 마진율 알려줘
+  fired: iPhone 16 Pro 카메라
+  fired: S25 가격
+
+EscalationAttempt 누적: 3</code></pre>
+  <strong>합격 조건:</strong> 3 건 누적. "S25 가격" 은 정상 query 라 로그 안 됨.
+</div>
+
+<h3>6b. 누적 patterns 조회 (운영자 시점)</h3>
+
+<pre class="cmd"><code>EMBEDDING_PROVIDER=ollama ./venv/bin/python -c "
+import django; django.setup()
+from chat.models import EscalationAttempt
+from django.db.models import Count
+
+# 페르소나별 위반 시도 카운트
+print('=== 페르소나 × decision ===')
+qs = (EscalationAttempt.objects
+      .values('from_persona', 'decision')
+      .annotate(n=Count('id'))
+      .order_by('-n'))
+for row in qs:
+    print(f'  {row[\"from_persona\"]:14} {row[\"decision\"]:15} {row[\"n\"]}')
+
+# 가장 빈번한 위반 query (top 5)
+print('\n=== 자주 시도된 쿼리 top 5 ===')
+qs = (EscalationAttempt.objects
+      .values('requested_query')
+      .annotate(n=Count('id'))
+      .order_by('-n')[:5])
+for row in qs:
+    print(f'  {row[\"n\"]:3} \"{row[\"requested_query\"][:50]}\"')
+" 2>&1 | grep -v Deprecation</code></pre>
+
+<div class="expect">
+  <strong>기대 출력 (예시).</strong>
+  <pre class="out"><code>=== 페르소나 × decision ===
+  P1_RETAIL      BLOCKED         1     # internal_only 시도
+  P1_RETAIL      REDIRECTED      2     # b2b/competitive 시도
+
+=== 자주 시도된 쿼리 top 5 ===
+    1 "Knox Vault EAL4 인증"
+    1 "이번달 마진율 알려줘"
+    1 "iPhone 16 Pro 카메라"</code></pre>
+  <strong>해석:</strong> P1 매장 사용자가 권한 밖 자주 시도 → 운영자 액션
+  (사용자 교육 / persona 변경 / 일부 tier 권한 확장 검토).
+</div>
+
+<h3>6c. Django admin 에서 보기 (선택)</h3>
+
+<pre class="cmd"><code># 백엔드 띄운 상태에서:
+# http://localhost:8000/admin/chat/escalationattempt/
+# (admin 사용자로 로그인 필요 — createsuperuser)
+
+./venv/bin/python manage.py createsuperuser --email admin@test.kr</code></pre>
+
+<div class="trouble">
+  <strong>EscalationAttempt 가 admin 에 안 보임.</strong>
+  → admin 등록 안 됐을 수 있음. <code>chat/admin.py</code> 에 다음 추가:
+  <pre class="cmd"><code>from .models import EscalationAttempt
+admin.site.register(EscalationAttempt)</code></pre>
+</div>
+
+<hr>
+
+<h2 id="tear"><span class="step">DONE</span>정리 + 테스팅 체크리스트</h2>
+
+<h3>다 됐는지 체크</h3>
+
+<ul class="checklist">
+  <li><input type="checkbox"> Step 1: pgvector chunks = 0 확인</li>
+  <li><input type="checkbox"> Step 2: 4 테스트 유저 (p1~p4@test.kr) 생성</li>
+  <li><input type="checkbox"> Step 3: P1 결과에 competitive/b2b tier 0건</li>
+  <li><input type="checkbox"> Step 3: P3 결과에 competitive 1건 이상</li>
+  <li><input type="checkbox"> Step 4: 4 페르소나 답변 길이/톤 차이 눈으로 확인</li>
+  <li><input type="checkbox"> Step 5: Streamlit 로그인 후 P1/P3 답변 본문 차이</li>
+  <li><input type="checkbox"> Step 6: 권한 위반 3건 EscalationAttempt 누적 확인</li>
+  <li><input type="checkbox"> Step 6: 페르소나 × decision 집계 쿼리 동작</li>
+</ul>
+
+<h3>테스트 끝나면 정리</h3>
+
+<pre class="cmd"><code># 테스트 유저 + escalation 로그 삭제 (운영 데이터 오염 방지)
+EMBEDDING_PROVIDER=ollama ./venv/bin/python -c "
+import django; django.setup()
+from chat.models import User, EscalationAttempt
+User.objects.filter(email__endswith='@test.kr').delete()
+EscalationAttempt.objects.filter(from_persona__in=['P1_RETAIL','P2_B2B','P3_HQ','P4_OUTBOUND']).delete()
+print('test users + escalation logs wiped')
+"</code></pre>
+
+<h3>현재 알려진 한계</h3>
+
+<table>
+  <thead><tr><th>한계</th><th>영향</th><th>다음 작업</th></tr></thead>
+  <tbody>
+    <tr><td>carrier corpus = 24/24 N/A</td><td>P4 외판 답변 자료 거의 없음</td><td>통신사 실 페이지 fetch 필요</td></tr>
+    <tr><td>retrieval ranking 검증 안 됨</td><td>Knox 쿼리에 b2b chunk top-1 안 옴</td><td>Stage 1 reranker 효과 측정</td></tr>
+    <tr><td>persona × tier 매트릭스 = 코드 하드코딩</td><td>운영자 admin 토글 불가</td><td>DB-backed PersonaAccess 모델</td></tr>
+    <tr><td>Escalation 탐지 = 키워드만</td><td>"마진율 분석" 같은 우회 표현 못 잡음</td><td>LLM classifier 도입</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2>관련 문서</h2>
+
+<ul>
+  <li>설계: <a href="./2026-05-29-persona-security-design.html">persona × security 통합 설계</a></li>
+  <li>현황: <a href="./2026-05-31-data-state-snapshot.html">데이터 현황 스냅샷</a></li>
+  <li>IR plan: <a href="./2026-05-29-ir-improvement-plan.html">IR 개선 plan 6 stages</a></li>
+  <li>코드:
+    <code>chat/persona.py</code> ·
+    <code>chat/utils.py::get_rag_context</code> ·
+    <code>chat/pipeline/modules.py::GenerationModule</code> ·
+    <code>chat/views.py::ChatAPIView</code>
+  </li>
+</ul>
+
+</body>
+</html>

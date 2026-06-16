@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Chat — 프로젝트 현재 상태</title>
+<style>
+  :root{
+    --bg:#0f1117; --panel:#171a23; --panel2:#1e222d; --border:#2a2f3c;
+    --ink:#e6e8ee; --muted:#9aa3b2; --accent:#6ea8fe; --green:#3fb950;
+    --amber:#d29922; --red:#f85149; --grey:#6e7681;
+    --mono:'SF Mono',ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo',sans-serif;
+    line-height:1.65; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:980px; margin:0 auto; padding:48px 24px 80px;}
+  header.top{border-bottom:1px solid var(--border); padding-bottom:24px; margin-bottom:36px;}
+  h1{font-size:30px; margin:0 0 8px; letter-spacing:-.02em;}
+  .sub{color:var(--muted); font-size:15px;}
+  .meta{display:flex; flex-wrap:wrap; gap:8px; margin-top:16px;}
+  .chip{
+    font-family:var(--mono); font-size:12px; padding:4px 10px; border-radius:6px;
+    background:var(--panel2); border:1px solid var(--border); color:var(--muted);
+  }
+  .chip b{color:var(--accent); font-weight:600;}
+  h2{font-size:20px; margin:44px 0 16px; letter-spacing:-.01em; display:flex; align-items:center; gap:10px;}
+  h2 .num{font-family:var(--mono); font-size:13px; color:var(--accent); background:var(--panel2);
+    border:1px solid var(--border); border-radius:6px; padding:2px 8px;}
+  h3{font-size:15px; margin:24px 0 10px; color:var(--ink);}
+  p{margin:0 0 12px;}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px 24px; margin:16px 0;}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media (max-width:680px){.grid{grid-template-columns:1fr}}
+  ul{margin:8px 0 12px; padding-left:20px;}
+  li{margin:5px 0;}
+  table{width:100%; border-collapse:collapse; font-size:14px; margin:8px 0;}
+  th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--border); vertical-align:top;}
+  th{color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em;}
+  td code, p code, li code{font-family:var(--mono); font-size:12.5px; background:var(--panel2);
+    padding:1px 6px; border-radius:5px; color:#cdd5e3;}
+  .st{font-family:var(--mono); font-size:12px; padding:2px 8px; border-radius:20px; white-space:nowrap;}
+  .done{background:rgba(63,185,80,.13); color:var(--green); border:1px solid rgba(63,185,80,.3);}
+  .warn{background:rgba(210,153,34,.13); color:var(--amber); border:1px solid rgba(210,153,34,.3);}
+  .todo{background:rgba(110,118,129,.13); color:var(--grey); border:1px solid rgba(110,118,129,.3);}
+  .hold{background:rgba(248,81,73,.10); color:var(--red); border:1px solid rgba(248,81,73,.28);}
+  pre{background:#0b0d12; border:1px solid var(--border); border-radius:10px; padding:16px 18px;
+    overflow-x:auto; font-family:var(--mono); font-size:12.5px; line-height:1.55; color:#cdd5e3;}
+  pre .c{color:var(--grey);} pre .k{color:var(--accent);} pre .v{color:#9ece6a;}
+  .lead{border-left:3px solid var(--accent); padding:6px 0 6px 16px; color:var(--muted); margin:0 0 12px;}
+  .footnote{color:var(--muted); font-size:13px; margin-top:48px; border-top:1px solid var(--border); padding-top:20px;}
+  a{color:var(--accent); text-decoration:none;} a:hover{text-decoration:underline;}
+  .kpi{display:flex; gap:14px; flex-wrap:wrap; margin:16px 0;}
+  .kpi .box{flex:1; min-width:140px; background:var(--panel); border:1px solid var(--border);
+    border-radius:10px; padding:14px 16px;}
+  .kpi .n{font-size:24px; font-weight:700; letter-spacing:-.02em;}
+  .kpi .l{font-size:12px; color:var(--muted); margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>RAG Chat — 프로젝트 현재 상태</h1>
+    <div class="sub">사내 영업팀 RAG 챗봇 · 베타 배포 직전 스냅샷</div>
+    <div class="meta">
+      <span class="chip">📅 기준일 <b>2026-05-27</b></span>
+      <span class="chip">🌿 브랜치 <b>feature/onnx-reranker</b></span>
+      <span class="chip">🧱 스택 <b>Django + DRF + Streamlit + Chroma</b></span>
+      <span class="chip">🗄️ DB <b>PostgreSQL 16</b></span>
+    </div>
+  </header>
+
+  <div class="kpi">
+    <div class="box"><div class="n" style="color:var(--green)">2 / 8</div><div class="l">Ingest 단계 완료 (Phase 1·2)</div></div>
+    <div class="box"><div class="n" style="color:var(--amber)">2</div><div class="l">통합 대기 (Upload API · 텍스트 loader)</div></div>
+    <div class="box"><div class="n" style="color:var(--accent)">6</div><div class="l">선택 가능한 LLM provider 프리셋</div></div>
+    <div class="box"><div class="n">17</div><div class="l">이번 작업 변경 파일</div></div>
+  </div>
+
+  <!-- 1 -->
+  <h2><span class="num">01</span> 방금 마무리한 작업 — Provider 스위칭</h2>
+  <p class="lead">Chat LLM 과 임베딩을 분리하고, 프론트엔드에서 provider 조합을 골라 쓸 수 있게 정리했습니다.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h3>① Chat LLM provider 확장</h3>
+      <p><code>ProviderManager</code> 가 reasoning / generation 모델을 독립적으로 해석합니다. 지원 provider:</p>
+      <ul>
+        <li><code>gemini</code> (기본값)</li>
+        <li><code>qwen</code> · <code>openrouter</code></li>
+        <li><code>ollama</code> — 로컬 OpenAI 호환 API</li>
+        <li><code>huggingface</code> — Inference Endpoint / TGI</li>
+      </ul>
+      <p style="color:var(--muted);font-size:13px;margin:0">Ollama·HF 모두 OpenAI 호환 엔드포인트를 통해 <code>ChatOpenAI</code> 로 연결됩니다.</p>
+    </div>
+    <div class="card">
+      <h3>② 임베딩은 시스템 스코프로 분리</h3>
+      <p>임베딩은 세션이 아니라 <b>시스템 단위</b> 설정입니다. 표시는 chat LLM 과 분리됩니다.</p>
+      <ul>
+        <li>지원: <code>gemini</code>, <code>openrouter</code></li>
+        <li><code>get_embedding_config()</code> 가 <code>requires_reindex: true</code> 를 노출</li>
+      </ul>
+      <p style="color:var(--amber);font-size:13px;margin:0">⚠️ 임베딩을 바꾸면 기존 Chroma 벡터 DB를 <b>반드시 재구축</b>해야 검색 품질이 유효합니다.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>③ 프론트엔드 Provider 프리셋 (Streamlit 사이드바)</h3>
+    <p><code>frontend/app.py</code> 사이드바의 <b>Provider Preset</b> 셀렉트박스로 세션별 조합을 전환합니다:</p>
+    <table>
+      <tr><th>프리셋</th><th>내부 값</th><th>구성</th></tr>
+      <tr><td>Gemini Only</td><td><code>gemini_only</code></td><td>reasoning + generation = Gemini</td></tr>
+      <tr><td>Qwen Reasoning + Gemini Generation</td><td><code>qwen_reasoning_gemini_generation</code></td><td>혼합</td></tr>
+      <tr><td>Qwen Only</td><td><code>qwen_only</code></td><td>둘 다 Qwen</td></tr>
+      <tr><td>OpenRouter Only</td><td><code>openrouter_only</code></td><td>둘 다 OpenRouter</td></tr>
+      <tr><td>Ollama Only</td><td><code>ollama_only</code></td><td>둘 다 로컬 Ollama</td></tr>
+      <tr><td>Hugging Face Only</td><td><code>huggingface_only</code></td><td>둘 다 HF 엔드포인트</td></tr>
+      <tr><td>Custom (manual)</td><td><code>custom</code></td><td>env 기본값 유지</td></tr>
+    </table>
+  </div>
+
+  <!-- 2 -->
+  <h2><span class="num">02</span> Ingest 파이프라인 진행도</h2>
+  <table>
+    <tr><th>Phase</th><th>주제</th><th>상태</th></tr>
+    <tr><td>0 / 0+</td><td>Django·DRF·Celery·Streamlit·Chroma 기본 스택 + RAG 파이프라인</td><td><span class="st done">✅ 완료</span></td></tr>
+    <tr><td>1</td><td>Ingest layer skeleton — <code>chat/ingest/</code> loader/splitter/sink 추상</td><td><span class="st done">✅ 완료</span></td></tr>
+    <tr><td>2</td><td>Manifest + SHA256 dedup — 중복 적재 차단, 멱등 ingest</td><td><span class="st done">✅ 완료</span></td></tr>
+    <tr><td>2+</td><td>Chunk Lab / Token Lab 페이지</td><td><span class="st done">✅ 완료</span></td></tr>
+    <tr><td>2+</td><td>Upload API — Phase 2 manifest 우회 상태</td><td><span class="st warn">⚠️ 통합 필요</span></td></tr>
+    <tr><td>3</td><td>텍스트 loader (PDF/DOCX/HTML) — splitter dispatch 미통합</td><td><span class="st warn">⚠️ 통합 필요</span></td></tr>
+    <tr><td>4</td><td>Clause/heading splitter (사규·법규 조항 단위) — Codex 분담</td><td><span class="st todo">⏳ 예정</span></td></tr>
+    <tr><td>5–7</td><td>OCR loader · ORM sink · HWP/CAD 변환</td><td><span class="st todo">⏳ 예정</span></td></tr>
+    <tr><td>8</td><td>Upload API + Celery 비동기 (트리거 발생 시)</td><td><span class="st hold">⏸️ 보류</span></td></tr>
+  </table>
+
+  <!-- 3 -->
+  <h2><span class="num">03</span> 진행 중 — ONNX Reranker</h2>
+  <div class="card">
+    <p>현재 브랜치 <code>feature/onnx-reranker</code> 에서 작업 중. RAG 검색 결과를 cross-encoder 로 재정렬합니다.</p>
+    <ul>
+      <li><code>OnnxBgeReranker</code> (BAAI/bge-reranker-v2-m3) 추가 + provider manager 싱글톤 접근자</li>
+      <li>파이프라인 기본 시퀀스에 <code>rerank</code> 스텝 등록, <code>RetrieveModule</code> 가 raw docs 노출</li>
+      <li>Docker 빌드에서 reranker 는 <b>optional</b> (의존성 무거움 → 기본 비활성)</li>
+      <li>기본값 <code>RERANKER_ENABLED=0</code> — 켜려면 <code>1</code> 로 설정</li>
+    </ul>
+  </div>
+
+  <!-- 4 -->
+  <h2><span class="num">04</span> 다음 할 일 — 환경 설정 가이드</h2>
+
+  <h3>① Ollama 로컬 모델 <span class="st done" style="font-size:11px">✅ 모델 확인 + .env 반영 완료</span></h3>
+  <p style="color:var(--muted);font-size:13px">로컬 설치 모델: <code>qwen3.6</code> (23GB), <code>gemma4</code> (9.6GB). <code>llama3.1</code>은 미설치 → 필요 시 <code>ollama pull llama3.1</code>. <code>.env</code>는 <code>OLLAMA_MODEL=qwen3.6</code>으로 설정됨.</p>
+  <pre><span class="c"># 데몬 실행 (모델은 이미 로컬에 있음)</span>
+ollama serve
+
+<span class="c"># .env — provider 만 ollama 로 전환하면 즉시 사용 가능</span>
+<span class="k">REASONING_PROVIDER</span>=<span class="v">ollama</span>
+<span class="k">GENERATION_PROVIDER</span>=<span class="v">ollama</span>
+<span class="k">OLLAMA_BASE_URL</span>=<span class="v">http://localhost:11434/v1</span>
+<span class="k">OLLAMA_MODEL</span>=<span class="v">qwen3.6</span>   <span class="c"># 또는 gemma4</span></pre>
+
+  <h3>② Hugging Face — OpenAI 호환 엔드포인트 필요 <span class="st hold" style="font-size:11px">⏸️ 나중에 설정 (담당자 직접)</span></h3>
+  <p style="color:var(--muted);font-size:13px">엔드포인트는 추후 직접 준비 예정. 단순 모델명만으로는 부족하며 Inference Endpoint / TGI 같은 <b>OpenAI 호환 엔드포인트</b>가 있어야 합니다. (아래는 참고용 형식)</p>
+  <pre><span class="k">REASONING_PROVIDER</span>=<span class="v">huggingface</span>
+<span class="k">GENERATION_PROVIDER</span>=<span class="v">huggingface</span>
+<span class="k">HUGGINGFACE_API_KEY</span>=<span class="v">...</span>
+<span class="k">HUGGINGFACE_BASE_URL</span>=<span class="v">https://....endpoints.huggingface.cloud/v1</span>
+<span class="k">HUGGINGFACE_MODEL</span>=<span class="v">meta-llama/Llama-3.1-8B-Instruct</span></pre>
+
+  <h3>③ 임베딩은 별도 관리 (변경 시 재인덱싱)</h3>
+  <pre><span class="c"># 임베딩 변경 → 기존 Chroma 벡터 DB 재구축 필수</span>
+<span class="k">EMBEDDING_PROVIDER</span>=<span class="v">gemini</span>
+<span class="k">EMBEDDING_MODEL</span>=<span class="v">models/text-embedding-004</span></pre>
+
+  <h3>④ 프론트엔드에서 선택</h3>
+  <p>Streamlit 사이드바 <b>Provider Preset</b> 에서 <code>Ollama Only</code> / <code>OpenRouter Only</code> 등을 골라 세션 단위로 전환.</p>
+
+  <!-- 5 -->
+  <h2><span class="num">05</span> 환경 변수 통합 (이번 세션)</h2>
+  <p class="lead"><code>.env</code> 를 단일 source of truth 로 통합하고 <code>.env.example</code> 을 제거했습니다.</p>
+  <div class="card">
+    <ul>
+      <li><b>병합</b> — <code>.env.example</code> 에만 있던 <code>RERANKER_MODEL/TOP_N/TOP_K/DEVICE</code>, <code>OLLAMA_*</code>, <code>HUGGINGFACE_*</code> 키를 겹치지 않게 <code>.env</code> 에 추가</li>
+      <li><b>유지</b> — 이미 있던 키(<code>REASONING_PROVIDER</code>/<code>GENERATION_PROVIDER</code>=<code>openrouter</code> 등)는 기존 값 보존</li>
+      <li><b>제외</b> — <code>EMBEDDING_MODEL</code> 은 추가하지 않음 (<code>.env</code> 의 <code>GOOGLE_EMBEDDING_MODEL=models/gemini-embedding-001</code> 과 값 충돌 방지)</li>
+      <li><b>삭제</b> — git 추적되던 <code>.env.example</code> 제거</li>
+      <li><b>.gitignore</b> — <code>.env.example</code> 무시 추가 (<code>.env</code> 는 기존부터 무시됨)</li>
+    </ul>
+    <p style="color:var(--muted);font-size:13px;margin:0">결과: <code>.env</code> / <code>.env.example</code> 모두 git 에 올라가지 않으며, 환경 설정은 <code>.env</code> 한 곳에서 관리됩니다.</p>
+  </div>
+
+  <!-- 6 -->
+  <h2><span class="num">06</span> 잔여 이슈</h2>
+  <div class="card">
+    <ul>
+      <li>JWT 의존성은 있으나 endpoint protection 미적용 → Phase 1 작업</li>
+      <li>Forbidden-word 매칭이 substring (false positive 가능) → 단어 경계 정규식 강화 필요</li>
+      <li>외부 LLM(Gemini/Qwen) 데이터 송신 → 대외비 등급 상향 시 Ollama/vLLM 전환</li>
+      <li>Streaming(SSE) 미지원 → 응답 체감 속도 개선 여지</li>
+      <li>Single node — HA / auto-scale 미설계</li>
+      <li>Upload API 와 Phase 3 텍스트 loader 가 manifest/splitter dispatch 와 아직 미통합</li>
+    </ul>
+  </div>
+
+  <div class="footnote">
+    관련 문서:
+    <a href="프로젝트현황.md">프로젝트현황.md</a> ·
+    <a href="backend/docs/_index.md">backend/docs/_index.md</a> ·
+    <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> ·
+    <a href="prd.html">prd.html</a><br>
+    <span style="color:var(--grey)">생성: Claude Code · 2026-05-27 · 코드 기준 자동 정리 스냅샷</span>
+  </div>
+
+</div>
+</body>
+</html>

@@ -273,7 +273,8 @@ class VectorMetadataManager:
     def enhance_vector_search(
         question: str,
         k: int = 3,
-        metadata_filters: Optional[Dict[str, Any]] = None
+        metadata_filters: Optional[Dict[str, Any]] = None,
+        user_access_level: str = "internal",
     ) -> Dict[str, Any]:
         """
         Enhanced vector search using separate metadata.
@@ -292,7 +293,7 @@ class VectorMetadataManager:
             search_results = vector_store.similarity_search(question, k=k)
             
             # Process results as usual
-            base_results = RAGUtils.process_search_results(search_results)
+            base_results = RAGUtils.process_search_results(search_results, user_access_level=user_access_level)
             
             # Enhance with additional metadata
             enhanced_metadata = []
@@ -324,4 +325,4 @@ class VectorMetadataManager:
         except Exception as e:
             logger.error(f"Error in enhanced vector search: {str(e)}")
             # Fall back to basic results
-            return RAGUtils.get_rag_context(question, k)
+            return RAGUtils.get_rag_context(question, k, user_access_level=user_access_level)

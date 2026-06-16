@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T1 학습 — Sensitivity 라벨 + ACL — 왜 키워드 필터로 못 막나 학습</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #1a1a1a;
+    --muted: #666;
+    --border: #e1e1e1;
+    --accent: #2563eb;
+    --hl: #fef9c3;
+    --tip: #ecfdf5;
+    --warn: #fef3c7;
+    --note: #eff6ff;
+    --code-bg: #f3f4f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --hl: #3a2a08;
+      --tip: #0a2a1c;
+      --warn: #3a2a08;
+      --note: #0c2545;
+      --code-bg: #161b22;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+    max-width: 820px; margin: 0 auto; padding: 40px 24px;
+    line-height: 1.75; font-size: 16px;
+  }
+  h1 { font-size: 30px; margin-bottom: 4px; letter-spacing: -.5px; }
+  h2 {
+    font-size: 22px; margin-top: 56px; padding-bottom: 8px;
+    border-bottom: 3px solid var(--accent);
+  }
+  h2 .num {
+    display: inline-block; width: 36px; height: 36px;
+    background: var(--accent); color: #fff;
+    border-radius: 50%; text-align: center; line-height: 36px;
+    font-size: 16px; margin-right: 10px;
+  }
+  h3 { font-size: 18px; margin-top: 28px; color: var(--accent); }
+  h4 { font-size: 15px; margin: 16px 0 4px; color: var(--muted); }
+  p.lead { color: var(--muted); font-size: 16px; margin-top: 0; }
+
+  .toc {
+    background: var(--note); padding: 18px 24px; border-radius: 8px;
+    margin: 24px 0; font-size: 14px;
+  }
+  .toc ol { margin: 8px 0; padding-left: 20px; }
+  .toc li { margin: 3px 0; }
+  .toc a { color: var(--fg); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+
+  code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: 14px; font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre {
+    background: var(--code-bg); padding: 14px 18px; border-radius: 6px;
+    overflow-x: auto; font-size: 13px; line-height: 1.6;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre.diff .del { color: #b91c1c; }
+  pre.diff .add { color: #15803d; }
+  @media (prefers-color-scheme: dark) {
+    pre.diff .del { color: #f87171; }
+    pre.diff .add { color: #4ade80; }
+  }
+
+  .analogy {
+    background: var(--hl); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #d97706;
+  }
+  .analogy::before { content: "💡 비유 · "; font-weight: 700; color: #92400e; }
+  @media (prefers-color-scheme: dark) {
+    .analogy::before { color: #fcd34d; }
+  }
+
+  .tip {
+    background: var(--tip); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #16a34a;
+  }
+  .tip::before { content: "✅ 핵심 · "; font-weight: 700; color: #15803d; }
+  @media (prefers-color-scheme: dark) {
+    .tip::before { color: #4ade80; }
+  }
+
+  .warn {
+    background: var(--warn); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #d97706;
+  }
+  .warn::before { content: "⚠️ 주의 · "; font-weight: 700; color: #92400e; }
+
+  .exercise {
+    background: var(--note); padding: 18px 22px; border-radius: 8px;
+    margin: 24px 0; border-left: 4px solid var(--accent);
+  }
+  .exercise h4 { color: var(--accent); margin-top: 0; }
+
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14px;
+  }
+  th, td { padding: 10px 12px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); }
+
+  .keyword {
+    display: inline-block; background: var(--code-bg);
+    padding: 0 6px; border-radius: 3px;
+    font-size: 13px; font-weight: 600;
+  }
+
+  a { color: var(--accent); }
+  .small { font-size: 13px; color: var(--muted); }
+
+  /* night-specific additions */
+  .status-pill { display:inline-block; padding:2px 10px; border-radius:999px;
+    font-size:13px; font-weight:600; }
+  .status-pill.done    { background:#dcfce7; color:#166534; }
+  .status-pill.active  { background:#dbeafe; color:#1e40af; }
+  .status-pill.blocked { background:#fee2e2; color:#991b1b; }
+  .status-pill.planned { background:#f3f4f6; color:#374151; }
+  .card { border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin:14px 0; }
+  .card h3 { margin-top:0; }
+  .muted { color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+
+<p class="muted"><a href="index.html">← 대시보드</a> · <a href="T1.html">작업 리포트 →</a></p>
+<h1>📚 Sensitivity 라벨 + ACL — 왜 키워드 필터로 못 막나 학습</h1>
+<p class="muted">T1 · 임무: Moderation Phase A 구현 — sensitivity 라벨/User.access_level/retrieval 필터를 코드 변경 없이 운영자가 튜닝할 수 있는 기반으로 세움 · 업데이트 2026-05-28 02:30</p>
+<hr>
+<h2>오늘 건드린 개념: "라벨 기반 접근통제 (label-based ACL)"</h2>
+<p>RAG 시스템에서 "이 chunk 를 이 사용자에게 보여줘도 되는가?" 를 결정하는 정책. 키워드 필터로는 못 막는 문제를 라벨 + 비교 한 줄로 해결한다.</p>
+<div class="analogy">
+<strong>비유 — 회사 문서고 출입증.</strong><br>
+회사 문서고에 들어가면 모든 캐비닛에 색 스티커가 붙어있다: <strong>흰색(공개) · 파랑(사내) · 노랑(대외비) · 빨강(기밀)</strong>. 직원은 자기 출입증에 적힌 색까지만 캐비닛을 열 수 있다.<br><br>
+- 신입사원(출입증=파랑) 이 빨강 캐비닛 손잡이를 잡으려 하면? 잠겨있다. 그리고 보안실 로그에 "신입 OOO 가 빨강 캐비닛 시도" 가 찍힌다.<br>
+- 신입이 검색대(=retrieval) 에 "M&A 자료" 라고 요청하면? 검색대는 "빨강 캐비닛 3건, 노랑 캐비닛 2건이 매칭됐지만 당신 권한 밖이라 5건 가렸음 — 결과 12건 중 표시 7건" 이라고 알려준다.<br>
+&nbsp;&nbsp;→ 이 "가렸음 N건" 메시지가 바로 우리 시스템의 <code>redacted_count</code>.
+</div>
+
+<h2>왜 키워드 필터로는 못 막나</h2>
+<p>기존 코드(<code>moderation/filter.py</code>) 는 "이 단어가 텍스트에 있으면 차단" 식의 ForbiddenWord 매칭만 한다. 이건 출입증 검사가 아니라 <strong>불심검문</strong> 이다.</p>
+<table>
+<thead>
+<tr>
+<th>시나리오</th>
+<th>키워드 필터</th>
+<th>라벨 ACL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>신입이 작년 M&amp;A 보고서 검색</td>
+<td>"M&amp;A" 단어 차단 — but 보고서 본문에 "M&amp;A" 가 안 적혀있고 "통합 거래" 라고만 적혀있으면 통과</td>
+<td>보고서 자체가 confidential 라벨이라 신입(internal) 권한 부족으로 차단</td>
+</tr>
+<tr>
+<td>차장이 자기 부서 코드네임 검색</td>
+<td>"Project Titan" 차단 — but 그건 차장이 알아도 되는 자기 프로젝트</td>
+<td>차장(confidential) ≥ chunk(confidential) 이므로 통과</td>
+</tr>
+<tr>
+<td>운영자가 신규 등급 추가 (예: top-secret)</td>
+<td>코드 수정 + 배포 필요</td>
+<td>DB 에 한 row 추가 (Phase B에서 admin UI 로 코드 변경 없이)</td>
+</tr>
+</tbody>
+</table>
+<div class="tip">
+<strong>핵심.</strong> 키워드 필터는 <strong>내용</strong> 을 본다 — 우회가 쉽고 false positive 가 많다. 라벨 ACL 은 <strong>출처</strong> 를 본다 — 출처가 분류되면 본문이 어떻게 적혔든 정책이 일관된다.
+</div>
+
+<h2>우리 구현의 핵심 한 줄</h2>
+<pre><code class="language-python"># moderation/levels.py
+SENSITIVITY_LEVEL = {&quot;public&quot;: 0, &quot;internal&quot;: 1, &quot;confidential&quot;: 2, &quot;restricted&quot;: 3}
+
+def can_access(user_level: str, content_level: str) -&gt; bool:
+    return SENSITIVITY_LEVEL[user_level] &gt;= SENSITIVITY_LEVEL[content_level]
+</code></pre>
+<p><code>&gt;=</code> 한 줄. 이게 가능한 이유는 sensitivity 가 <strong>단조 ladder (monotone ladder)</strong> 라서다 — 빨강 출입증은 노랑/파랑/흰색 캐비닛까지 다 열린다. 모든 차원이 이렇게 깔끔하지 않다는 게 함정인데(부서 RBAC, 시간 제한 등), 부트캠프 범위에서는 단일 ladder 만으로 충분.</p>
+<div class="warn">
+<strong>주의 — 라벨이 메타데이터에 없으면?</strong><br>
+옛 청크는 sensitivity 메타가 없을 수 있다. 코드는 <code>DEFAULT_LEVEL = "internal"</code> 로 안전측 fallback. "기록 없는 데이터는 사내 정도로 본다" 는 정책 — public 으로 fallback 하면 옛 chunk 가 외부 유출 가능성이 생긴다.
+</div>
+
+<h2>4 boundary 가 같은 ladder 를 공유하는 이유</h2>
+<p><code>moderation/levels.py</code> 는 ORM 의존이 0이다. 이게 의도된 설계:
+1. <strong>업로드</strong> 경계: 운영자가 Document.sensitivity 부여 → <code>should_index()</code> 로 restricted 차단.
+2. <strong>질문</strong> 경계: 사용자 입력 검사 (Phase C — PII 매칭, Phase A 범위 밖).
+3. <strong>검색결과</strong> 경계: chunk 메타데이터의 sensitivity 와 User.access_level 비교 → <code>apply_acl_filter()</code>.
+4. <strong>답변</strong> 경계: LLM 응답 검사 (Phase C 범위).</p>
+<p>네 경계가 모두 <code>from moderation.levels import ...</code> 한 줄로 같은 ladder 를 import 하므로, 운영자가 새 등급을 추가하면 4 boundary 가 동시에 갱신된다.</p>
+<div class="analogy">
+<strong>비유 — 회사 전체가 같은 색표를 쓰기.</strong><br>
+출입증 색표가 정문 보안, 문서고, 메일 시스템, 회의실 예약 시스템마다 달랐다면? 신입이 "파랑인 줄 알았는데 회의실에서는 노랑이라며 거절당함" 같은 혼란이 생긴다. 회사 전체가 같은 4색표(public/internal/confidential/restricted) 를 공유하는 게 ladder 공유의 본질.
+</div>
+
+<h2>무성 드롭 (silent drop) 금지 — <code>redacted_count</code> 의 의의</h2>
+<p>retrieval 에서 chunk 가 가려졌는데 사용자가 모르면? 답변이 "정보가 없습니다" 처럼 보여 사용자가 가짜 답을 신뢰하거나, 거꾸로 "왜 결과가 없지" 라며 다시 비슷한 질문을 반복한다. 둘 다 신뢰 비용.</p>
+<p>우리 응답은:</p>
+<pre><code class="language-python">{
+  &quot;context&quot;: &quot;...&quot;,          # 권한 통과한 chunk 들의 본문
+  &quot;docs&quot;: [...],             # 권한 통과한 chunk 객체
+  &quot;image_paths&quot;: [...],
+  &quot;redacted_count&quot;: 3        # ← 가려진 갯수 노출
+}
+</code></pre>
+<p>Frontend (Phase D) 는 이 숫자로 citation ribbon 끝에 <code>[수정됨·3건]</code> amber 배지를 그린다. 사용자가 "내가 권한 부족이구나" 를 알면 결재 요청으로 자연스레 흐른다.</p>
+<div class="tip">
+<strong>핵심.</strong> 보안 정책은 차단만이 아니라 <strong>차단 사실의 가시화</strong> 까지 포함해야 신뢰가 유지된다. CLAUDE.md "무성 드롭 금지" 가 코드로 박힌 자리가 바로 <code>redacted_count</code>.
+</div>
+
+<h2>TDD 가 이번에 잡아준 함정</h2>
+<p>테스트 먼저 쓰면서 자연스레 결정한 케이스 3개:</p>
+<ol>
+<li><strong><code>can_access("god", "public")</code> — 오타 권한값은 KeyError</strong>: silent False 면 권한 오타가 "그냥 안 보임" 으로 묻힌다. KeyError 로 시끄럽게 죽는 게 운영 사고에 안전.</li>
+<li><strong>sensitivity 메타가 없는 chunk — default internal</strong>: 옛 데이터 호환. 위 warn 박스 참고.</li>
+<li><strong>권한 초과 chunk 의 page_content 가 context 문자열에 들어가지 않음</strong>: <code>process_search_results</code> 가 join 전에 필터링해야 — 한 줄 잘못 쓰면 본문 노출. 테스트가 이 순서를 명시 검증.</li>
+</ol>
+<p>만약 코드 먼저 쓰고 테스트 뒤에 썼다면, "redacted_count 키 존재" 같은 통과형 테스트만 추가하고 위 3개 케이스는 놓쳤을 가능성이 크다.</p>
+<div class="exercise">
+<h4>연습</h4>
+<ol>
+<li><strong>운영자 시나리오</strong>: 새 등급 <code>"executive"</code> (level=4, restricted 위) 를 추가하려 한다. <code>moderation/levels.py</code> 의 <code>SENSITIVITY_LEVEL</code> 에 <code>"executive": 4</code> 한 줄을 추가하면 — Document, User, 4 boundary 가 모두 자동으로 새 등급을 지원하나? 안 된다면 어디를 더 손대야 하나? (힌트: <code>knowledge/models.py:Sensitivity</code>, <code>chat/models.py:User.access_level</code> 의 choices, 그리고 마이그레이션.)</li>
+<li><strong>chunk 메타 누락 시</strong>: 옛 청크에 <code>sensitivity</code> 가 없는데 운영자가 default 를 <code>"confidential"</code> 로 바꾸고 싶다고 한다. <code>moderation/levels.py:DEFAULT_LEVEL = "internal"</code> 한 줄만 바꾸면 충분한가? 어떤 사이드 이펙트가 생길까? (힌트: public/internal user 가 옛 청크를 전부 못 보게 됨 — 운영 결정이 필요한 부분.)</li>
+</ol>
+</div>
+
+<h2>더 읽기</h2>
+<ul>
+<li>본 임무 결정 기록: <a href="T1.work.md">T1.work.md</a></li>
+<li>spec: <a href="../../superpowers/specs/2026-05-28-moderation-architecture.md"><code>backend/docs/superpowers/specs/2026-05-28-moderation-architecture.md</code></a> — 4단 ladder 결정 근거 + threat model</li>
+<li>plan: <a href="../../superpowers/plans/2026-05-28-moderation-implementation.md"><code>backend/docs/superpowers/plans/2026-05-28-moderation-implementation.md</code></a> — Phase A→B→C 단계별 작업표</li>
+<li>같은 야간 세션의 다른 학습 노트: <a href="T2.learning.md">T2.learning.md</a> (splitter), <a href="T3.work.md">T3.work.md</a> (docs 통합)</li>
+</ul>
+
+<footer class="muted" style="margin-top:60px; border-top:1px solid var(--border); padding-top:16px;">
+  생성:  · 야간 자율 멀티에이전트 wrap-up
+</footer>
+</body>
+</html>

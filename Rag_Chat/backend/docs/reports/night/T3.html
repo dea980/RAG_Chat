@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T3 작업 리포트 — 어젯밤 4-agent 결과 통합 문서화 — _index sync + cross-link + commit_split_plan 갱신</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #1a1a1a;
+    --muted: #666;
+    --border: #e1e1e1;
+    --accent: #2563eb;
+    --hl: #fef9c3;
+    --tip: #ecfdf5;
+    --warn: #fef3c7;
+    --note: #eff6ff;
+    --code-bg: #f3f4f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --hl: #3a2a08;
+      --tip: #0a2a1c;
+      --warn: #3a2a08;
+      --note: #0c2545;
+      --code-bg: #161b22;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+    max-width: 820px; margin: 0 auto; padding: 40px 24px;
+    line-height: 1.75; font-size: 16px;
+  }
+  h1 { font-size: 30px; margin-bottom: 4px; letter-spacing: -.5px; }
+  h2 {
+    font-size: 22px; margin-top: 56px; padding-bottom: 8px;
+    border-bottom: 3px solid var(--accent);
+  }
+  h2 .num {
+    display: inline-block; width: 36px; height: 36px;
+    background: var(--accent); color: #fff;
+    border-radius: 50%; text-align: center; line-height: 36px;
+    font-size: 16px; margin-right: 10px;
+  }
+  h3 { font-size: 18px; margin-top: 28px; color: var(--accent); }
+  h4 { font-size: 15px; margin: 16px 0 4px; color: var(--muted); }
+  p.lead { color: var(--muted); font-size: 16px; margin-top: 0; }
+
+  .toc {
+    background: var(--note); padding: 18px 24px; border-radius: 8px;
+    margin: 24px 0; font-size: 14px;
+  }
+  .toc ol { margin: 8px 0; padding-left: 20px; }
+  .toc li { margin: 3px 0; }
+  .toc a { color: var(--fg); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+
+  code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: 14px; font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre {
+    background: var(--code-bg); padding: 14px 18px; border-radius: 6px;
+    overflow-x: auto; font-size: 13px; line-height: 1.6;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  pre.diff .del { color: #b91c1c; }
+  pre.diff .add { color: #15803d; }
+  @media (prefers-color-scheme: dark) {
+    pre.diff .del { color: #f87171; }
+    pre.diff .add { color: #4ade80; }
+  }
+
+  .analogy {
+    background: var(--hl); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #d97706;
+  }
+  .analogy::before { content: "💡 비유 · "; font-weight: 700; color: #92400e; }
+  @media (prefers-color-scheme: dark) {
+    .analogy::before { color: #fcd34d; }
+  }
+
+  .tip {
+    background: var(--tip); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #16a34a;
+  }
+  .tip::before { content: "✅ 핵심 · "; font-weight: 700; color: #15803d; }
+  @media (prefers-color-scheme: dark) {
+    .tip::before { color: #4ade80; }
+  }
+
+  .warn {
+    background: var(--warn); padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; border-left: 4px solid #d97706;
+  }
+  .warn::before { content: "⚠️ 주의 · "; font-weight: 700; color: #92400e; }
+
+  .exercise {
+    background: var(--note); padding: 18px 22px; border-radius: 8px;
+    margin: 24px 0; border-left: 4px solid var(--accent);
+  }
+  .exercise h4 { color: var(--accent); margin-top: 0; }
+
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14px;
+  }
+  th, td { padding: 10px 12px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); }
+
+  .keyword {
+    display: inline-block; background: var(--code-bg);
+    padding: 0 6px; border-radius: 3px;
+    font-size: 13px; font-weight: 600;
+  }
+
+  a { color: var(--accent); }
+  .small { font-size: 13px; color: var(--muted); }
+
+  /* night-specific additions */
+  .status-pill { display:inline-block; padding:2px 10px; border-radius:999px;
+    font-size:13px; font-weight:600; }
+  .status-pill.done    { background:#dcfce7; color:#166534; }
+  .status-pill.active  { background:#dbeafe; color:#1e40af; }
+  .status-pill.blocked { background:#fee2e2; color:#991b1b; }
+  .status-pill.planned { background:#f3f4f6; color:#374151; }
+  .card { border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin:14px 0; }
+  .card h3 { margin-top:0; }
+  .muted { color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+
+<p class="muted"><a href="index.html">← 대시보드</a></p>
+<h1>T3 · 어젯밤 4-agent 결과 통합 문서화 — _index sync + cross-link + commit_split_plan 갱신</h1>
+<p>
+  <span class="status-pill done">done</span>
+  <span class="muted">업데이트 2026-05-28 02:31</span>
+</p>
+<p class="muted">임무: _index.md sync + 새 doc 들 cross-link + commit-split-plan 갱신</p>
+<p class="muted">👉 <a href="T3-learning.html">이 작업으로 배우는 RAG 개념 →</a></p>
+<hr>
+<blockquote>
+<p>이 doc 는 T3 야간 작업 로그. 각 임무 항목 끝낼 때마다 <code>### &lt;항목&gt;</code> 헤딩 5줄 append.</p>
+</blockquote>
+<h3><code>_index.md</code> 에 신규 doc 등록 라인 추가</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>_index.md</code> 에 §3.6 Moderation, §3.7 Night Autonomous 두 섹션 신설 (learn.md / references.md / setup_learning.md 등록). §4 sessions 표에 <code>missions.md</code> + <code>night/&lt;Tn&gt;.work·learning.md</code> 패턴 추가. §9.2 를 "Superpowers plans/specs" 표로 확장 (어젯밤·오늘 신규 plan/spec 4개). 기타 메모는 §9.3 으로 밀어내림.</li>
+<li><strong>왜</strong>: 어젯밤 4-agent 병렬 + 오늘 moderation/night_autonomous 결과로 생긴 신규 md 들이 <code>_index.md</code> 에 미등록 → "그림자 파일" 상태. mission 의 완료 정의 = <code>find Rag_Chat/backend/docs -name "*.md" | wc -l (44)</code> 과 인덱스 entry 개수가 일치해야 cross-link 무결.</li>
+<li><strong>그때 상황</strong>: <code>find</code> 결과 44개 md 중 <code>_index.md</code> 에 누락된 것 — <code>features/moderation/learn.md</code>, <code>features/moderation/references.md</code>, <code>features/night_autonomous/setup_learning.md</code>, superpowers plans 2종, superpowers specs 2종, <code>sessions/missions.md</code>. T1/T2 영역 코드는 손대지 않고 doc 만 등록.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: 후보 A — 새 섹션 만들지 않고 §3.4 token_lab 옆에 표만 추가. 후보 B (채택) — 각 도메인(moderation·night_autonomous) 을 독립 §3.x 섹션으로. CLAUDE.md 가 모더레이션을 "메인 요구사항" 으로 표시했고 phase A 가 진행 중이라 향후 doc 가 더 붙을 자리 → 섹션을 미리 끊는 게 인덱스 무결성 유지에 유리.</li>
+<li><strong>결과</strong>: <code>Rag_Chat/backend/docs/_index.md</code> modified — §3.5 뒤에 §3.6/§3.7 신설, §4 sessions 표에 2줄 추가, §9.2 superpowers 표로 확장. 코드 변경 없음. 다음 항목에서 검증.</li>
+</ul>
+<h3><code>commit_split_plan.md</code> 를 현재 <code>git status</code> 와 동기화</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>sessions/commit_split_plan.md</code> 를 <em>현재 <code>git status --short</code> 스냅샷</em> 기준으로 전면 재작성. 8개 commit 묶음으로 재분류: (1) chore 정리(OCR 중복 제거+루트 잡파일) → (2) phase 5 OCR → (3) HWP research → (4) embedding_lab skeleton → (5) chunk_lab heading/clause → (6) moderation Phase A → (7) design system DESIGN.md+레이아웃 → (8) meta docs(_index + CLAUDE.md + night narrative).</li>
+<li><strong>왜</strong>: 기존 문서가 1주일 이전 스냅샷 기준이었고, "다른 agent 가 4개 추가 커밋" 등의 단편 메모만 누적됨. 어젯밤 4-agent (yesterday) + 오늘 야간 4-agent 결과가 누적된 지금은 origin과 working tree 차이가 30개 파일+를 넘음 → 사용자가 깨어났을 때 <em>순서를 따라 commit</em> 할 수 있도록 8개 묶음을 명확히 분리해야 함.</li>
+<li><strong>그때 상황</strong>: <code>git status --short</code> 가 14 modified + 19 untracked. 이 중 일부는 어젯밤 yesterday 결과 (phase5/phase7a/embedding_lab/night-parallel.md), 일부는 오늘 야간 결과 (chunk_lab.py, moderation/levels.py, T2.work·learning, T3.work). DownSub HTML 한 개 (<code>파수 대외비 문서 관리 및 보안 _ Fasoo ...</code>) 가 루트에 떨어진 채 → "커밋하지 말 것" 섹션 유지.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: 후보 A — 기존 5묶음 구조 유지하고 새 항목만 append. 후보 B (채택) — 전면 재작성 + 작업 순서 제안 재정렬. 어젯밤+오늘로 변경 규모가 ~2배 → append 만 하면 어느 항목이 살아있는지/죽었는지 사용자가 다시 매핑해야 함. 통째 다시 쓰는 게 사용자 머리 부하 더 적음. 이력은 본문 상단 "재작성 이력" 으로 보존.</li>
+<li><strong>결과</strong>: <code>Rag_Chat/backend/docs/sessions/commit_split_plan.md</code> rewritten. 코드 변경 없음. embedding_lab 의 backend 코드(<code>embedding_views.py</code>)가 status 에 안 보이는 점은 <em>4번 묶음</em> 본문에 "yesterday T2 가 코드까지 안 갔을 가능성 — 진행 직전 status 재점검" 으로 명시.</li>
+</ul>
+<h3><code>handoff.md</code> 의 "다음 세션 진입점" 업데이트</h3>
+<ul>
+<li><strong>무엇을</strong>: <code>sessions/handoff.md</code> 끝에 §13 "2026-05-28 (야간 4-agent 통합)" 섹션 추가. T1/T2/T3 결과 매트릭스, §13.1 즉시 처리할 것 (4단계), §13.2 야간 산출물 위치 트리, §13.3 OCR 중복 정리 카운트다운, §13.4 design system 신설, §13.5 다음 phase 진입 순서 4단계. 끝의 "관련 문서" 표에 <code>reports/night/index.html</code> · <code>missions.md</code> · 야간 narrative 링크 추가.</li>
+<li><strong>왜</strong>: 기존 handoff.md 가 §12 (2026-05-27 저녁 마감) 에서 멈춰 있어 <em>어젯밤 + 오늘 야간 결과</em> 반영 안 됨. 다음 세션이 깨어났을 때 무엇부터 commit 할지 5분 안에 파악하려면 진입점이 최신 상태여야 함.</li>
+<li><strong>그때 상황</strong>: handoff.md 가 12개 섹션, 마지막은 yesterday 저녁 (Phase 6 ORM + Phase 5 OCR). 그 사이 yesterday 야간 4-agent + 오늘 야간 4-agent 가 추가됨 → moderation Phase A 가 진행 중인데 handoff 에 진입 경로 없음. T1 mission 의 Exit Criteria 인용 경로 (<code>plans/2026-05-28-moderation-implementation.md §A.6</code>) 도 노출 안 됨.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: 후보 A — yesterday 작업 별도 §13, 오늘 야간 §14 두 섹션. 후보 B (채택) — 오늘 야간 한 섹션에 yesterday 도 짧게 reference. handoff 는 <em>다음 세션 진입점</em> 목적이라 가장 최신 야간 한 번에 정리하는 게 5분 파악에 유리. yesterday 의 자세한 narrative 는 <code>2026-05-27-night-parallel.md</code> 가 이미 있음 → 거기로 link.</li>
+<li><strong>결과</strong>: <code>Rag_Chat/backend/docs/sessions/handoff.md</code> modified — §13 추가 (5 sub-sections), 관련 문서 표 확장 (<code>reports/night/index.html</code> + <code>missions.md</code> + yesterday narrative 추가). 코드 변경 없음.</li>
+</ul>
+<h3>신규 skeleton doc 에 "5분 진입" 콜아웃 추가</h3>
+<ul>
+<li><strong>무엇을</strong>: 3개 skeleton doc 의 머리에 <em>5분 진입</em> 콜아웃 한 단락 삽입. (1) <code>phase5_ocr.md</code> — OCR 중복 정리 완료 흔적 + loader_for 단일 반환 sanity 명령. (2) <code>phase7a_hwp.md</code> — yesterday T4 리서치 결론 (pyhwp 채택, six 동반, libhwp/LibreOffice/hwp-extract 거부, AGPLv3 주의) 한 단락 요약. (3) <code>embedding_lab/page.md</code> — yesterday T2 가 backend 코드까지 안 갔을 가능성 + <code>git status | grep embedding</code> 으로 재확인 가이드 + 오늘 T2 는 chunk_lab 작업이라는 명시.</li>
+<li><strong>왜</strong>: mission "skeleton 이 비어있으면 <em>플레이스홀더 채워두기</em>. 다음 세션 작성자가 5분 안에 맥락 잡도록". 3개 doc 는 yesterday T1 이 만든 풀 skeleton 이라 비어있진 않지만 <em>현재 시점 상태</em> (OCR 정리 / HWP 결정 / embedding_lab 코드 부재) 가 본문에 없음 → 다음 작성자가 git status + 다른 doc 들 다 읽어야 알 수 있음. 머리 콜아웃 한 단락이 그 5분을 줄임.</li>
+<li><strong>그때 상황</strong>: phase5_ocr.md = T3 라고 적혀 있는데 <em>yesterday</em> T3 (오늘 야간의 T3 = 본 터미널 = 문서화) 와 혼동됨. yesterday 야간의 T3 가 OCR loader 코드 담당이었고, 오늘 야간의 T3 가 <em>그 결과의 문서 통합</em> 담당. 시점 구분이 본문에 없어 5분 진입 콜아웃에 "yesterday T3" 로 명시.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: 후보 A — skeleton 본문 전체를 yesterday 결과 반영하여 재작성. 후보 B (채택) — 머리에 5분 진입 콜아웃 한 단락만, 본문은 yesterday 시점 청사진 유지. 본문은 <em>구현 후</em> 결과로 채워질 자리라서 미리 덮어쓰면 다음 세션 작성자가 <em>yesterday 의 미해결 항목</em> 을 추적하기 어려워짐. 콜아웃은 <em>현재 시점 상태 메모</em> 로 가볍게 얹는 게 낮은 부담.</li>
+<li><strong>결과</strong>: <code>features/ingest/phase5_ocr.md</code>, <code>features/ingest/phase7a_hwp.md</code>, <code>features/embedding_lab/page.md</code> 각 modified. 코드 변경 없음. 각 doc 머리 4~6줄 추가.</li>
+</ul>
+<h3>Cross-link 무결성 검증</h3>
+<ul>
+<li><strong>무엇을</strong>: 신규 5개 doc 의 cross-link 그래프 점검. (a) <code>_index.md → 5 docs</code> forward 5/5 ✓ (이번 세션 추가). (b) <code>night-parallel.md → 5 docs</code> forward 4/5 — moderation/learn.md 미참조 (conceptually 어젯밤 세션과 무관, 오늘 작업). (c) <code>5 docs → night-parallel.md</code> reverse 3/5 — editable 3개 skeleton (phase5_ocr/phase7a_hwp/embedding_lab/page) 의 "관련 문서" 섹션에 이미 존재. (d) <code>phase7a_hwp_research.md</code> + <code>moderation/learn.md</code> 의 reverse 는 미존재 (둘 다 T3 write-set 밖이라 수정 불가). 다만 두 파일 모두 인접 doc (<code>phase7a_hwp.md</code> / <code>architecture/security.md</code> / <code>superpowers/specs/.../moderation-architecture.md</code>) 으로 1-hop 이내 reach 가능 → 그래프는 fully connected.</li>
+<li><strong>왜</strong>: mission 완료 정의가 "<code>find Rag_Chat/backend/docs -name "*.md" | wc -l</code> 와 _index.md entry 개수 일치 (cross-link 무결성)" + 새 doc 들의 양방향 연결. 그림자 파일 방지가 본질.</li>
+<li><strong>그때 상황</strong>: <code>find</code> = 46개 md (T3.work.md 포함). <code>_index.md</code> 의 unique md 링크 = 49 (외부 README/ARCHITECTURE/프로젝트현황 3개 + 내부 46개). 일치. moderation/learn.md ↔ night-parallel.md 는 conceptual mismatch (시점 다름) — strict 양방향 강제는 무의미. 그래프 reachability 만 확보.</li>
+<li><strong>대안 &amp; 선택 이유</strong>: 후보 A — write-set 위반하고 phase7a_hwp_research.md + moderation/learn.md 에 night-parallel backlink 1줄씩 추가. 후보 B (채택) — write-set 준수 + reachability 만 확인 + work.md 에 상태 명시. mission 첫 규칙 "자기 영역 밖 파일은 절대 수정 금지" 가 cross-link 강제보다 상위 규칙.</li>
+<li><strong>결과</strong>: 코드/문서 변경 없음. 검증 결과만 본 work log 에 기록. 다음 세션이 night-parallel.md (어젯밤 narrative) 와 <em>오늘 야간 narrative</em> (= missions.md + night/T*.work.md) 를 분리해 관리하는 게 더 자연스러움 — 따라서 오늘 야간 결과는 missions.md + handoff.md §13 에 집중.</li>
+</ul>
+
+<footer class="muted" style="margin-top:60px; border-top:1px solid var(--border); padding-top:16px;">
+  생성:  · 야간 자율 멀티에이전트 wrap-up
+</footer>
+</body>
+</html>

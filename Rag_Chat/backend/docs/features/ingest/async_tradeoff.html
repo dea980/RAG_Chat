@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Async Ingest vs Context Lightening — Tradeoff</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #1a1a1a;
+    --muted: #666;
+    --border: #e1e1e1;
+    --accent: #2563eb;
+    --pro: #16a34a;
+    --con: #dc2626;
+    --card-a: #eff6ff;
+    --card-b: #fef3c7;
+    --code-bg: #f3f4f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --pro: #3fb950;
+      --con: #f85149;
+      --card-a: #0c2545;
+      --card-b: #3a2a08;
+      --code-bg: #161b22;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+    max-width: 1080px; margin: 0 auto; padding: 40px 24px;
+    line-height: 1.6;
+  }
+  h1 { font-size: 28px; margin-bottom: 4px; }
+  h2 { font-size: 20px; margin-top: 40px; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
+  h3 { font-size: 16px; margin-top: 24px; }
+  p.lead { color: var(--muted); font-size: 15px; margin-top: 0; }
+  code { background: var(--code-bg); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  pre { background: var(--code-bg); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th, td { padding: 10px 12px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+  @media (max-width: 720px) { .cards { grid-template-columns: 1fr; } }
+  .card { padding: 20px; border-radius: 8px; border: 1px solid var(--border); }
+  .card.a { background: var(--card-a); }
+  .card.b { background: var(--card-b); }
+  .card h3 { margin-top: 0; }
+  .card .tag {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; background: var(--accent); color: #fff;
+    margin-bottom: 8px;
+  }
+  .pros, .cons { list-style: none; padding-left: 0; margin: 8px 0; }
+  .pros li::before { content: "+"; color: var(--pro); font-weight: 700; margin-right: 8px; }
+  .cons li::before { content: "-"; color: var(--con); font-weight: 700; margin-right: 8px; }
+  .pros li, .cons li { font-size: 14px; margin: 4px 0; }
+  .verdict {
+    background: var(--code-bg);
+    border-left: 4px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin-top: 24px;
+  }
+  .verdict strong { color: var(--accent); }
+  .small { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>Async Ingest vs Context Lightening</h1>
+<p class="lead">
+  "맥락의 경량화" 라는 표현이 가리키는 두 갈래 — Redis/Celery 를 <b>어디에</b> 쓸 것인가 —
+  의 장단점과 결정 기준.
+</p>
+
+<div class="verdict" style="border-left-color: var(--con); margin-top: 12px;">
+  <p><strong style="color: var(--con);">⚠️ 갱신 결론 (2026-05-27)</strong></p>
+  <p>
+    <b>지금은 둘 다 필요 없음.</b> 이전 결론("A 인제스천 비동기 먼저") 은 과한 권고였다.
+    현재 ingest 는 CLI 단일 호출이라 HTTP timeout·동시성·외부 트리거 같은 진짜 압력이 없다.
+    <b>Phase 2 manifest (Django 모델 + SHA256)</b> 만 들어가면 중복 적재·재실행 안전성
+    90% 가 해결된다. Celery 는 <b>Phase 8 (Upload API)</b> 에서 같이.
+    B(컨텍스트 캐시) 는 트래픽 누적 후 임베딩 캐시만 단순히 추가.
+  </p>
+  <p class="small">아래 카드들은 <b>그 시점이 왔을 때 참고할 설계</b> 로 보존.</p>
+</div>
+
+<h2>1. 두 갈래의 정의</h2>
+<table>
+  <thead>
+    <tr><th style="width: 14%;">갈래</th><th>해결하는 문제</th><th>Redis 의 역할</th><th>Celery 의 역할</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>A. 인제스천 부하 분리</b></td>
+      <td>PDF/OCR/HWP 처리가 무거워 동기 호출이 timeout/UX 막힘 + 중복 적재</td>
+      <td>브로커, in-progress 락, 진행률 캐시</td>
+      <td>shared_task 로 ingest 비동기 실행, beat 로 디렉토리 정기 스캔</td>
+    </tr>
+    <tr>
+      <td><b>B. LLM 컨텍스트 절약</b></td>
+      <td>retrieval 결과·임베딩·대화 history 가 LLM 호출 비용·지연을 키움</td>
+      <td>retrieval 결과 캐시, 임베딩 캐시, 대화 요약 캐시</td>
+      <td>(거의 안 씀 — 캐시는 동기성)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>2. 카드별 장단점</h2>
+
+<div class="cards">
+  <div class="card a">
+    <span class="tag">A · Ingest 측</span>
+    <h3>인제스천을 Celery + Redis 로 비동기화</h3>
+
+    <p class="small">대상: <code>chat.ingest.pipeline.ingest_path</code> 호출 경로.</p>
+
+    <h4>장점</h4>
+    <ul class="pros">
+      <li>HTTP/CLI 가 즉시 반환 — UX 막힘 해소</li>
+      <li>이미 Celery worker + beat 가 떠 있어서 추가 인프라 ✕</li>
+      <li>Redis 락으로 같은 파일 동시 ingest 차단 (현재 88청크 누적 문제의 부분 해결)</li>
+      <li>Beat 스케줄로 NAS/S3 디렉토리 자동 색인 가능</li>
+      <li>OCR/HWP 처럼 분 단위 걸리는 작업이 워크플로우 막지 않음</li>
+      <li>실패 시 retry / 재시도 정책을 task 단위로 관리 가능</li>
+    </ul>
+
+    <h4>단점</h4>
+    <ul class="cons">
+      <li>로컬 dev 마찰 — worker 안 띄우면 task 실행 안 됨 (CLI 동기 경로는 유지 필요)</li>
+      <li>관측성 — task_id 별 추적 위해 Flower / Sentry 도입 필요</li>
+      <li>임베딩 provider 다운 시 retry 폭주 → 큐 폭주. backoff/DLQ 설계 필요</li>
+      <li>락 만료 corner case — worker 가 죽으면 lock 이 영구 잡혀 차단되는 시나리오 (manifest 가 같이 가야 안전)</li>
+      <li>테스트 복잡도 — <code>CELERY_TASK_ALWAYS_EAGER</code> eager 모드 분기 관리</li>
+    </ul>
+  </div>
+
+  <div class="card b">
+    <span class="tag">B · Retrieval / LLM 측</span>
+    <h3>Redis 캐시로 LLM 입력 컨텍스트 가볍게</h3>
+
+    <p class="small">대상: <code>RAGUtils.get_rag_context</code> + LLM 호출 전후.</p>
+
+    <h4>장점</h4>
+    <ul class="pros">
+      <li>임베딩 API 호출 캐시 → 비용 절감 (반복 질문에서 효과 큼)</li>
+      <li>retrieval 결과 캐시 → top-k 검색 자체를 건너뛰어 지연 감소</li>
+      <li>대화 요약 캐시 → 멀티턴 컨텍스트 부풀음 억제 (7강 강사의 "히스토리 관리 핵심 과제")</li>
+      <li>코드 변경 작음 — `cache.get_or_set` 한 줄</li>
+      <li>비용·지연 효과가 즉시 측정 가능 (캐시 hit rate)</li>
+    </ul>
+
+    <h4>단점</h4>
+    <ul class="cons">
+      <li>인제스천 병목은 그대로 — ingest 무거운 문제는 해결 X</li>
+      <li>retrieval 캐시는 stale 위험 — corpus 갱신 시 invalidation 정책 필요</li>
+      <li>임베딩 캐시는 모델 바뀌면 통째로 무효 (model 키 포함 필요)</li>
+      <li>대화 요약 캐시는 결국 또 다른 LLM 호출 → 비용 측정 필요</li>
+      <li>"맥락 경량화" 라는 단어가 가리키는 게 맞는지 모호 (Ingest 부하라면 헛짚는 셈)</li>
+    </ul>
+  </div>
+</div>
+
+<h2>3. 결정 기준 — 어떤 신호가 어느 쪽을 가리키나</h2>
+<table>
+  <thead>
+    <tr><th>관측되는 증상</th><th>A 인제스천</th><th>B 컨텍스트</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>"파일 올리니까 화면 멈춤"</td><td>✅ 명확</td><td>—</td></tr>
+    <tr><td>"같은 PDF 두 번 넣으니 중복 적재"</td><td>✅ 명확 (락+manifest)</td><td>—</td></tr>
+    <tr><td>"같은 질문 반복인데 매번 임베딩 비용 청구"</td><td>—</td><td>✅ 명확 (embedding cache)</td></tr>
+    <tr><td>"멀티턴 대화 길어지니까 LLM 응답 느려짐"</td><td>—</td><td>✅ (요약 캐시)</td></tr>
+    <tr><td>"OCR 한 권 돌리는 동안 챗봇 응답 지연"</td><td>✅ (worker 분리)</td><td>—</td></tr>
+    <tr><td>"동시 사용자 늘었더니 임베딩 API rate limit"</td><td>일부 (큐잉)</td><td>✅ (cache hit)</td></tr>
+    <tr><td>"NAS 에 파일만 떨어뜨려 두면 자동 색인되면 좋겠다"</td><td>✅ (beat scan)</td><td>—</td></tr>
+    <tr><td>"corpus 안 바뀌었는데 매번 같은 검색이 비싸다"</td><td>—</td><td>✅ (retrieval cache)</td></tr>
+  </tbody>
+</table>
+
+<h2>4. 비용·작업량 비교</h2>
+<table>
+  <thead>
+    <tr><th>축</th><th>A (Async Ingest)</th><th>B (Context Cache)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>코드 변경량</td><td>중 — task + 락 + beat schedule + manifest 의존</td><td>소 — cache decorator 정도</td></tr>
+    <tr><td>인프라</td><td>이미 떠 있음 (Celery + Redis)</td><td>이미 떠 있음 (Redis)</td></tr>
+    <tr><td>테스트 복잡도</td><td>높음 — EAGER 모드, retry 시나리오</td><td>낮음 — hit/miss만 검증</td></tr>
+    <tr><td>운영 위험</td><td>중 — 큐 폭주/락 누수 가능</td><td>저 — 캐시 stale 정도</td></tr>
+    <tr><td>가시적 효과</td><td>UX 즉각 개선</td><td>비용/지연 지표 개선 (대시보드 필요)</td></tr>
+    <tr><td>다른 작업과 의존</td><td>Phase 2 manifest 와 함께 가야 안전</td><td>독립 — 언제든 추가/제거 가능</td></tr>
+  </tbody>
+</table>
+
+<h2>5. 권장 결론 (갱신)</h2>
+
+<div class="verdict">
+  <p>
+    <strong>지금은 둘 다 보류. 대신 Phase 2 manifest 부터.</strong>
+  </p>
+
+  <h3>왜 A 도 보류인가</h3>
+  <p>이전 권고는 트리거가 없는 상태에서 인프라를 미리 깔자는 제안이었다. 사실 관계:</p>
+  <ul>
+    <li>현재 ingest 는 <code>python manage.py build_vectors</code> CLI 단발성 호출. HTTP timeout 같은 압력이 없음.</li>
+    <li>중복 적재(현재 88청크 누적) 는 Celery 락이 아닌 <b>Django 모델 + SHA256</b> 으로 해결됨.</li>
+    <li>PDF/HWP/OCR 무겁다 → CLI 면 그냥 기다리면 됨. request-path 가 아님.</li>
+    <li>Upload API 도 디렉토리 자동 스캔도 지금 요구사항 아님.</li>
+  </ul>
+
+  <h3>Celery 가 진짜로 필요한 트리거</h3>
+  <ul>
+    <li>Upload API — 영업팀이 Admin 에서 파일 드롭 → HTTP 응답이 ingest 못 기다림</li>
+    <li>외부 트리거 — Slack/Email/Webhook 자동 인입</li>
+    <li>동시 운영자 — 다수 사용자 동시 업로드</li>
+  </ul>
+  <p>이 셋 중 <b>하나라도</b> 발생하는 시점에 위 카드 A 의 설계를 적용. 그전에는 동기 CLI 유지.</p>
+
+  <h3>B (컨텍스트 캐시) 는</h3>
+  <p>트래픽 누적 후 측정 데이터를 보면서 결정. <b>예외 — 임베딩 캐시 한 줄</b> 은 비용 효과 즉각적이라 트래픽 없어도 도입 가능. 그 외 retrieval/대화 요약 캐시는 stale 위험만 키움.</p>
+
+  <h3>지금 실제로 할 것</h3>
+  <ol>
+    <li><b>Phase 2</b> — IngestManifest 모델 + SHA256 dedup (Celery 없이 동기로)</li>
+    <li>Phase 3~7 — loader 추가 (Codex/다른 Claude 분담)</li>
+    <li>Phase 8 가 오면 그때 이 문서 재방문</li>
+  </ol>
+</div>
+
+<h2>6. 적용 순서 (갱신)</h2>
+<table>
+  <thead><tr><th>단계</th><th>내용</th><th>분류</th><th>지금?</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Phase 2 — IngestManifest 모델 + SHA256 dedup (동기)</td><td>전제</td><td>✅ 다음 작업</td></tr>
+    <tr><td>2</td><td>임베딩 API 응답 Redis 캐시 (model 키 포함)</td><td>B (저비용)</td><td>⚠️ 선택 — 비용 우려 있을 때</td></tr>
+    <tr><td>3</td><td><code>ingest_file_task</code> shared_task + Redis 락</td><td>A</td><td>❌ Phase 8 와 함께</td></tr>
+    <tr><td>4</td><td>Celery beat 디렉토리 스캔 → 자동 색인</td><td>A</td><td>❌ Phase 8 와 함께</td></tr>
+    <tr><td>5</td><td>Upload API + 진행률 cache.set</td><td>A</td><td>❌ 요구사항 들어올 때</td></tr>
+    <tr><td>6</td><td>retrieval 결과 캐시 (corpus 버전 키 포함)</td><td>B</td><td>❌ 트래픽 누적 후</td></tr>
+    <tr><td>7</td><td>대화 요약 캐시 — 멀티턴 길어질 때만</td><td>B</td><td>❌ 멀티턴 비용 문제 보일 때</td></tr>
+  </tbody>
+</table>
+
+<p class="small" style="margin-top:48px; text-align:center;">
+  · 관련 문서: <code>ingest_layer.md</code>, <code>ingest_phase1_skeleton.md</code>, <code>async_ingest_plan.md</code>, <code>chunk_testing_page.md</code>
+</p>
+
+</body>
+</html>

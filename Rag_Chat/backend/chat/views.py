@@ -17,9 +17,11 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from pathlib import Path
 import pandas as pd
 import os
-from .redis_manager import RedisMessageManager
+from .redis_manager import RedisMessageManager, refresh_user_session
 from .provider_overrides import set_override as set_provider_override, get_override as get_provider_override, clear_override as clear_provider_override
 from .pipeline import ModuleContext, PipelineRunner, ModuleError
+from moderation.filter import apply as moderate_text, BlockedByModerationError
+from moderation.models import ModerationLog
 
 # Ensure Google Gemini API key is set
 os.environ["GOOGLE_API_KEY"] = settings.GOOGLE_API_KEY
@@ -38,21 +40,30 @@ from .utils import RAGUtils
 from .providers import provider_manager
 
 # For backward compatibility
-def get_rag_context(question: str) -> Dict[str, Any]:
+def get_rag_context(question: str, user_access_level: str = "internal") -> Dict[str, Any]:
     """Backwards compatibility wrapper for the RAGUtils class method"""
-    return RAGUtils.get_rag_context(question)
+    return RAGUtils.get_rag_context(question, user_access_level=user_access_level)
 
 class RedisMessageHistory(BaseChatMessageHistory):
-    def __init__(self, user_id: str):
+    def __init__(self, user_id: str, history_limit: int | None = None):
+        """history_limit = last N messages to return (None = all).
+
+        Truncating history caps prompt size — each retained turn becomes
+        prefix tokens fed to the LLM on every subsequent call.
+        """
         self.user_id = user_id
-    
+        self.history_limit = history_limit
+
     @property
     def messages(self) -> List[BaseMessage]:
-        """Return a list of messages from Redis"""
+        """Return a list of messages from Redis (newest-last)."""
         try:
             message_store = get_message_store()
             raw_messages = message_store.get_messages(self.user_id)
-            
+
+            if self.history_limit is not None and self.history_limit >= 0:
+                raw_messages = raw_messages[-self.history_limit:]
+
             # Convert raw messages to LangChain BaseMessage objects
             result = []
             for msg in raw_messages:
@@ -60,7 +71,7 @@ class RedisMessageHistory(BaseChatMessageHistory):
                     result.append(AIMessage(content=msg.get("content", "")))
                 else:
                     result.append(HumanMessage(content=msg.get("content", "")))
-            
+
             return result
         except Exception as e:
             logger.error(f"Error retrieving messages from history: {str(e)}")
@@ -84,17 +95,23 @@ class RedisMessageHistory(BaseChatMessageHistory):
         except Exception as e:
             logger.error(f"Error clearing message history: {str(e)}")
 
-def history_session_handler(session_id: str) -> BaseChatMessageHistory:
-    return RedisMessageHistory(session_id)
+def history_session_handler(session_id: str, history_limit: int | None = None) -> BaseChatMessageHistory:
+    """If `history_limit` is set, only the last N messages are exposed to the LLM."""
+    return RedisMessageHistory(session_id, history_limit=history_limit)
 
 class ChatRateThrottle(UserRateThrottle):
     rate = '60/minute'  # Increased for development
 
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 class ChatAPIView(APIView):
     throttle_classes = [ChatRateThrottle]
-        
+    # B4 — chat requires authentication. user identity + access_level come
+    # from the session (`request.user`), not from request payload. This is
+    # the boundary that makes Phase A ACL meaningful — without it, any
+    # client could forge user_id and bypass the sensitivity filter.
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         try:
             question = request.data.get("question")
@@ -104,14 +121,11 @@ class ChatAPIView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Get user_id from JSON payload instead of cookies
-            user_id = request.data.get('user_id')
-            if not user_id:
-                return Response(
-                    {"error": "사용자 ID가 필요합니다."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-                
+            # Authoritative user identity — session, not payload.
+            # Any `user_id` in request.data is silently ignored.
+            user_obj = request.user
+            user_id = user_obj.user_id
+
             # Question Data Save
             chat_data = {
                 "user": user_id,
@@ -124,19 +138,49 @@ class ChatAPIView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             chat_instance = chat_serializer.save()
-            
+
+            # Inbound forbidden-word filter — runs BEFORE the LLM sees the text.
+            # BLOCK short-circuits; MASK rewrites the question; WARN is logged.
+            try:
+                mod_in = moderate_text(
+                    question,
+                    source=ModerationLog.Source.INBOUND,
+                    user=user_obj,
+                    chat=chat_instance,
+                )
+            except BlockedByModerationError as exc:
+                from moderation.messages import next_steps_for
+                chat_instance.response_text = "[BLOCKED] 요청에 차단 단어가 포함되어 있습니다."
+                chat_instance.save(update_fields=["response_text"])
+                return Response(
+                    {
+                        "error": "요청에 차단된 단어가 포함되어 있습니다.",
+                        "blocked_words": exc.words,
+                        "categories": exc.categories,
+                        "next_steps": next_steps_for(exc.categories),
+                        "chat_id": chat_instance.question_id,
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            sanitized_question = mod_in.sanitized
+
             history = history_session_handler(user_id)
+            # Persona × audience_tier ACL — view 가 User.persona 를 컨텍스트에 주입.
+            # null 이면 RetrieveModule 이 가장 보수적 fallback (public + retail) 사용.
             pipeline_context = ModuleContext(
-                question=question,
+                question=sanitized_question,
                 session_id=user_id,
                 user_id=user_id,
                 history_handler=history_session_handler,
                 history=history,
+                user_access_level=getattr(user_obj, "access_level", "internal") or "internal",
+                extra={"persona": getattr(user_obj, "persona", None)},
             )
 
             pipeline = PipelineRunner(
                 [
                     {"type": "retrieve"},
+                    {"type": "rerank"},
                     {"type": "reasoning"},
                     {"type": "generation"},
                 ]
@@ -165,6 +209,19 @@ class ChatAPIView(APIView):
             rag_instance = rag_serializer.save()
 
             response_text = pipeline_context.response or ""
+
+            # Outbound filter — strip secrets that may have leaked through the LLM.
+            try:
+                mod_out = moderate_text(
+                    response_text,
+                    source=ModerationLog.Source.OUTBOUND,
+                    user=user_obj,
+                    chat=chat_instance,
+                )
+                response_text = mod_out.sanitized
+            except BlockedByModerationError:
+                response_text = "응답에 차단된 내용이 포함되어 표시할 수 없습니다. 관리자에게 문의하세요."
+
             chat_instance.data_id = rag_instance.data_id
             chat_instance.response_text = response_text
             chat_instance.save()
@@ -182,7 +239,9 @@ class ChatAPIView(APIView):
             return Response({
                 "response": response_text,
                 "chat_id": chat_instance.question_id,
-                "images": pipeline_context.images
+                "images": pipeline_context.images,
+                # Layer 2 ACL — frontend uses this to render `[수정됨·N건]`.
+                "redacted_count": rag_metadata.get("redacted_count", 0),
             }, status=status.HTTP_200_OK)
                 
         except Exception as e:
@@ -205,14 +264,9 @@ class ChatUserAPIView(APIView):
                 try:
                     user = User.objects.get(user_id=existing_user_id)
 
-                    # Refresh user expiration status if necessary
-                    if user.expired_datetime is not None:
-                        user.expired_datetime = None
-                        user.save(update_fields=["expired_datetime"])
-
-                    # Update the session in Redis
+                    # Atomically aligns DB expired_datetime + Redis TTL
                     redis_manager = get_message_store()
-                    redis_manager.set_session(existing_user_id)
+                    refresh_user_session(user, redis_manager)
 
                     return Response({
                         "user_id": user.user_id
@@ -228,7 +282,7 @@ class ChatUserAPIView(APIView):
             # Initialize session in Redis
             try:
                 redis_manager = get_message_store()
-                redis_manager.set_session(user.user_id)
+                refresh_user_session(user, redis_manager)
                 logger.info(f"Set new session in Redis for user {user.user_id}")
             except Exception as e:
                 logger.error(f"Failed to set session in Redis: {e}")
@@ -266,22 +320,16 @@ class UpdateActivityAPIView(APIView):
                     status=status.HTTP_401_UNAUTHORIZED
                 )
             
-            # Update user's last activity time in database
-            # last_activity 필드가 auto_now=True로 설정되어 있으므로
-            # 객체를 불러와서 저장만 해도 자동으로 현재 시간으로 업데이트됨
             try:
                 user = User.objects.get(user_id=user_id)
-                user.save(update_fields=['last_activity'])
-                logger.debug(f"Updated last_activity for user {user_id}")
             except User.DoesNotExist:
                 logger.error(f"User {user_id} not found when updating activity")
                 return Response(
                     {"error": "User not found"},
                     status=status.HTTP_404_NOT_FOUND
                 )
-            
-            # Refresh Redis session
-            if redis_manager.set_session(user_id):
+
+            if refresh_user_session(user, redis_manager):
                 logger.debug(f"Activity updated for user {user_id}")
                 return Response(status=status.HTTP_200_OK)
             else:
@@ -315,9 +363,21 @@ class ProviderConfigAPIView(APIView):
             "reasoning_provider": "qwen",
             "generation_provider": "qwen",
         },
+        "openrouter_only": {
+            "reasoning_provider": "openrouter",
+            "generation_provider": "openrouter",
+        },
+        "ollama_only": {
+            "reasoning_provider": "ollama",
+            "generation_provider": "ollama",
+        },
+        "huggingface_only": {
+            "reasoning_provider": "huggingface",
+            "generation_provider": "huggingface",
+        },
     }
 
-    VALID_PROVIDERS = {"gemini", "qwen"}
+    VALID_PROVIDERS = {"gemini", "qwen", "openrouter", "ollama", "huggingface"}
 
     def _resolve_session_id(self, request) -> str:
         session_id = request.data.get("user_id") if isinstance(request.data, dict) else None
@@ -336,6 +396,7 @@ class ProviderConfigAPIView(APIView):
             "session_id": session_id,
             "selection": selection,
             "override": override,
+            "embedding": provider_manager.get_embedding_config(),
         }, status=status.HTTP_200_OK)
 
     def post(self, request):
@@ -375,6 +436,7 @@ class ProviderConfigAPIView(APIView):
             "session_id": session_id,
             "selection": selection,
             "provider_combo": combo_key or "custom",
+            "embedding": provider_manager.get_embedding_config(),
         }
         return Response(response, status=status.HTTP_200_OK)
 
@@ -386,6 +448,7 @@ class ProviderConfigAPIView(APIView):
             "session_id": session_id,
             "selection": selection,
             "provider_combo": "default",
+            "embedding": provider_manager.get_embedding_config(),
         }, status=status.HTTP_200_OK)
 class ChatRagAPIView(APIView):
     """
@@ -395,10 +458,13 @@ class ChatRagAPIView(APIView):
     - Test similarity search (mode=3)
     """
     
-    def _create_vector_store(self, documents, embedding_model="models/text-embedding-004"):
-        """Create and persist a vector store from documents"""
-        # Use the RAGUtils from utils.py to leverage shared code
-        return RAGUtils.create_vector_store_from_documents(documents, embedding_model)
+    def _create_vector_store(self, documents):
+        """Create and persist a vector store from documents.
+
+        Embedding model is resolved by ProviderManager (.env 설정 — 현재 Gemini
+        gemini-embedding-001). 옛 하드코딩된 'text-embedding-004' 은 deprecated.
+        """
+        return RAGUtils.create_vector_store_from_documents(documents)
         
     def _process_csv_data(self):
         """Process CSV data into vector store"""
@@ -466,7 +532,7 @@ class ChatRagAPIView(APIView):
             search_results = vector_store.similarity_search(query, k=3)
             
             # Process results using the utility class
-            rag_context = RAGUtils.process_search_results(search_results)
+            rag_context = RAGUtils.process_search_results(search_results, user_access_level="internal")
             
             # Format response with images
             response_data = []

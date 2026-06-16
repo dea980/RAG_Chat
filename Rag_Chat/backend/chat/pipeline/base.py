@@ -20,6 +20,9 @@ class ModuleContext:
     user_id: str
     history_handler: Optional[Callable[[str], Any]] = None
     history: Optional[Any] = None
+    # Phase A moderation: retrieval ACL filter reads this to drop chunks
+    # whose `metadata["sensitivity"]` exceeds the caller's level.
+    user_access_level: str = "internal"
     context_text: str = ""
     images: List[str] = field(default_factory=list)
     reasoning: Optional[str] = None

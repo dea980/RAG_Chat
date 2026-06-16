@@ -1,0 +1,815 @@
+{
+  "summary": {
+    "dataset": "dataset_sales_full.jsonl",
+    "k": 5,
+    "chunk_count": 97,
+    "question_total": 30,
+    "labeled_count": 29,
+    "na_count": 1,
+    "elapsed_seconds": 13.68,
+    "metrics": {
+      "mrr_mean": 0.9425,
+      "recall_top5_mean": 0.9828
+    }
+  },
+  "per_question": [
+    {
+      "id": "sf01",
+      "question": "Galaxy Z Fold6 메인 디스플레이 크기 알려줘",
+      "scenario": "폴더블 메인 디스플레이",
+      "expected_keywords": [
+        "Z Fold6",
+        "7.6"
+      ],
+      "top_sources": [
+        "foldable_handbook.md",
+        "foldable_handbook.md",
+        "foldable_handbook.md",
+        "foldable_handbook.md",
+        "foldable_lineup.csv"
+      ],
+      "top_previews": [
+        "### 3.2 프로세서 - Qualcomm **Snapdragon 8 Gen 3 for Galaxy** (4nm) - CPU: Octa-core",
+        "### 4.1 디스플레이 - 메인 (내부): 7.6인치, Dynamic AMOLED 2X   - 해상도: 2176 x 1812 (~373 ppi",
+        "> 업데이트 보장 정책의 변경점: Z Fold5 는 출시 시 \"4 OS + 5 보안\" 정책이었으나, Z Fold6/Flip6 는 삼성의 7년 정",
+        "# Samsung Galaxy Z 폴더블 시리즈 핸드북  > 출처: gsmarena.com / en.wikipedia.org > 본 문서는 공개",
+        "Series: Galaxy Z Fold Model: Galaxy Z Fold6 Release Date: 2024-07-24 Display Siz"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 0.5,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf02",
+      "question": "Z Fold6 커버 디스플레이 사이즈는?",
+      "scenario": "폴더블 커버 화면",
+      "expected_keywords": [
+        "Z Fold6",
+        "6.3"
+      ],
+      "top_sources": [
+        "foldable_handbook.md",
+        "foldable_handbook.md",
+        "foldable_handbook.md",
+        "foldable_handbook.md",
+        "foldable_handbook.md"
+      ],
+      "top_previews": [
+        "### 4.7 색상 Phantom Black / Icy Blue / Cream + Gray / Blue (온라인 한정)  ### 4.8 업데이트",
+        "> 업데이트 보장 정책의 변경점: Z Fold5 는 출시 시 \"4 OS + 5 보안\" 정책이었으나, Z Fold6/Flip6 는 삼성의 7년 정",
+        "# Samsung Galaxy Z 폴더블 시리즈 핸드북  > 출처: gsmarena.com / en.wikipedia.org > 본 문서는 공개",
+        "### 4.1 디스플레이 - 메인 (내부): 7.6인치, Dynamic AMOLED 2X   - 해상도: 2176 x 1812 (~373 ppi",
+        "### 3.2 프로세서 - Qualcomm **Snapdragon 8 Gen 3 for Galaxy** (4nm) - CPU: Octa-core"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 0.5,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf03",
+      "question": "Z Fold6 칩셋이 뭐야",
+      "scenario": "폴더블 SoC",
+      "expected_keywords": [
+        "Z Fold6",
+        "Snapdragon 8 Gen 3"
+      ],
+      "top_sources": [
+        "foldable_handbook.md",
+        "foldable_handbook.md",
+        "foldable_handbook.md",
+        "foldable_handbook.md",
+        "foldable_handbook.md"
+      ],
+      "top_previews": [
+        "> 업데이트 보장 정책의 변경점: Z Fold5 는 출시 시 \"4 OS + 5 보안\" 정책이었으나, Z Fold6/Flip6 는 삼성의 7년 정",
+        "### 4.7 색상 Phantom Black / Icy Blue / Cream + Gray / Blue (온라인 한정)  ### 4.8 업데이트",
+        "### 4.1 디스플레이 - 메인 (내부): 7.6인치, Dynamic AMOLED 2X   - 해상도: 2176 x 1812 (~373 ppi",
+        "## 7. 출처  - [Samsung Galaxy Z Fold6 - GSMArena](https://www.gsmarena.com/samsung",
+        "# Samsung Galaxy Z 폴더블 시리즈 핸드북  > 출처: gsmarena.com / en.wikipedia.org > 본 문서는 공개"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf04",
+      "question": "Galaxy Z Flip6 메인 카메라 화소",
+      "scenario": "플립 카메라",
+      "expected_keywords": [
+        "Z Flip6",
+        "50MP"
+      ],
+      "top_sources": [
+        "foldable_handbook.md",
+        "foldable_lineup.csv",
+        "foldable_handbook.md",
+        "foldable_handbook.md",
+        "foldable_handbook.md"
+      ],
+      "top_previews": [
+        "### 2.4 메모리·저장 - RAM: 12GB - 저장: 256GB / 512GB / 1TB (UFS 4.0)  ### 2.5 배터리·충전 -",
+        "Series: Galaxy Z Flip Model: Galaxy Z Flip6 Release Date: 2024-07-24 Display Siz",
+        "# Samsung Galaxy Z 폴더블 시리즈 핸드북  > 출처: gsmarena.com / en.wikipedia.org > 본 문서는 공개",
+        "> 업데이트 보장 정책의 변경점: Z Fold5 는 출시 시 \"4 OS + 5 보안\" 정책이었으나, Z Fold6/Flip6 는 삼성의 7년 정",
+        "## 6. 모델 간 비교  | 항목 | Z Fold6 | Z Flip6 | Z Fold5 | |---|---|---|---| | 출시 | 202"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 0.5,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf05",
+      "question": "Z Fold5 와 Z Fold6 차이점은",
+      "scenario": "세대 비교",
+      "expected_keywords": [
+        "Z Fold5",
+        "Z Fold6"
+      ],
+      "top_sources": [
+        "foldable_handbook.md",
+        "foldable_handbook.md",
+        "foldable_handbook.md",
+        "foldable_handbook.md",
+        "foldable_handbook.md"
+      ],
+      "top_previews": [
+        "### 4.7 색상 Phantom Black / Icy Blue / Cream + Gray / Blue (온라인 한정)  ### 4.8 업데이트",
+        "> 업데이트 보장 정책의 변경점: Z Fold5 는 출시 시 \"4 OS + 5 보안\" 정책이었으나, Z Fold6/Flip6 는 삼성의 7년 정",
+        "# Samsung Galaxy Z 폴더블 시리즈 핸드북  > 출처: gsmarena.com / en.wikipedia.org > 본 문서는 공개",
+        "## 7. 출처  - [Samsung Galaxy Z Fold6 - GSMArena](https://www.gsmarena.com/samsung",
+        "### 4.1 디스플레이 - 메인 (내부): 7.6인치, Dynamic AMOLED 2X   - 해상도: 2176 x 1812 (~373 ppi"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf06",
+      "question": "폴더블 폰 방수 등급 어떻게 돼",
+      "scenario": "폴더블 IP",
+      "expected_keywords": [
+        "Z Fold6",
+        "IP48"
+      ],
+      "top_sources": [
+        "foldable_handbook.md",
+        "accessories_handbook.md",
+        "foldable_handbook.md",
+        "accessories_handbook.md",
+        "tab_handbook.md"
+      ],
+      "top_previews": [
+        "### 4.7 색상 Phantom Black / Icy Blue / Cream + Gray / Blue (온라인 한정)  ### 4.8 업데이트",
+        "### 2.3 Galaxy Watch FE — 엔트리·가성비 - **출시일**: 2024-06-24 - **케이스**: 40mm 단일 (알루미늄",
+        "# Samsung Galaxy Z 폴더블 시리즈 핸드북  > 출처: gsmarena.com / en.wikipedia.org > 본 문서는 공개",
+        "### 3.2 Galaxy S25 Ultra + Galaxy Watch Ultra - **타깃**: 프리미엄·아웃도어 유저, 트레일러닝·등산·다",
+        "### 4.3 카메라 - 후면: 8MP AF (단일) - 전면: 12MP f/2.4 120° ultrawide  ### 4.4 배터리·충전 - "
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf07",
+      "question": "Galaxy A55 카메라 OIS 지원해?",
+      "scenario": "중급 카메라 기능",
+      "expected_keywords": [
+        "A55",
+        "OIS"
+      ],
+      "top_sources": [
+        "a_series_handbook.md",
+        "a_series_handbook.md",
+        "a_series_lineup.csv",
+        "a_series_handbook.md",
+        "a_series_handbook.md"
+      ],
+      "top_previews": [
+        "## 2. Galaxy A55 5G (프리미엄 중급)  ### 2.1 디스플레이 - 크기: 6.6인치 - 패널: Super AMOLED, HDR",
+        "### 3.2 카메라 - 메인: 50MP f/1.8, OIS - 초광각: 8MP f/2.2, 123° (A55 의 12MP 에서 다운그레이드) ",
+        "Series: Galaxy A Model: Galaxy A55 5G Release Date: 2024-03-15 Display Size: 6.6",
+        "### 영업 추천 가이드 (가성비) - **카메라 품질 중요 + 디자인 중시**: A55 5G (알루미늄 프레임, 32MP 셀카, IP67) -",
+        "# Samsung Galaxy A 시리즈 (중급 라인업) 핸드북  > 출처: gsmarena.com (2023-12 ~ 2024-10 출시 기준"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf08",
+      "question": "A35 5G 디스플레이 크기 알려줘",
+      "scenario": "A 시리즈 디스플레이",
+      "expected_keywords": [
+        "A35",
+        "6.6"
+      ],
+      "top_sources": [
+        "a_series_handbook.md",
+        "foldable_handbook.md",
+        "a_series_lineup.csv",
+        "a_series_handbook.md",
+        "a_series_handbook.md"
+      ],
+      "top_previews": [
+        "## 2. Galaxy A55 5G (프리미엄 중급)  ### 2.1 디스플레이 - 크기: 6.6인치 - 패널: Super AMOLED, HDR",
+        "### 3.2 프로세서 - Qualcomm **Snapdragon 8 Gen 3 for Galaxy** (4nm) - CPU: Octa-core",
+        "Series: Galaxy A Model: Galaxy A35 5G Release Date: 2024-03-15 Display Size: 6.6",
+        "### 5.6 업데이트 정책 (시리즈 최장) - **6세대 OS 업그레이드 + 6년 보안 패치** — 엔트리 모델임에도 A55/A35/A25 (",
+        "### 4.3 프로세서·메모리 - 칩셋: Exynos 1280 (5nm) - CPU: 옥타코어 2x2.4GHz Cortex-A78 + 6x2.0"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf09",
+      "question": "Galaxy A25 충전 속도 몇 W",
+      "scenario": "A 시리즈 충전",
+      "expected_keywords": [
+        "A25",
+        "25W"
+      ],
+      "top_sources": [
+        "a_series_handbook.md",
+        "a_series_lineup.csv",
+        "galaxy_faq.html",
+        "galaxy_faq.html",
+        "galaxy_handbook.md"
+      ],
+      "top_previews": [
+        "### 3.2 카메라 - 메인: 50MP f/1.8, OIS - 초광각: 8MP f/2.2, 123° (A55 의 12MP 에서 다운그레이드) ",
+        "Series: Galaxy A Model: Galaxy A25 5G Release Date: 2023-12-16 Display Size: 6.5",
+        "Galaxy S25 시리즈 FAQ — 실제 스펙 기반 Galaxy S25 시리즈 자주 묻는 질문 본 FAQ 는 공개된 실제 사양 (gsmaren",
+        "S25 Ultra 는 새로운 Corning Gorilla Armor 2 (Mohs level 6) 에 DX 반사 방지      코팅이 추가됩니다",
+        "## 2. Galaxy S25 (기본형)  ### 2.1 디스플레이 - 크기: 6.2인치 - 패널: Dynamic LTPO AMOLED 2X -"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf10",
+      "question": "A16 5G 칩셋 뭐 들어가나요",
+      "scenario": "엔트리 SoC (caveat: Exynos/Dimensity 변형)",
+      "expected_keywords": [
+        "A16",
+        "Exynos"
+      ],
+      "top_sources": [
+        "a_series_handbook.md",
+        "a_series_lineup.csv",
+        "a_series_handbook.md",
+        "a_series_handbook.md",
+        "a_series_lineup.csv"
+      ],
+      "top_previews": [
+        "### 4.3 프로세서·메모리 - 칩셋: Exynos 1280 (5nm) - CPU: 옥타코어 2x2.4GHz Cortex-A78 + 6x2.0",
+        "Series: Galaxy A Model: Galaxy A16 5G Release Date: 2024-10-25 Display Size: 6.7",
+        "### 영업 추천 가이드 (가성비) - **카메라 품질 중요 + 디자인 중시**: A55 5G (알루미늄 프레임, 32MP 셀카, IP67) -",
+        "# Samsung Galaxy A 시리즈 (중급 라인업) 핸드북  > 출처: gsmarena.com (2023-12 ~ 2024-10 출시 기준",
+        "Series: Galaxy A Model: Galaxy A55 5G Release Date: 2024-03-15 Display Size: 6.6"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf11",
+      "question": "A 시리즈 무선 충전 되나",
+      "scenario": "다운그레이드 항목 확인",
+      "expected_keywords": [
+        "A55",
+        "무선"
+      ],
+      "top_sources": [
+        "a_series_handbook.md",
+        "a_series_handbook.md",
+        "galaxy_faq.html",
+        "a_series_handbook.md",
+        "tab_handbook.md"
+      ],
+      "top_previews": [
+        "## 7. S 시리즈 (S25 라인업) 대비 주요 다운그레이드  영업 현장에서 \"S 시리즈와 차이가 뭐냐\"는 질문에 대한 핵심 응답 포인트:  ",
+        "### 5.6 업데이트 정책 (시리즈 최장) - **6세대 OS 업그레이드 + 6년 보안 패치** — 엔트리 모델임에도 A55/A35/A25 (",
+        "Galaxy S25 시리즈 FAQ — 실제 스펙 기반 Galaxy S25 시리즈 자주 묻는 질문 본 FAQ 는 공개된 실제 사양 (gsmaren",
+        "# Samsung Galaxy A 시리즈 (중급 라인업) 핸드북  > 출처: gsmarena.com (2023-12 ~ 2024-10 출시 기준",
+        "## 12. 알려진 한계 (Caveat)  본 문서를 인덱스에 넣기 전에 알아둘 것:  - **시작가(USD)**: 4개 모델 모두 공개 스펙 "
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf12",
+      "question": "S25 와 A55 카메라 차이는?",
+      "scenario": "플래그십 vs 중급 비교",
+      "expected_keywords": [
+        "S25",
+        "A55"
+      ],
+      "top_sources": [
+        "a_series_handbook.md",
+        "galaxy_faq.html",
+        "a_series_handbook.md",
+        "galaxy_handbook.md",
+        "a_series_handbook.md"
+      ],
+      "top_previews": [
+        "## 7. S 시리즈 (S25 라인업) 대비 주요 다운그레이드  영업 현장에서 \"S 시리즈와 차이가 뭐냐\"는 질문에 대한 핵심 응답 포인트:  ",
+        "Galaxy S25 시리즈 FAQ — 실제 스펙 기반 Galaxy S25 시리즈 자주 묻는 질문 본 FAQ 는 공개된 실제 사양 (gsmaren",
+        "### 3.2 카메라 - 메인: 50MP f/1.8, OIS - 초광각: 8MP f/2.2, 123° (A55 의 12MP 에서 다운그레이드) ",
+        "## 2. Galaxy S25 (기본형)  ### 2.1 디스플레이 - 크기: 6.2인치 - 패널: Dynamic LTPO AMOLED 2X -",
+        "### 5.6 업데이트 정책 (시리즈 최장) - **6세대 OS 업그레이드 + 6년 보안 패치** — 엔트리 모델임에도 A55/A35/A25 ("
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf13",
+      "question": "Galaxy Tab S10 Ultra DeX 지원해?",
+      "scenario": "B2B 생산성",
+      "expected_keywords": [
+        "Tab S10 Ultra",
+        "DeX"
+      ],
+      "top_sources": [
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "tab_handbook.md"
+      ],
+      "top_previews": [
+        "## 2. Galaxy Tab S10 Ultra (플래그십·대화면)  ### 2.1 디스플레이 - 크기: 14.6인치 - 패널: Dynamic ",
+        "## 7. 액세서리 정책 한눈에  | 액세서리 | Tab S10 Ultra | Tab S10+ | Tab S9 FE | Tab A9+ | |--",
+        "# Samsung Galaxy Tab 라인업 핸드북 (B2B 제안서용)  > 출처: gsmarena.com / en.wikipedia.org (",
+        "### 2.6 액세서리·생산성 - **S Pen: 박스 기본 포함** (2.8ms latency, Bluetooth 연동) - **Book Co",
+        "- Tab S10 Ultra / S10+: **무선 DeX 지원** (HDMI 케이블 또는 미라캐스트로 무선 연결) - Tab S9 FE: 공개"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf14",
+      "question": "Tab S10+ 디스플레이 사이즈",
+      "scenario": "태블릿 디스플레이",
+      "expected_keywords": [
+        "Tab S10+",
+        "12.4"
+      ],
+      "top_sources": [
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "tab_lineup.csv",
+        "tab_handbook.md"
+      ],
+      "top_previews": [
+        "### 2.6 액세서리·생산성 - **S Pen: 박스 기본 포함** (2.8ms latency, Bluetooth 연동) - **Book Co",
+        "## 2. Galaxy Tab S10 Ultra (플래그십·대화면)  ### 2.1 디스플레이 - 크기: 14.6인치 - 패널: Dynamic ",
+        "### 4.3 카메라 - 후면: 8MP AF (단일) - 전면: 12MP f/2.4 120° ultrawide  ### 4.4 배터리·충전 - ",
+        "Series: Galaxy Tab S10 Model: Galaxy Tab S10 Plus Release Date: 2024-10-03 Displ",
+        "## 7. 액세서리 정책 한눈에  | 액세서리 | Tab S10 Ultra | Tab S10+ | Tab S9 FE | Tab A9+ | |--"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf15",
+      "question": "Tab S9 FE S Pen 기본 포함되나",
+      "scenario": "액세서리 포함 여부",
+      "expected_keywords": [
+        "Tab S9 FE",
+        "S Pen"
+      ],
+      "top_sources": [
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "tab_lineup.csv",
+        "tab_handbook.md"
+      ],
+      "top_previews": [
+        "### 3.4 배터리·충전 - 용량: 10,090mAh - 유선: 45W - 무선 충전: 미지원  ### 3.5 디자인·내구성 - 크기: 285",
+        "### 4.3 카메라 - 후면: 8MP AF (단일) - 전면: 12MP f/2.4 120° ultrawide  ### 4.4 배터리·충전 - ",
+        "## 7. 액세서리 정책 한눈에  | 액세서리 | Tab S10 Ultra | Tab S10+ | Tab S9 FE | Tab A9+ | |--",
+        "Series: Galaxy Tab S9 FE Model: Galaxy Tab S9 FE Release Date: 2023-10-15 Displa",
+        "### 2.6 액세서리·생산성 - **S Pen: 박스 기본 포함** (2.8ms latency, Bluetooth 연동) - **Book Co"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf16",
+      "question": "Galaxy Tab A9+ 가격",
+      "scenario": "엔트리 태블릿 가격 (caveat: USD N/A)",
+      "expected_keywords": [
+        "Tab A9+"
+      ],
+      "top_sources": [
+        "tab_lineup.csv",
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "tab_lineup.csv",
+        "tab_handbook.md"
+      ],
+      "top_previews": [
+        "Series: Galaxy Tab A9 Model: Galaxy Tab A9 Plus Release Date: 2023-10-17 Display",
+        "## 5. Galaxy Tab A9+ (보급형·대량 배포)  ### 5.1 디스플레이 - 크기: 11인치 - 패널: TFT LCD - 해상도: ",
+        "### 4.3 카메라 - 후면: 8MP AF (단일) - 전면: 12MP f/2.4 120° ultrawide  ### 4.4 배터리·충전 - ",
+        "Series: Galaxy Tab S9 FE Model: Galaxy Tab S9 FE Release Date: 2023-10-15 Displa",
+        "- Tab S10 Ultra / S10+: **무선 DeX 지원** (HDMI 케이블 또는 미라캐스트로 무선 연결) - Tab S9 FE: 공개"
+      ],
+      "bucket": "labeled",
+      "mrr": 0.5,
+      "recall_top1": 0.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf17",
+      "question": "갤럭시 탭 무선 DeX 가능한 모델",
+      "scenario": "무선 DeX 매핑",
+      "expected_keywords": [
+        "Tab S10 Ultra",
+        "무선 DeX"
+      ],
+      "top_sources": [
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "tab_handbook.md"
+      ],
+      "top_previews": [
+        "## 7. 액세서리 정책 한눈에  | 액세서리 | Tab S10 Ultra | Tab S10+ | Tab S9 FE | Tab A9+ | |--",
+        "- Tab S10 Ultra / S10+: **무선 DeX 지원** (HDMI 케이블 또는 미라캐스트로 무선 연결) - Tab S9 FE: 공개",
+        "## 5. Galaxy Tab A9+ (보급형·대량 배포)  ### 5.1 디스플레이 - 크기: 11인치 - 패널: TFT LCD - 해상도: ",
+        "# Samsung Galaxy Tab 라인업 핸드북 (B2B 제안서용)  > 출처: gsmarena.com / en.wikipedia.org (",
+        "### 2.6 액세서리·생산성 - **S Pen: 박스 기본 포함** (2.8ms latency, Bluetooth 연동) - **Book Co"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf18",
+      "question": "Tab S10 Ultra 와 S10+ 차이가 뭐야",
+      "scenario": "태블릿 모델 비교",
+      "expected_keywords": [
+        "Tab S10 Ultra",
+        "S10+"
+      ],
+      "top_sources": [
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "tab_lineup.csv",
+        "tab_handbook.md"
+      ],
+      "top_previews": [
+        "## 2. Galaxy Tab S10 Ultra (플래그십·대화면)  ### 2.1 디스플레이 - 크기: 14.6인치 - 패널: Dynamic ",
+        "### 2.6 액세서리·생산성 - **S Pen: 박스 기본 포함** (2.8ms latency, Bluetooth 연동) - **Book Co",
+        "### 5.8 OS·업데이트 - 출시 시: Android 13 + One UI 5.1.1 - 업데이트 보장: N/A (출처 미명시)  ## 6.",
+        "Series: Galaxy Tab S10 Model: Galaxy Tab S10 Ultra Release Date: 2024-10-03 Disp",
+        "# Samsung Galaxy Tab 라인업 핸드북 (B2B 제안서용)  > 출처: gsmarena.com / en.wikipedia.org ("
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 0.5,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf19",
+      "question": "Galaxy Buds3 Pro ANC 되나",
+      "scenario": "이어버드 ANC",
+      "expected_keywords": [
+        "Buds3 Pro",
+        "ANC"
+      ],
+      "top_sources": [
+        "buds_lineup.csv",
+        "buds_lineup.csv",
+        "accessories_handbook.md",
+        "accessories_handbook.md",
+        "accessories_handbook.md"
+      ],
+      "top_previews": [
+        "Series: Buds3 Model: Galaxy Buds3 Pro Release Date: 2024-07-24 Driver: 2-way (10",
+        "Series: Buds3 Model: Galaxy Buds3 Release Date: 2024-07-24 Driver: 11mm dynamic ",
+        "# Galaxy 액세서리 핸드북 — Buds & Watch (2024)  영업·지원팀용 번들 판매 레퍼런스. 폰 라인업과 함께 묶음 제안할 때 ",
+        "### 1.2 Galaxy Buds3 — 메인스트림 - **출시일**: 2024-07-24 - **드라이버**: 11mm 다이내믹 (1-way)",
+        "### 2.3 Galaxy Watch FE — 엔트리·가성비 - **출시일**: 2024-06-24 - **케이스**: 40mm 단일 (알루미늄"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf20",
+      "question": "Buds3 코덱 뭐 지원해",
+      "scenario": "오디오 코덱",
+      "expected_keywords": [
+        "Buds3"
+      ],
+      "top_sources": [
+        "accessories_handbook.md",
+        "buds_lineup.csv",
+        "buds_lineup.csv",
+        "accessories_handbook.md",
+        "accessories_handbook.md"
+      ],
+      "top_previews": [
+        "# Galaxy 액세서리 핸드북 — Buds & Watch (2024)  영업·지원팀용 번들 판매 레퍼런스. 폰 라인업과 함께 묶음 제안할 때 ",
+        "Series: Buds3 Model: Galaxy Buds3 Release Date: 2024-07-24 Driver: 11mm dynamic ",
+        "Series: Buds3 Model: Galaxy Buds3 Pro Release Date: 2024-07-24 Driver: 2-way (10",
+        "---  ## 4. 호환성 정리  | 항목 | Buds3 Pro / Buds3 | Buds FE | Watch7 / Watch Ultra | W",
+        "### 1.2 Galaxy Buds3 — 메인스트림 - **출시일**: 2024-07-24 - **드라이버**: 11mm 다이내믹 (1-way)"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf21",
+      "question": "Galaxy Buds FE 무선 충전 되나",
+      "scenario": "FE 충전 옵션",
+      "expected_keywords": [
+        "Buds FE"
+      ],
+      "top_sources": [
+        "accessories_handbook.md",
+        "buds_lineup.csv",
+        "accessories_handbook.md",
+        "accessories_handbook.md",
+        "accessories_handbook.md"
+      ],
+      "top_previews": [
+        "### 1.2 Galaxy Buds3 — 메인스트림 - **출시일**: 2024-07-24 - **드라이버**: 11mm 다이내믹 (1-way)",
+        "Series: Buds FE Model: Galaxy Buds FE Release Date: 2023-10-05 Driver: 12mm AKG-",
+        "- Wikipedia Galaxy Buds series: <https://en.wikipedia.org/wiki/Samsung_Galaxy_Bu",
+        "# Galaxy 액세서리 핸드북 — Buds & Watch (2024)  영업·지원팀용 번들 판매 레퍼런스. 폰 라인업과 함께 묶음 제안할 때 ",
+        "### 2.3 Galaxy Watch FE — 엔트리·가성비 - **출시일**: 2024-06-24 - **케이스**: 40mm 단일 (알루미늄"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf22",
+      "question": "Galaxy Watch7 디스플레이 크기",
+      "scenario": "워치 디스플레이",
+      "expected_keywords": [
+        "Watch7",
+        "40mm"
+      ],
+      "top_sources": [
+        "accessories_handbook.md",
+        "watch_lineup.csv",
+        "accessories_handbook.md",
+        "accessories_handbook.md",
+        "watch_lineup.csv"
+      ],
+      "top_previews": [
+        "---  ## 2. Galaxy Watch 라인업  ### 2.1 Galaxy Watch7 — 메인스트림 스마트워치 - **출시일**: 2024",
+        "Series: Watch7 Model: Galaxy Watch7 Release Date: 2024-07-24 Case Size: 40mm, 44",
+        "### 2.2 Galaxy Watch Ultra — 러기드·아웃도어 플래그십 - **출시일**: 2024-07-24 - **케이스**: 47mm",
+        "**중요**: Galaxy Watch 7/Ultra/FE는 **Android 전용**이다. iPhone 사용자는 호환 안 됨 — 영업 시 첫 질",
+        "Series: Watch Ultra Model: Galaxy Watch Ultra Release Date: 2024-07-24 Case Size"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf23",
+      "question": "Watch Ultra 배터리 용량 얼마야",
+      "scenario": "워치 배터리",
+      "expected_keywords": [
+        "Watch Ultra",
+        "590"
+      ],
+      "top_sources": [
+        "galaxy_faq.html",
+        "galaxy_handbook.md",
+        "accessories_handbook.md",
+        "galaxy_faq.html",
+        "accessories_handbook.md"
+      ],
+      "top_previews": [
+        "7. 디자인 7.1 무게 비교는? S25 162g, S25 Plus 190g, S25 Ultra 218g. 7.2 Ultra 의 프레임 소재는?",
+        "### 3.1 디스플레이 - 크기: 6.7인치 - 해상도: 1440 x 3120 (~513 ppi) - 패널·주사율·밝기: S25 와 동일  #",
+        "### 2.2 Galaxy Watch Ultra — 러기드·아웃도어 플래그십 - **출시일**: 2024-07-24 - **케이스**: 47mm",
+        "S25 Ultra 는 새로운 Corning Gorilla Armor 2 (Mohs level 6) 에 DX 반사 방지      코팅이 추가됩니다",
+        "### 3.2 Galaxy S25 Ultra + Galaxy Watch Ultra - **타깃**: 프리미엄·아웃도어 유저, 트레일러닝·등산·다"
+      ],
+      "bucket": "labeled",
+      "mrr": 0.3333,
+      "recall_top1": 0.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf24",
+      "question": "Galaxy Watch FE 가격",
+      "scenario": "엔트리 워치 가격",
+      "expected_keywords": [
+        "Watch FE"
+      ],
+      "top_sources": [
+        "watch_lineup.csv",
+        "accessories_handbook.md",
+        "accessories_handbook.md",
+        "accessories_handbook.md",
+        "watch_lineup.csv"
+      ],
+      "top_previews": [
+        "Series: Watch FE Model: Galaxy Watch FE Release Date: 2024-06-24 Case Size: 40mm",
+        "### 1.2 Galaxy Buds3 — 메인스트림 - **출시일**: 2024-07-24 - **드라이버**: 11mm 다이내믹 (1-way)",
+        "**중요**: Galaxy Watch 7/Ultra/FE는 **Android 전용**이다. iPhone 사용자는 호환 안 됨 — 영업 시 첫 질",
+        "---  ## 2. Galaxy Watch 라인업  ### 2.1 Galaxy Watch7 — 메인스트림 스마트워치 - **출시일**: 2024",
+        "Series: Watch7 Model: Galaxy Watch7 Release Date: 2024-07-24 Case Size: 40mm, 44"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf25",
+      "question": "S25 Ultra 랑 같이 추천할 액세서리 번들",
+      "scenario": "번들 시나리오",
+      "expected_keywords": [
+        "S25 Ultra",
+        "Watch Ultra"
+      ],
+      "top_sources": [
+        "galaxy_faq.html",
+        "galaxy_faq.html",
+        "galaxy_handbook.md",
+        "galaxy_handbook.md",
+        "galaxy_faq.html"
+      ],
+      "top_previews": [
+        "S25 Ultra 는 새로운 Corning Gorilla Armor 2 (Mohs level 6) 에 DX 반사 방지      코팅이 추가됩니다",
+        "7. 디자인 7.1 무게 비교는? S25 162g, S25 Plus 190g, S25 Ultra 218g. 7.2 Ultra 의 프레임 소재는?",
+        "### 3.1 디스플레이 - 크기: 6.7인치 - 해상도: 1440 x 3120 (~513 ppi) - 패널·주사율·밝기: S25 와 동일  #",
+        "## 6. 출처  - [Samsung Galaxy S25 - GSMArena](https://www.gsmarena.com/samsung_gal",
+        "Galaxy S25 시리즈 FAQ — 실제 스펙 기반 Galaxy S25 시리즈 자주 묻는 질문 본 FAQ 는 공개된 실제 사양 (gsmaren"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 0.5,
+      "recall_top5": 0.5
+    },
+    {
+      "id": "sf26",
+      "question": "Buds3 Pro 가 Galaxy 외에 iPhone 에서도 동작해?",
+      "scenario": "타 OS 호환",
+      "expected_keywords": [
+        "Buds3 Pro"
+      ],
+      "top_sources": [
+        "accessories_handbook.md",
+        "accessories_handbook.md",
+        "buds_lineup.csv",
+        "buds_lineup.csv",
+        "accessories_handbook.md"
+      ],
+      "top_previews": [
+        "# Galaxy 액세서리 핸드북 — Buds & Watch (2024)  영업·지원팀용 번들 판매 레퍼런스. 폰 라인업과 함께 묶음 제안할 때 ",
+        "---  ## 4. 호환성 정리  | 항목 | Buds3 Pro / Buds3 | Buds FE | Watch7 / Watch Ultra | W",
+        "Series: Buds3 Model: Galaxy Buds3 Pro Release Date: 2024-07-24 Driver: 2-way (10",
+        "Series: Buds3 Model: Galaxy Buds3 Release Date: 2024-07-24 Driver: 11mm dynamic ",
+        "### 1.2 Galaxy Buds3 — 메인스트림 - **출시일**: 2024-07-24 - **드라이버**: 11mm 다이내믹 (1-way)"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf27",
+      "question": "Galaxy S30 출시일",
+      "scenario": "N/A — 존재하지 않는 모델 (LLM 이 모른다 답해야 함)",
+      "expected_keywords": [],
+      "top_sources": [
+        "galaxy_s25_data.csv",
+        "galaxy_lineup.csv",
+        "galaxy_s25_data.csv",
+        "galaxy_s25_data.csv",
+        "galaxy_s25_data.csv"
+      ],
+      "top_previews": [
+        "Model: Galaxy S24 Color: Sapphire Blue (online exclusive) Storage: 256GB RAM: 8G",
+        "Series: Galaxy S25 Model: Galaxy S25 Release Date: 2025-02-07 Display Size: 6.2 ",
+        "Model: Galaxy S24 Color: Marble Gray Storage: 256GB RAM: 8GB Camera: 50MP Main +",
+        "Model: Galaxy S24 Color: Cobalt Violet Storage: 256GB RAM: 8GB Camera: 50MP Main",
+        "Model: Galaxy S24 Color: Onyx Black Storage: 128GB RAM: 8GB Camera: 50MP Main + "
+      ],
+      "bucket": "n/a"
+    },
+    {
+      "id": "sf28",
+      "question": "Galaxy Z Flip6 가격 한국 출고가",
+      "scenario": "N/A — caveat USD 가격 미확인",
+      "expected_keywords": [
+        "Z Flip6"
+      ],
+      "top_sources": [
+        "foldable_handbook.md",
+        "foldable_handbook.md",
+        "foldable_lineup.csv",
+        "foldable_handbook.md",
+        "foldable_handbook.md"
+      ],
+      "top_previews": [
+        "# Samsung Galaxy Z 폴더블 시리즈 핸드북  > 출처: gsmarena.com / en.wikipedia.org > 본 문서는 공개",
+        "### 2.4 메모리·저장 - RAM: 12GB - 저장: 256GB / 512GB / 1TB (UFS 4.0)  ### 2.5 배터리·충전 -",
+        "Series: Galaxy Z Flip Model: Galaxy Z Flip6 Release Date: 2024-07-24 Display Siz",
+        "## 7. 출처  - [Samsung Galaxy Z Fold6 - GSMArena](https://www.gsmarena.com/samsung",
+        "> 업데이트 보장 정책의 변경점: Z Fold5 는 출시 시 \"4 OS + 5 보안\" 정책이었으나, Z Fold6/Flip6 는 삼성의 7년 정"
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf29",
+      "question": "삼성 폴더블이랑 일반 폰 중 어떤 게 영업팀 시연용으로 적합",
+      "scenario": "추천 — 의미 검색",
+      "expected_keywords": [
+        "폴더블",
+        "Fold"
+      ],
+      "top_sources": [
+        "accessories_handbook.md",
+        "foldable_handbook.md",
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "accessories_handbook.md"
+      ],
+      "top_previews": [
+        "### 2.3 Galaxy Watch FE — 엔트리·가성비 - **출시일**: 2024-06-24 - **케이스**: 40mm 단일 (알루미늄",
+        "# Samsung Galaxy Z 폴더블 시리즈 핸드북  > 출처: gsmarena.com / en.wikipedia.org > 본 문서는 공개",
+        "# Samsung Galaxy Tab 라인업 핸드북 (B2B 제안서용)  > 출처: gsmarena.com / en.wikipedia.org (",
+        "## 7. 액세서리 정책 한눈에  | 액세서리 | Tab S10 Ultra | Tab S10+ | Tab S9 FE | Tab A9+ | |--",
+        "### 3.2 Galaxy S25 Ultra + Galaxy Watch Ultra - **타깃**: 프리미엄·아웃도어 유저, 트레일러닝·등산·다"
+      ],
+      "bucket": "labeled",
+      "mrr": 0.5,
+      "recall_top1": 0.0,
+      "recall_top5": 1.0
+    },
+    {
+      "id": "sf30",
+      "question": "B2B 제안서에 쓰기 좋은 태블릿 추천해줘",
+      "scenario": "B2B 추천 — 의미 검색",
+      "expected_keywords": [
+        "Tab S10",
+        "B2B"
+      ],
+      "top_sources": [
+        "tab_handbook.md",
+        "tab_handbook.md",
+        "accessories_handbook.md",
+        "tab_handbook.md",
+        "tab_handbook.md"
+      ],
+      "top_previews": [
+        "## 7. 액세서리 정책 한눈에  | 액세서리 | Tab S10 Ultra | Tab S10+ | Tab S9 FE | Tab A9+ | |--",
+        "# Samsung Galaxy Tab 라인업 핸드북 (B2B 제안서용)  > 출처: gsmarena.com / en.wikipedia.org (",
+        "### 2.3 Galaxy Watch FE — 엔트리·가성비 - **출시일**: 2024-06-24 - **케이스**: 40mm 단일 (알루미늄",
+        "- Tab S10 Ultra / S10+: **무선 DeX 지원** (HDMI 케이블 또는 미라캐스트로 무선 연결) - Tab S9 FE: 공개",
+        "- Samsung Business 한국: https://www.samsung.com/sec/business/ - B2B 총판 견적서 (대리점) "
+      ],
+      "bucket": "labeled",
+      "mrr": 1.0,
+      "recall_top1": 1.0,
+      "recall_top5": 1.0
+    }
+  ]
+}

@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Triple Chat · 대외비·PII·금칙어 학습 노트</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root[data-theme="dark"] {
+  --bg: #0A0B0D; --surface: #131418; --surface-2: #16171B;
+  --border: #25262B; --border-hi: #34353B;
+  --fg: #F3F2EE; --fg-muted: #8B8B93; --fg-dim: #5C5D63;
+  --accent: #E89B3C; --accent-bg: rgba(232,155,60,0.08); --accent-border: rgba(232,155,60,0.35);
+  --success: #4F9D7A; --warning: #D9A441; --error: #C24A4A; --info: #6B8AB8;
+}
+:root[data-theme="light"] {
+  --bg: #F7F6F2; --surface: #FFFFFF; --surface-2: #F0EFEA;
+  --border: #DCDBD4; --border-hi: #C2C1BA;
+  --fg: #1A1B1F; --fg-muted: #6B6C72; --fg-dim: #9C9DA3;
+  --accent: #B8771F; --accent-bg: rgba(184,119,31,0.08); --accent-border: rgba(184,119,31,0.30);
+  --success: #3E7D60; --warning: #A8801F; --error: #9B3939; --info: #4E6D9A;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--fg); font-family: 'Pretendard Variable', Pretendard, -apple-system, sans-serif; line-height: 1.65; }
+.mono { font-family: 'Geist Mono', ui-monospace, monospace; font-feature-settings: 'tnum' 1; }
+.muted { color: var(--fg-muted); }
+.dim { color: var(--fg-dim); }
+.label-mono { font-family: 'Geist Mono', monospace; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); }
+
+.topbar { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--border); padding: 12px 32px; display: flex; align-items: center; justify-content: space-between; }
+.topbar .brand { display: flex; align-items: center; gap: 10px; }
+.brand-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 2px; }
+.brand-name { font-weight: 600; font-size: 14px; letter-spacing: -0.005em; }
+.brand-tag { color: var(--fg-muted); font-size: 13px; }
+.theme-toggle { background: var(--surface); border: 1px solid var(--border); color: var(--fg); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: 'Geist Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+.theme-toggle:hover { border-color: var(--border-hi); }
+
+.shell { max-width: 920px; margin: 0 auto; padding: 56px 32px; }
+section { margin-bottom: 72px; }
+
+.hero { padding: 32px 0 48px; }
+.hero .eyebrow { color: var(--fg-muted); font-family: 'Geist Mono', monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px; }
+.hero h1 { font-size: 48px; line-height: 1.1; letter-spacing: -0.022em; font-weight: 600; margin-bottom: 20px; }
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero .lead { font-size: 17px; color: var(--fg-muted); max-width: 680px; }
+
+.section-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 28px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.section-head .num { font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--accent); font-weight: 500; }
+.section-head h2 { font-size: 26px; font-weight: 600; letter-spacing: -0.015em; }
+.section-head .meta { margin-left: auto; font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+h3 { font-size: 18px; font-weight: 600; letter-spacing: -0.005em; margin: 28px 0 12px; }
+h4 { font-size: 14px; font-weight: 500; color: var(--fg-muted); margin: 20px 0 8px; font-family: 'Geist Mono', monospace; text-transform: uppercase; letter-spacing: 0.06em; }
+p { margin-bottom: 12px; font-size: 15px; }
+ul, ol { margin: 8px 0 16px 24px; }
+li { margin-bottom: 6px; font-size: 15px; }
+strong { font-weight: 600; color: var(--fg); }
+
+.callout { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 4px; padding: 18px 22px; margin: 16px 0; }
+.callout.why { border-left-color: var(--info); }
+.callout.danger { border-left-color: var(--error); }
+.callout.lesson { border-left-color: var(--success); }
+.callout .label-mono { margin-bottom: 8px; }
+.callout p { margin-bottom: 6px; }
+.callout p:last-child { margin-bottom: 0; }
+
+.card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 16px 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 20px; }
+.card h3 { margin-top: 0; margin-bottom: 6px; font-size: 16px; }
+.card .tag { font-family: 'Geist Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 10px; display: block; }
+.card .body { font-size: 14px; color: var(--fg-muted); line-height: 1.6; }
+.card .body strong { color: var(--fg); }
+.card ul { margin: 8px 0 0 18px; }
+.card li { font-size: 14px; }
+
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+.cmp-table th { text-align: left; font-family: 'Geist Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); font-weight: 500; padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.cmp-table td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.cmp-table tr:hover td { background: var(--surface-2); }
+.cmp-table td.center { text-align: center; }
+.cmp-table .rating { color: var(--accent); font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.04em; }
+
+pre.code { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; overflow-x: auto; font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 1.6; color: var(--fg); margin: 10px 0; }
+pre.code .cm { color: var(--fg-dim); }
+pre.code .kw { color: var(--accent); }
+pre.code .str { color: var(--success); }
+code.inline { background: var(--surface-2); border: 1px solid var(--border); padding: 1px 6px; border-radius: 3px; font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--fg); }
+
+.diagram { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 24px; margin: 16px 0; }
+.flow3 { display: grid; grid-template-columns: 1fr 28px 1fr 28px 1fr; align-items: center; gap: 0; }
+.flow3 .node { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 16px; text-align: center; }
+.flow3 .node .n { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--accent); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
+.flow3 .node .t { font-size: 13px; color: var(--fg); font-weight: 500; margin-bottom: 4px; }
+.flow3 .node .s { font-size: 11px; color: var(--fg-muted); font-family: 'Geist Mono', monospace; }
+.flow3 .arrow { text-align: center; color: var(--fg-dim); font-family: 'Geist Mono', monospace; }
+
+.layers { display: flex; flex-direction: column; gap: 12px; }
+.layer-row { display: grid; grid-template-columns: 60px 1fr; gap: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px; align-items: start; }
+.layer-row .badge { background: var(--accent-bg); border: 1px solid var(--accent-border); color: var(--accent); font-family: 'Geist Mono', monospace; font-size: 12px; text-align: center; padding: 6px 0; border-radius: 4px; height: fit-content; font-weight: 500; }
+.layer-row .title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.layer-row .desc { font-size: 13px; color: var(--fg-muted); margin-bottom: 6px; }
+.layer-row .impl { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--fg-dim); }
+
+.analogy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0; }
+.analogy { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 16px 18px; }
+.analogy h4 { color: var(--accent); font-family: 'Pretendard Variable', sans-serif; text-transform: none; letter-spacing: -0.005em; font-size: 14px; margin-bottom: 8px; font-weight: 600; }
+.analogy p { font-size: 13px; color: var(--fg-muted); margin: 0; line-height: 1.55; }
+.analogy .ana-table { width: 100%; font-size: 12px; margin-top: 8px; }
+.analogy .ana-table td { padding: 3px 0; border-bottom: 1px solid var(--border); }
+.analogy .ana-table td:first-child { color: var(--fg-muted); width: 50%; }
+.analogy .ana-table tr:last-child td { border-bottom: 0; }
+
+.toc { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 24px 0 48px; }
+.toc .label-mono { margin-bottom: 8px; }
+.toc ol { margin: 0 0 0 22px; }
+.toc li { font-size: 14px; margin-bottom: 4px; }
+.toc a { color: var(--fg); text-decoration: none; border-bottom: 1px dashed transparent; }
+.toc a:hover { border-bottom-color: var(--accent); color: var(--accent); }
+
+footer { padding: 48px 0 64px; border-top: 1px solid var(--border); color: var(--fg-muted); font-size: 13px; display: flex; justify-content: space-between; align-items: center; margin-top: 32px; }
+footer .links { display: flex; gap: 18px; }
+footer a { color: var(--fg-muted); text-decoration: none; border-bottom: 1px dashed transparent; }
+footer a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <div class="brand-name">Triple Chat</div>
+    <div class="brand-tag">· 학습 노트 · 대외비·PII·금칙어</div>
+  </div>
+  <button class="theme-toggle" onclick="toggleTheme()">⏾ DARK / LIGHT</button>
+</div>
+
+<div class="shell">
+
+  <section class="hero">
+    <div class="eyebrow">LEARN · MODERATION · 2026-05-28</div>
+    <h1>사내 RAG에서 <em>대외비·PII·금칙어</em>를<br>어떻게 다뤄야 하나.</h1>
+    <p class="lead">Fasoo · Microsoft Purview · Google Workspace · Microsoft Presidio · NVIDIA NeMo Guardrails — 글로벌이 공통으로 쓰는 패턴을 학습한 다음, Triple Chat의 결정을 박는다.</p>
+  </section>
+
+  <div class="toc">
+    <div class="label-mono">목차</div>
+    <ol>
+      <li><a href="#tldr">TL;DR — 한 페이지 요약</a></li>
+      <li><a href="#why-hard">왜 어려운 문제인가</a></li>
+      <li><a href="#global">글로벌 패턴 한눈에</a></li>
+      <li><a href="#opensource">오픈소스 도구</a></li>
+      <li><a href="#common">공통 패턴 — 라벨 + 권한 + 추적</a></li>
+      <li><a href="#decision">Triple Chat 결정 — 3-layer label-based</a></li>
+      <li><a href="#analogy">비유로 다시 정리</a></li>
+      <li><a href="#exercise">실습 노트</a></li>
+    </ol>
+  </div>
+
+  <!-- 1. TL;DR -->
+  <section id="tldr">
+    <div class="section-head">
+      <span class="num">01</span>
+      <h2>TL;DR</h2>
+      <span class="meta">읽는 데 60초</span>
+    </div>
+    <div class="callout danger">
+      <div class="label-mono">제일 위험한 것</div>
+      <p><strong>키워드 매칭만으로는 PII·대외비 보호가 안 된다.</strong> "주민등록번호"란 단어가 들어있는지를 보는 것과, 실제 <span class="mono">901101-1234567</span> 같은 패턴을 잡는 것은 완전히 다른 일이다. 키워드 사전이 "보호 중"이라는 잘못된 안전감만 주고 진짜 PII는 통과시킨다.</p>
+    </div>
+    <div class="callout lesson">
+      <div class="label-mono">글로벌이 합의한 정답</div>
+      <p>3종 세트 — <strong>sensitivity label · DLP rule · audit log</strong>. Microsoft Purview, Google Workspace, Slack Enterprise, Atlassian, Fasoo 전부 같은 구조. 셋 중 하나가 빠지면 무너진다.</p>
+    </div>
+    <div class="callout why">
+      <div class="label-mono">Triple Chat 결정</div>
+      <p><strong>3-layer label-based.</strong> Layer 1 = 업로드 시 라벨 부여, Layer 2 = retrieval에서 권한 vs 라벨 비교, Layer 3 = 입출력 모더레이션 (PII regex · 키워드 · 임베딩). 키워드/regex/embedding은 "도구"이지 "전략"이 아니다.</p>
+    </div>
+  </section>
+
+  <!-- 2. 왜 어려운가 -->
+  <section id="why-hard">
+    <div class="section-head">
+      <span class="num">02</span>
+      <h2>왜 이게 어려운가</h2>
+      <span class="meta">개념 정립</span>
+    </div>
+
+    <h3>"대외비"는 보안 등급의 중간 지대</h3>
+    <p>공공 부문 정의 (파수 페이지 인용):</p>
+    <div class="callout">
+      <p>대외비 문서란 <strong>비밀(secret) 외에 직무 수행상 특별히 보호가 필요한 사항</strong>.</p>
+    </div>
+    <p>핵심은 <strong>"직무 수행상"</strong> 이다. 비밀은 금고에 넣고 안 꺼내면 되지만, 대외비는 <strong>써야 한다</strong>. 안 쓰면 업무가 안 돌아간다. 그래서:</p>
+    <div class="callout why">
+      <div class="label-mono">트레이드오프</div>
+      <p>보안 ↔ 생산성. 너무 막으면 사용자가 우회한다 (개인 메일·Slack DM·메모장에 복붙). 이 균형을 어떻게 푸느냐가 회사마다 다르다.</p>
+    </div>
+
+    <h3>LLM이 끼면 문제가 더 어려워진다</h3>
+    <p>기존 DLP는 "사람이 파일을 첨부해서 외부로 보냈는지"만 본다. RAG는 4 군데에서 누설이 발생한다:</p>
+    <ol>
+      <li>사용자가 자기 권한 안의 chunk만 검색해야 한다 → <strong>ACL 매칭</strong></li>
+      <li>LLM 답변이 권한 밖 chunk를 재구성 가능 → <strong>출력 검사</strong></li>
+      <li>사용자 질문 자체가 민감 정보를 LLM에 송출 → <strong>입력 검사</strong></li>
+      <li>외부 LLM에 보내는 raw context = <strong>회사 밖으로 데이터 전송</strong></li>
+    </ol>
+    <p>→ 모더레이션 경계는 한 곳이 아니라 <strong>4 군데</strong>다 — 업로드 · 질문 · 검색결과 · 답변.</p>
+
+    <h3>"그냥 금칙어 사전 두면 되지 않나요?"</h3>
+    <p>이 접근이 첫 분기에 죽는 이유:</p>
+    <ul>
+      <li><strong>PII</strong>: 키워드 매칭은 실제 데이터 형식을 못 잡는다. 잡으려면 regex.</li>
+      <li><strong>대외비</strong>: 코드네임은 자주 바뀐다. 운영자가 코드 배포 권한이 없으면 죽은 사전이 된다 → <strong>DB-driven 운영자 UI 필수</strong>.</li>
+      <li><strong>맥락 의존</strong>: "원가"란 단어는 발표 자료에선 OK, 영업팀 답변에선 BLOCK. 단순 사전으론 표현 못 함 → <strong>boundary 분리</strong> 필요.</li>
+    </ul>
+  </section>
+
+  <!-- 3. 글로벌 패턴 -->
+  <section id="global">
+    <div class="section-head">
+      <span class="num">03</span>
+      <h2>글로벌 패턴 한눈에</h2>
+      <span class="meta">벤치마크</span>
+    </div>
+
+    <div class="card-grid">
+      <div class="card">
+        <span class="tag">Fasoo · 한국 엔터프라이즈</span>
+        <h3>Data-Centric DRM</h3>
+        <div class="body">
+          <strong>철학</strong>: 보안은 네트워크/엔드포인트가 아니라 <strong>문서 자체</strong>에 박는다.
+          <ul>
+            <li>Cataloger AI로 자동 라벨링</li>
+            <li>DRM 암호화 — 파일이 자기 정책 들고 다님</li>
+            <li>FILM 추적 — 외부 PC에서도 사용 로그</li>
+            <li>AI-R DLP — GenAI 채널 별도 차단</li>
+          </ul>
+          <p style="margin-top:10px"><strong>우리에게 적용</strong>: 풀 DRM은 못 한다. 단 "라벨이 컨텐츠를 따라다닌다" 원칙은 chunk metadata로 재현 가능.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <span class="tag">Microsoft Purview · 표준</span>
+        <h3>Sensitivity Label</h3>
+        <div class="body">
+          모든 컨텐츠에 4단계 라벨이 있고, 라벨이 정책을 결정한다.
+          <pre class="code" style="margin-top:10px"><span class="cm">// 라벨</span>
+Public → General → Confidential → Highly Confidential
+
+<span class="cm">// 정책 (라벨에 자동 매핑)</span>
+없음   워터마크    암호화+DLP        공유차단+보존</pre>
+          <p style="margin-top:8px"><strong>M365 Copilot 시그니쳐</strong>: 사용자 ACL을 그대로 LLM context에 전달. 사용자가 못 보는 파일은 Copilot도 못 본다.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <span class="tag">Google Workspace · DLP</span>
+        <h3>Predefined Detectors + Confidence</h3>
+        <div class="body">
+          ~150종 PII/금융/의료 정규식 사전 제공. confidence 점수(high/med/low)로 false positive 억제.
+          <ul>
+            <li>Luhn 알고리즘 → 신용카드 false positive ↓</li>
+            <li>Actions: block · warn · audit only (우리 BLOCK/MASK/WARN과 동일 매핑)</li>
+            <li>Gemini Workspace는 라벨 기반 retrieval 제한</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <span class="tag">Slack/Atlassian · 통합</span>
+        <h3>Third-party DLP + 시각 차단</h3>
+        <div class="body">
+          자체 안 짜고 <strong>Nightfall · BigID · Polymer</strong> 통합. 메시지 송신 직전 스캔, <strong>send 버튼이 회색</strong>으로 비활성화돼 사용자가 학습한다.
+          <p style="margin-top:10px"><strong>우리에게 적용</strong>: <code class="inline">[수정됨·N건]</code> ribbon으로 사용자에게 "무엇이 차단됐는지" 알려주는 UX = 같은 원칙. silent drop 금지.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <span class="tag">Apple / Meta · 내부 코드네임</span>
+      <h3>코드네임 자동 블랙리스트</h3>
+      <div class="body">
+        모든 미공개 프로젝트에 코드네임 부여 (Apple "Titan", Meta "Quest"). 사내 모든 LLM·channel·메일에 동일 키워드 룰 상속. → Triple Chat의 <code class="inline">ForbiddenWord(category="코드네임")</code>가 이 패턴의 mini 버전.
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 오픈소스 -->
+  <section id="opensource">
+    <div class="section-head">
+      <span class="num">04</span>
+      <h2>오픈소스 도구</h2>
+      <span class="meta">실전 후보</span>
+    </div>
+    <table class="cmp-table">
+      <thead>
+        <tr>
+          <th>도구</th>
+          <th>역할</th>
+          <th class="center">도입난이도</th>
+          <th class="center">우리 적합도</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Microsoft Presidio</strong><br><span class="mono dim">github.com/microsoft/presidio</span></td>
+          <td>PII detection (regex + spaCy NER) + anonymization</td>
+          <td class="center">중</td>
+          <td class="center"><span class="rating">★★★★★</span> Layer 3 표준</td>
+        </tr>
+        <tr>
+          <td><strong>presidio-analyzer-ko</strong><br><span class="mono dim">community fork</span></td>
+          <td>한국 PII recognizer (주민번호·전화·계좌)</td>
+          <td class="center">낮음</td>
+          <td class="center"><span class="rating">★★★★★</span> 필수 import</td>
+        </tr>
+        <tr>
+          <td><strong>NVIDIA NeMo Guardrails</strong></td>
+          <td>LLM 입출력 가드레일 — 토픽 차단, jailbreak</td>
+          <td class="center">중</td>
+          <td class="center"><span class="rating">★★★</span> phase 2</td>
+        </tr>
+        <tr>
+          <td><strong>Guardrails AI</strong></td>
+          <td>validator 프레임워크 — schema·PII·profanity</td>
+          <td class="center">낮음</td>
+          <td class="center"><span class="rating">★★★★</span> 답변 검증</td>
+        </tr>
+        <tr>
+          <td><strong>Llama Guard</strong> (Meta)</td>
+          <td>작은 LLM이 1차 검열 (LLM-as-judge)</td>
+          <td class="center">높음</td>
+          <td class="center"><span class="rating">★★</span> Ollama 후</td>
+        </tr>
+        <tr>
+          <td><strong>LangChain Constitutional AI</strong></td>
+          <td>LLM 자기검증 chain</td>
+          <td class="center">낮음</td>
+          <td class="center"><span class="rating">★★★</span> 답변 self-check</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 5. 공통 패턴 -->
+  <section id="common">
+    <div class="section-head">
+      <span class="num">05</span>
+      <h2>공통 패턴 — 라벨 + 권한 + 추적</h2>
+      <span class="meta">3종 세트</span>
+    </div>
+
+    <p>위 모든 시스템이 다음 3종을 공유한다. 셋 중 하나가 빠지면 보호가 무너진다.</p>
+
+    <div class="diagram">
+      <div class="flow3">
+        <div class="node">
+          <div class="n">① 라벨</div>
+          <div class="t">Sensitivity</div>
+          <div class="s">컨텐츠가<br>얼마나 민감한가</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="node">
+          <div class="n">② 권한 매칭</div>
+          <div class="t">ACL · DLP rule</div>
+          <div class="s">누가 어떤 boundary에서<br>접근 가능한가</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="node">
+          <div class="n">③ 추적 로그</div>
+          <div class="t">Audit trail</div>
+          <div class="s">누가 언제 어떤 시도를<br>했고 어떻게 처리됐나</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout why">
+      <div class="label-mono">왜 셋이 다 필요한가</div>
+      <p><strong>라벨만 있고 권한 매칭 없으면</strong> → 그냥 메타데이터 (보호 안 됨).</p>
+      <p><strong>권한만 있고 라벨 없으면</strong> → 매번 ad-hoc 키워드 매칭 = false negative 폭증.</p>
+      <p><strong>추적 없으면</strong> → 사고 사후 조사 불가능 + 운영자가 룰 튜닝 못 함.</p>
+    </div>
+  </section>
+
+  <!-- 6. Triple Chat 결정 -->
+  <section id="decision">
+    <div class="section-head">
+      <span class="num">06</span>
+      <h2>Triple Chat 결정 · 3-layer label-based</h2>
+      <span class="meta">핵심 설계</span>
+    </div>
+
+    <div class="layers">
+      <div class="layer-row">
+        <div class="badge">L1</div>
+        <div>
+          <div class="title">인덱싱 (업로드 경계)</div>
+          <div class="desc">업로드 시 <code class="inline">Document.sensitivity</code> 라벨 부여 (사용자 선택 → phase 2에 자동분류). <code class="inline">restricted</code>는 vector store 진입 차단.</div>
+          <div class="impl">knowledge.Document.sensitivity · chunk metadata 상속</div>
+        </div>
+      </div>
+      <div class="layer-row">
+        <div class="badge">L2</div>
+        <div>
+          <div class="title">검색 (retrieval 경계)</div>
+          <div class="desc"><code class="inline">User.access_level ≥ chunk.sensitivity</code>인 chunk만 반환. 필터된 결과는 citation ribbon에 <code class="inline">[수정됨·N건]</code> 가시화 — silent drop 금지.</div>
+          <div class="impl">chat.User.access_level · retrieval filter · citation badge</div>
+        </div>
+      </div>
+      <div class="layer-row">
+        <div class="badge">L3</div>
+        <div>
+          <div class="title">입출력 검사 (질문·답변 경계)</div>
+          <div class="desc">PII = Presidio + 한국 regex. 대외비 키워드/regex = ModerationRule(확장된 ForbiddenWord). 답변에도 동일 적용 (outbound).</div>
+          <div class="impl">moderation.filter.apply() · pattern_type=KW/RE/EMB</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>왜 라벨이 첫 단추인가</h3>
+    <p>라벨이 없으면 모든 layer가 ad-hoc 키워드 매칭에 의존하게 된다. 라벨이 있으면:</p>
+    <ul>
+      <li>Layer 2는 단순 비교 — <code class="inline">user.level >= chunk.level</code></li>
+      <li>Layer 3은 라벨에 따라 다른 룰셋 적용 (예: <code class="inline">restricted</code> 답변은 외부 LLM 차단)</li>
+      <li>운영자는 라벨 단위로 정책 관리 → UI가 단순</li>
+    </ul>
+
+    <h3>왜 키워드/regex/embedding은 "도구"이지 "전략"이 아닌가</h3>
+    <ul>
+      <li><strong>키워드</strong>: 정확하지만 누락 많음 (변형·오타·동의어).</li>
+      <li><strong>regex</strong>: 형식 고정 데이터(주민번호·전화) 강점, 자연어엔 약함.</li>
+      <li><strong>embedding</strong>: 자연어 의미 잘 잡지만 비용·지연·해석 어려움.</li>
+    </ul>
+    <p>→ 각각 특정 카테고리에서만 강함. 전체 전략은 라벨이 잡고, 각 layer가 알맞은 도구를 고른다.</p>
+
+    <h3>거부한 옵션과 이유</h3>
+    <table class="cmp-table">
+      <thead><tr><th>옵션</th><th>거부 이유</th></tr></thead>
+      <tbody>
+        <tr><td>키워드 사전만 풍부히</td><td>§ 02에서 다룸 — 잘못된 안전감</td></tr>
+        <tr><td>Fasoo급 풀 DRM 도입</td><td>비용·복잡도. 부트캠프 RAG에 oversized</td></tr>
+        <tr><td>LLM이 self-judge (Constitutional AI만)</td><td>라벨 없으면 일관성 없음. 외부 LLM에 raw 송신 = 본질 미해결</td></tr>
+        <tr><td>외부 vendor (Nightfall·BigID)</td><td>사내 RAG에 outbound dependency 추가 = 회피</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 7. 비유 -->
+  <section id="analogy">
+    <div class="section-head">
+      <span class="num">07</span>
+      <h2>비유로 다시 정리</h2>
+      <span class="meta">기억 정착</span>
+    </div>
+
+    <div class="analogy-grid">
+      <div class="analogy">
+        <h4>도서관 비유</h4>
+        <p>전체 구조 매핑.</p>
+        <table class="ana-table">
+          <tr><td>Document</td><td>책</td></tr>
+          <tr><td>sensitivity</td><td>등급 스티커</td></tr>
+          <tr><td>User.access_level</td><td>도서관 카드 등급</td></tr>
+          <tr><td>Layer 1 (업로드)</td><td>사서가 스티커 붙임</td></tr>
+          <tr><td>Layer 2 (retrieval)</td><td>열람 가능 책만 진열</td></tr>
+          <tr><td>Layer 3 (입출력)</td><td>찢기·촬영 감시</td></tr>
+          <tr><td>audit log</td><td>대출 기록</td></tr>
+        </table>
+      </div>
+
+      <div class="analogy">
+        <h4>여권 비유 (Fasoo DRM 본질)</h4>
+        <p>일반 파일 = 종이 메모. 복사하면 그만.<br>
+        Fasoo DRM = <strong>여권을 들고 다니는 파일</strong>. 어디로 가든 출입국 검사.<br>
+        우리 chunk metadata = <strong>여권 미니 버전</strong>. vector store에서 꺼낼 때마다 검사.</p>
+      </div>
+
+      <div class="analogy">
+        <h4>이중 자물쇠 비유 (4 boundary 이유)</h4>
+        <p>한 자물쇠는 도구만 있으면 따짐. 자물쇠 4개를 다른 메커니즘으로 → 한 곳 뚫려도 나머지가 잡음.<br>
+        업로드(물리잠금) · 질문(키확인) · 검색(지문) · 답변(망보는 사람).</p>
+      </div>
+
+      <div class="analogy">
+        <h4>공항 보안 비유 (PII Layer 3)</h4>
+        <p>키워드 매칭 = "주민등록번호 가져왔어?"라고 묻기. 솔직한 사람만 잡힘.<br>
+        Regex 매칭 = X-ray 스캐너. 어떻게 숨기든 형태로 잡힘.<br>
+        → 진짜 PII 보호는 X-ray 필수.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. 실습 -->
+  <section id="exercise">
+    <div class="section-head">
+      <span class="num">08</span>
+      <h2>실습 노트</h2>
+      <span class="meta">직접 만져보기</span>
+    </div>
+
+    <h3>현재 ForbiddenWord 테이블 확인</h3>
+<pre class="code">docker compose exec backend python manage.py shell -c "
+from moderation.models import ForbiddenWord
+for w in ForbiddenWord.objects.all()[:10]:
+    print(f'{w.severity:8s} {w.direction:8s} {w.category:10s} {w.word}')
+"</pre>
+    <p class="muted" style="font-size:13px">관찰 포인트 — severity·direction·category·word 4축뿐. pattern_type·boundary 없음 → Phase A 마이그레이션 필요.</p>
+
+    <h3>현재 PII 처리 한계 실험</h3>
+<pre class="code">docker compose exec backend python manage.py shell -c "
+from moderation.filter import apply
+from moderation.models import ModerationLog
+<span class="cm"># 키워드 매칭 (현재 동작)</span>
+print(apply('주민등록번호를 알려주세요', source=ModerationLog.Source.INBOUND))
+<span class="cm"># 실제 PII 데이터 (현재는 못 잡음 — 잘못된 안전감!)</span>
+print(apply('내 정보는 901101-1234567 이야', source=ModerationLog.Source.INBOUND))
+"</pre>
+    <p class="muted" style="font-size:13px">→ 첫 줄은 잡히고 둘째 줄은 통과한다. <strong>이게 § 02에서 말한 문제</strong>. Phase C에서 Presidio + regex로 해결.</p>
+
+    <h3>한국 PII regex 직접 테스트</h3>
+<pre class="code"><span class="kw">import</span> re
+
+patterns = {
+    <span class="str">'주민번호'</span>: <span class="str">r'\b\d{6}[-]?[1-4]\d{6}\b'</span>,
+    <span class="str">'휴대전화'</span>: <span class="str">r'\b01[016-9][-]?\d{3,4}[-]?\d{4}\b'</span>,
+    <span class="str">'이메일'</span>:   <span class="str">r'\b[\w.+-]+@[\w-]+\.[\w.-]+\b'</span>,
+    <span class="str">'신용카드'</span>: <span class="str">r'\b(?:\d[ -]?){13,19}\b'</span>,
+}
+
+text = <span class="str">'연락처는 010-1234-5678 / 901101-1234567 / kim@example.com'</span>
+<span class="kw">for</span> name, pat <span class="kw">in</span> patterns.items():
+    hits = re.findall(pat, text)
+    print(f<span class="str">'{name:8s}: {hits}'</span>)</pre>
+    <p class="muted" style="font-size:13px">연습 과제 — Luhn 알고리즘으로 신용카드 false positive 줄이기 (Google DLP가 쓰는 방식).</p>
+
+    <h3>라벨 기반 retrieval 시뮬레이션</h3>
+    <div class="callout">
+      <pre class="code" style="margin:0"><span class="cm">사용자: access_level = "internal"</span>
+
+chunk A: sensitivity = <span class="str">"public"</span>        → 통과 ✓
+chunk B: sensitivity = <span class="str">"internal"</span>      → 통과 ✓
+chunk C: sensitivity = <span class="str">"confidential"</span>  → 차단 (citation에 [수정됨·1건])
+chunk D: sensitivity = <span class="str">"restricted"</span>    → 인덱스 진입 안 함 (Layer 1)</pre>
+      <p style="font-size:13px;margin-top:8px">→ Layer 2 핵심 동작. 차단된 게 있다는 사실은 보여줘야 한다 (silent drop 금지).</p>
+    </div>
+
+    <h3>모더레이션 UI 목업 보기</h3>
+    <p><a href="../../../docs/design/preview.html#" style="color:var(--accent)">design/preview.html</a> 09 섹션 — 운영자 검수 화면. 4 boundary 탭 · 카테고리/pattern_type/severity 컬럼 · 실시간 테스트 패널. 구현은 phase A·B·C 끝난 후.</p>
+  </section>
+
+  <footer>
+    <div class="links">
+      <a href="learn.md">learn.md</a>
+      <a href="references.md">references.md</a>
+      <a href="refs/fasoo_원본.html">Fasoo 원본</a>
+      <a href="../../architecture/security.md">security.md</a>
+    </div>
+    <span class="mono label-mono">LEARN · MODERATION · 2026-05-28</span>
+  </footer>
+
+</div>
+
+<script>
+function toggleTheme() {
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+}
+</script>
+</body>
+</html>

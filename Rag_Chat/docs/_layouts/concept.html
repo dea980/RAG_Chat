@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>{{ title }} — Triple Chat 개념 노트</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" as="style" crossorigin
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Tokens — synced with DESIGN.md */
+  :root[data-theme="dark"] {
+    --bg: #0A0B0D; --surface: #131418; --surface-2: #16171B;
+    --border: #25262B; --border-hi: #34353B;
+    --fg: #F3F2EE; --fg-muted: #8B8B93; --fg-dim: #5C5D63;
+    --accent: #E89B3C;
+    --accent-bg: rgba(232,155,60,0.08); --accent-border: rgba(232,155,60,0.35);
+    --success: #4F9D7A; --warning: #D9A441; --error: #C24A4A; --info: #6B8AB8;
+    --success-bg: rgba(79,157,122,0.08);
+    --warning-bg: rgba(217,164,65,0.08);
+    --error-bg: rgba(194,74,74,0.08);
+    --info-bg: rgba(107,138,184,0.08);
+  }
+  :root[data-theme="light"] {
+    --bg: #F7F6F2; --surface: #FFFFFF; --surface-2: #F0EFEA;
+    --border: #DCDBD4; --border-hi: #C2C1BA;
+    --fg: #1A1B1F; --fg-muted: #6B6C72; --fg-dim: #9C9DA3;
+    --accent: #B8771F; --accent-bg: rgba(184,119,31,0.08); --accent-border: rgba(184,119,31,0.30);
+    --success: #3E7D60; --warning: #A8801F; --error: #9B3939; --info: #4E6D9A;
+    --success-bg: rgba(62,125,96,0.08);
+    --warning-bg: rgba(168,128,31,0.08);
+    --error-bg: rgba(155,57,57,0.08);
+    --info-bg: rgba(78,109,154,0.08);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    color: var(--fg); background: var(--bg);
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-feature-settings: 'ss05';
+    font-size: 15px; line-height: 1.7;
+  }
+  .mono, code, pre {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-feature-settings: 'tnum' 1;
+  }
+  .label-mono {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--fg-muted);
+  }
+
+  .wrap { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+
+  /* Side nav */
+  nav.side {
+    position: sticky; top: 0;
+    align-self: start; height: 100vh; overflow-y: auto;
+    border-right: 1px solid var(--border);
+    padding: 28px 20px;
+    background: var(--bg);
+  }
+  nav.side .crumb {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--fg-muted);
+    margin-bottom: 18px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  nav.side .crumb a { color: var(--fg-muted); text-decoration: none; }
+  nav.side .crumb a:hover { color: var(--accent); }
+  nav.side h2 {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    margin: 0 0 12px;
+    padding: 4px 8px;
+  }
+  nav.side .tag {
+    display: inline-block;
+    padding: 2px 8px; border-radius: 4px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; color: var(--fg-muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 14px;
+  }
+  nav.side ol { list-style: none; padding: 0; margin: 0 0 22px; counter-reset: nav; }
+  nav.side li { counter-increment: nav; margin: 2px 0; }
+  nav.side li a {
+    text-decoration: none; color: var(--fg-muted);
+    display: block; padding: 6px 8px;
+    border-radius: 4px; font-size: 13px;
+    transition: all 150ms ease-out;
+  }
+  nav.side li a::before {
+    content: counter(nav, decimal-leading-zero) "  ";
+    color: var(--fg-dim);
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+  }
+  nav.side li a:hover { background: var(--surface-2); color: var(--fg); }
+  nav.side .meta {
+    font-size: 12px; color: var(--fg-muted);
+    margin-top: 16px;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+  nav.side .meta div { margin: 4px 0; }
+  nav.side .meta b {
+    color: var(--fg-muted);
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+
+  /* Main */
+  main { padding: 40px 56px 120px; max-width: 880px; }
+
+  /* Top theme bar */
+  .top-bar {
+    display: flex; justify-content: flex-end; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .theme-toggle {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--fg); padding: 6px 12px; border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .theme-toggle:hover { border-color: var(--border-hi); }
+
+  h1 {
+    font-size: 32px; line-height: 1.15;
+    margin: 8px 0 6px;
+    font-weight: 600; letter-spacing: -0.015em;
+  }
+  h2 {
+    font-size: 22px; line-height: 1.2;
+    margin: 56px 0 12px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-weight: 600; letter-spacing: -0.01em;
+  }
+  h2:first-of-type { border-top: 0; padding-top: 0; margin-top: 8px; }
+  h3 { font-size: 17px; margin: 30px 0 8px; font-weight: 600; }
+  h4 { font-size: 14px; margin: 18px 0 4px; font-weight: 500; }
+  .lede {
+    color: var(--fg-muted);
+    font-size: 16px;
+    margin: 0 0 24px;
+    line-height: 1.6;
+  }
+  p { margin: 8px 0 14px; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 5px 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-border); transition: border-color 150ms ease-out; }
+  a:hover { border-bottom-color: var(--accent); }
+  strong { font-weight: 600; color: var(--fg); }
+
+  /* Tables */
+  table {
+    width: 100%; border-collapse: collapse;
+    margin: 14px 0 22px;
+    font-size: 14px;
+  }
+  th, td {
+    border-bottom: 1px solid var(--border);
+    padding: 10px 12px;
+    vertical-align: top; text-align: left;
+  }
+  th {
+    background: var(--surface);
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    letter-spacing: 0.08em;
+  }
+  td code, p code, li code {
+    background: var(--surface-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--accent);
+  }
+
+  /* Analogy — warning-toned with tinted bg for visibility */
+  .analogy {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warning);
+    background: var(--warning-bg);
+    padding: 14px 18px;
+    margin: 14px 0;
+    border-radius: 0 6px 6px 0;
+  }
+  .analogy h4 {
+    margin: 0 0 6px;
+    color: var(--warning);
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+  }
+  .analogy strong { color: var(--fg); }
+
+  /* Definition card */
+  .definition {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 18px;
+    background: var(--surface);
+    margin: 14px 0;
+  }
+  .definition .term {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--fg-muted);
+    font-weight: 500;
+  }
+  .definition .name {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 4px 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .definition p { margin: 0; font-size: 14.5px; color: var(--fg); line-height: 1.65; }
+
+  /* Callouts — map to semantic colors with tinted bg */
+  .callout {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--info);
+    background: var(--info-bg);
+    padding: 12px 18px;
+    margin: 14px 0;
+    border-radius: 0 6px 6px 0;
+  }
+  .callout.warn   { border-left-color: var(--warning); background: var(--warning-bg); }
+  .callout.ok     { border-left-color: var(--success); background: var(--success-bg); }
+  .callout.danger { border-left-color: var(--error);   background: var(--error-bg); }
+  .callout h4 {
+    margin: 0 0 4px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    font-weight: 500;
+  }
+  .callout       h4 { color: var(--info); }
+  .callout.warn  h4 { color: var(--warning); }
+  .callout.ok    h4 { color: var(--success); }
+  .callout.danger h4 { color: var(--error); }
+
+  /* Code blocks — lighter surface tier to stand out against near-black bg */
+  pre.code, pre {
+    background: #1A1C22;
+    border: 1px solid var(--border-hi);
+    color: var(--fg);
+    padding: 14px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 13px; line-height: 1.6;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+  :root[data-theme="light"] pre.code, :root[data-theme="light"] pre {
+    background: var(--surface-2); border-color: var(--border-hi);
+  }
+
+  /* Pills (status) */
+  .pill {
+    display: inline-block;
+    padding: 2px 8px; border-radius: 4px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    border: 1px solid transparent;
+  }
+  .pill.ok   { background: var(--success-bg); border-color: rgba(79,157,122,0.3);  color: var(--success); }
+  .pill.warn { background: var(--warning-bg); border-color: rgba(217,164,65,0.3);  color: var(--warning); }
+  .pill.bad  { background: var(--error-bg);   border-color: rgba(194,74,74,0.3);   color: var(--error); }
+
+  /* Q&A blocks */
+  .qa {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 10px 0;
+    background: var(--surface);
+  }
+  .qa .q {
+    font-weight: 600; color: var(--accent);
+    font-size: 14px; margin-bottom: 6px;
+  }
+  .qa .a { font-size: 14px; color: var(--fg); }
+
+  /* Level badges */
+  .level-badge {
+    display: inline-block;
+    padding: 2px 8px; border-radius: 4px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    border: 1px solid transparent;
+    margin-right: 6px;
+  }
+  .level-badge.beginner     { background: var(--success-bg); border-color: rgba(79,157,122,0.3); color: var(--success); }
+  .level-badge.intermediate { background: var(--warning-bg); border-color: rgba(217,164,65,0.3); color: var(--warning); }
+  .level-badge.advanced     { background: var(--error-bg);   border-color: rgba(194,74,74,0.3);  color: var(--error); }
+
+  /* Related links */
+  .related { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 22px; }
+  .related a {
+    display: inline-block;
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--fg-muted);
+    background: var(--surface);
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .related a:hover {
+    background: var(--surface-2);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+
+  /* Footer nav */
+  .footer-nav {
+    display: flex; justify-content: space-between;
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    gap: 16px;
+  }
+  .footer-nav a {
+    flex: 1;
+    padding: 14px 18px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--fg);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .footer-nav a:hover { background: var(--surface-2); border-color: var(--border-hi); }
+  .footer-nav .label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--fg-muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .footer-nav .title { font-size: 14px; font-weight: 600; margin-top: 4px; }
+  .footer-nav .next { text-align: right; }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 36px 0; }
+
+  @media print {
+    .wrap { grid-template-columns: 1fr; }
+    nav.side, .theme-toggle, .top-bar { display: none; }
+    main { padding: 0; max-width: none; }
+    h2 { break-before: page; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="side">
+  <div class="crumb"><a href="index.html">← 개념 인덱스</a></div>
+  <span class="tag">{{ category }}</span>
+  <h2>이 문서 차례</h2>
+  <ol>
+    {% for h in toc %}
+    <li><a href="#{{ h.id }}">{{ h.text }}</a></li>
+    {% endfor %}
+  </ol>
+
+  {% if prerequisites %}
+  <div class="meta">
+    <div><b>먼저 읽기</b></div>
+    {% for p in prerequisites %}
+    <div>· <a href="{{ p.slug }}.html">{{ p.title }}</a></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="meta">
+    <div><b>난이도</b> · {{ level }}</div>
+    {% if updated %}<div><b>업데이트</b> · {{ updated }}</div>{% endif %}
+  </div>
+</nav>
+
+<main>
+
+<div class="top-bar">
+  <button class="theme-toggle" onclick="toggleTheme()">⏾ DARK / LIGHT</button>
+</div>
+
+<div>
+  <span class="level-badge {{ level_class }}">{{ level }}</span>
+  <span class="tag">{{ category }}</span>
+</div>
+<h1>{{ title }}</h1>
+{% if summary %}<p class="lede">{{ summary }}</p>{% endif %}
+
+{% if related %}
+<div class="related">
+  {% for r in related %}<a href="{{ r.slug }}.html">↗ {{ r.title }}</a>{% endfor %}
+</div>
+{% endif %}
+
+{{ body | safe }}
+
+<div class="footer-nav">
+  {% if prev %}
+  <a href="{{ prev.slug }}.html">
+    <div class="label">← 이전</div>
+    <div class="title">{{ prev.title }}</div>
+  </a>
+  {% else %}<span></span>{% endif %}
+  {% if next %}
+  <a href="{{ next.slug }}.html" class="next">
+    <div class="label">다음 →</div>
+    <div class="title">{{ next.title }}</div>
+  </a>
+  {% else %}<span></span>{% endif %}
+</div>
+
+<hr>
+<p style="color:var(--fg-muted);font-size:13px">
+  관련 프로젝트 문서:
+  <a href="../prd.html">prd.html</a> ·
+  <a href="../workflow.html">workflow.html</a> ·
+  <a href="../ab_testing_guide.html">ab_testing_guide.html</a>
+</p>
+
+</main>
+</div>
+<script>
+  function toggleTheme(){
+    const r = document.documentElement;
+    r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('triple-theme', r.dataset.theme); } catch(e) {}
+  }
+  try {
+    const saved = localStorage.getItem('triple-theme');
+    if (saved) document.documentElement.dataset.theme = saved;
+  } catch(e) {}
+</script>
+</body>
+</html>

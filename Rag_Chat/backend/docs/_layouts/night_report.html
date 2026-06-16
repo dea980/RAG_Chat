@@ -1,0 +1,14 @@
+{% extends "night_base.html" %}
+{% block title %}{{ doc.terminal }} 작업 리포트 — {{ doc.title }}{% endblock %}
+{% block content %}
+<p class="muted"><a href="index.html">← 대시보드</a></p>
+<h1>{{ doc.terminal }} · {{ doc.title }}</h1>
+<p>
+  <span class="status-pill {{ status_class }}">{{ doc.status }}</span>
+  <span class="muted">업데이트 {{ doc.updated }}</span>
+</p>
+<p class="muted">임무: {{ doc.mission }}</p>
+<p class="muted">👉 <a href="{{ doc.terminal }}-learning.html">이 작업으로 배우는 RAG 개념 →</a></p>
+<hr>
+{{ body|safe }}
+{% endblock %}

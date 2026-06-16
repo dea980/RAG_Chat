@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Triple Chat — PRD (Internal RAG Chatbot)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --ink: #111;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --bg: #ffffff;
+    --bg-soft: #f7f7f8;
+    --accent: #2563eb;
+    --ok: #16a34a;
+    --warn: #d97706;
+    --danger: #dc2626;
+    --mono: "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", "Noto Sans KR", sans-serif;
+    color: var(--ink); background: var(--bg);
+    font-size: 15px; line-height: 1.7;
+  }
+  /* Layout */
+  .wrap { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+  nav.side {
+    position: sticky; top: 0; align-self: start;
+    height: 100vh; overflow-y: auto;
+    border-right: 1px solid var(--line);
+    padding: 28px 20px;
+    background: var(--bg-soft);
+  }
+  nav.side h2 { font-size: 13px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
+  nav.side ol { list-style: none; padding: 0; margin: 0 0 22px; counter-reset: nav; }
+  nav.side ol li { counter-increment: nav; margin: 4px 0; }
+  nav.side ol li a {
+    text-decoration: none; color: var(--ink);
+    display: block; padding: 6px 8px; border-radius: 6px;
+    font-size: 14px;
+  }
+  nav.side ol li a::before { content: counter(nav) ". "; color: var(--muted); margin-right: 2px; }
+  nav.side ol li a:hover { background: white; }
+  nav.side .meta { color: var(--muted); font-size: 12px; line-height: 1.6; }
+  main { padding: 40px 56px 120px; max-width: 920px; }
+  /* Headings */
+  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 { font-size: 22px; margin: 56px 0 4px; padding-top: 24px; border-top: 1px solid var(--line); }
+  h2 .badge { font-size: 12px; color: var(--muted); margin-left: 8px; font-weight: normal; }
+  h3 { font-size: 16px; margin: 28px 0 6px; }
+  .lede { color: var(--muted); margin: 0 0 24px; font-size: 16px; }
+  /* PRD table */
+  table.prd {
+    width: 100%; border-collapse: collapse; margin: 14px 0 24px;
+    font-size: 14px;
+  }
+  table.prd th, table.prd td {
+    padding: 10px 12px; border: 1px solid var(--line);
+    vertical-align: top; text-align: left;
+  }
+  table.prd th {
+    background: var(--bg-soft);
+    width: 130px; font-weight: 600; color: var(--muted);
+    letter-spacing: .03em; text-transform: uppercase; font-size: 12px;
+  }
+  /* Misc */
+  code, kbd { font-family: var(--mono); background: var(--bg-soft); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
+  pre { font-family: var(--mono); background: #0b1020; color: #cdd6f4; padding: 14px 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.55; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 3px 0; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 48px 0; }
+  /* Pills */
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .pill.user { background: #eef2ff; color: #3730a3; }
+  .pill.mgr  { background: #ecfeff; color: #155e75; }
+  .pill.admin { background: #fef2f2; color: #991b1b; }
+  .pill.done { background: #ecfdf5; color: var(--ok); }
+  .pill.todo { background: #fef3c7; color: var(--warn); }
+  /* Header card */
+  .header-card {
+    display: flex; gap: 24px; align-items: flex-end; justify-content: space-between;
+    padding: 0 0 18px; border-bottom: 1px solid var(--line); margin-bottom: 28px;
+  }
+  .header-card .right { color: var(--muted); font-size: 13px; line-height: 1.6; text-align: right; }
+  /* Architecture diagram (ASCII) */
+  .ascii {
+    font-family: var(--mono); white-space: pre; background: var(--bg-soft);
+    padding: 14px 18px; border-radius: 8px; font-size: 12.5px; line-height: 1.55;
+    overflow-x: auto;
+  }
+  @media print {
+    .wrap { grid-template-columns: 1fr; }
+    nav.side { display: none; }
+    main { padding: 0; max-width: none; }
+    h2 { page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="side">
+  <h2>PRD 목차</h2>
+  <ol>
+    <li><a href="#overview">시스템 개요</a></li>
+    <li><a href="#part-chat">Part 1 · chat (RAG 파이프라인)</a></li>
+    <li><a href="#part-knowledge">Part 2 · knowledge (지식베이스)</a></li>
+    <li><a href="#part-moderation">Part 3 · moderation (금지어 검수)</a></li>
+    <li><a href="#part-audit">Part 4 · audit (감사 로그)</a></li>
+    <li><a href="#appendix-security">부록 A · 보안 / 대외비 대응</a></li>
+    <li><a href="#appendix-validation">부록 B · 검증 (chunk A/B + CI)</a></li>
+    <li><a href="#roadmap">로드맵 / 리스크</a></li>
+  </ol>
+  <div class="meta">
+    Triple Chat<br>
+    Internal RAG Chatbot PRD<br>
+    Version 1.0 · 2026-05-18<br>
+    Owner: Daeyeop Kim<br>
+    Repo: <code>RAG_Chat</code>
+  </div>
+</nav>
+
+<main>
+
+<!-- ============================================================ -->
+<header class="header-card">
+  <div>
+    <h1>Triple Chat — 사내 RAG 챗봇 PRD</h1>
+    <p class="lede">영업팀 등 비엔지니어 부서가 제품/담당자 정보를 자연어로 찾고, 관리자가 검수·감사할 수 있는 사내 챗봇.</p>
+  </div>
+  <div class="right">
+    Status: <span class="pill done">MVP 구현 완료</span><br>
+    Stage: 배포 직전 · 영업팀 베타<br>
+    Branch: <code>main</code>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<section id="overview">
+<h2>1 · 시스템 개요 <span class="badge">overview</span></h2>
+
+<table class="prd">
+  <tr><th>Problem</th><td>
+    영업팀·고객지원팀이 제품 사양·가격·담당자 정보를 매번 PDF/엑셀/슬랙에서 수동으로 찾는 데 시간을 과도하게 소비. 정보 분산 → 잘못된 응답을 고객에게 전달하는 사고 위험.
+  </td></tr>
+  <tr><th>Users</th><td>
+    <span class="pill user">USER</span> 영업·CS 직원 (자연어 질문) ·
+    <span class="pill mgr">MANAGER</span> 부서장 (팀원 활동 리포트) ·
+    <span class="pill admin">ADMIN</span> C-Level/IT (금지어·RAG 문서·감사 관리)
+  </td></tr>
+  <tr><th>Goal</th><td>
+    1. 영업팀 질문 평균 응답 3~5초.<br>
+    2. 매 응답에 대해 (질문→컨텍스트→답변)을 감사 가능.<br>
+    3. 대외비/PII가 외부 LLM으로 평문 송신되지 않도록 다층 방어.<br>
+    4. 관리자가 Django Admin에서 금지어를 직접 운영/검수.
+  </td></tr>
+  <tr><th>Non-goal</th><td>
+    소비자 대상 챗봇·다국어·HA 멀티노드·완전 자체 호스팅 LLM (단계적, 부록 A 참조).
+  </td></tr>
+  <tr><th>Stack</th><td>
+    Streamlit · Django REST · Celery · Redis · PostgreSQL 16 · FAISS/Chroma · LangChain · Gemini(기본)/Qwen(실험) · Docker Compose · GitHub Actions
+  </td></tr>
+</table>
+
+<h3>1.1 시스템 다이어그램</h3>
+<div class="ascii">
+        ┌────────────────────────────────────────────┐
+        │              사용자 (영업/CS)               │
+        └────────────────────────────────────────────┘
+                          │ 자연어 질문
+                          ▼
+                ┌──────────────────────┐
+                │   Streamlit (8501)    │
+                └──────────────────────┘
+                          │
+                          ▼
+        ┌────────────────────────────────────────────┐
+        │  Django REST  (8000)                       │
+        │  ┌──────────────────────────────────────┐  │
+        │  │ AuditLogMiddleware (모든 호출 기록)  │  │
+        │  └──────────────────────────────────────┘  │
+        │                  │                         │
+        │   ┌──────────────┼─────────────────┐       │
+        │   ▼              ▼                 ▼       │
+        │ chat        knowledge          moderation  │
+        │ (RAG)     (deterministic    (BLOCK/MASK/   │
+        │            search API)         WARN)       │
+        │   │              │                 │       │
+        │   ▼              ▼                 ▼       │
+        │  FAISS    Postgres tables    ForbiddenWord │
+        │  Chroma                       ModerationLog│
+        │   │                                        │
+        │   ▼ (INBOUND filter → LLM → OUTBOUND filter)
+        │  Gemini / Qwen API   ◀── 향후: Ollama/vLLM │
+        └────────────────────────────────────────────┘
+                  │
+                  ▼
+              PostgreSQL + Redis + AuditLog</div>
+
+<h3>1.2 KPI</h3>
+<ul>
+  <li><b>응답 시간</b>: p50 ≤ 3s, p95 ≤ 5s</li>
+  <li><b>검색 정확도</b>: recall@5 ≥ 0.80 (12문항 영업팀 평가셋 기준)</li>
+  <li><b>금지어 누락률</b>: ModerationLog 미반영 응답 0건 / 주</li>
+  <li><b>감사 커버리지</b>: 모든 mutating API 호출의 100%가 AuditLog에 기록</li>
+</ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="part-chat">
+<h2>2 · Part 1 · chat — RAG 파이프라인 <span class="badge">app: chat</span></h2>
+
+<table class="prd">
+  <tr><th>Problem</th><td>제품 자료가 분산되어 영업이 자연어로 답을 빨리 못 얻음.</td></tr>
+  <tr><th>Users</th><td><span class="pill user">USER</span> 모든 임직원</td></tr>
+  <tr><th>Goal</th><td>질문 → 벡터검색 → reasoning → generation → 응답 + 모든 단계 추적 가능</td></tr>
+  <tr><th>Non-goal</th><td>스트리밍 응답(추후), 멀티턴 기억(현재 Redis 단순 히스토리), 다국어</td></tr>
+</table>
+
+<h3>2.1 Requirements</h3>
+<ul>
+  <li>POST <code>/api/v1/triple/chat/</code> · 입력 <code>{user_id, question}</code> → 출력 <code>{response, chat_id, images}</code></li>
+  <li>모든 응답은 <code>Chat</code>, <code>SearchLog</code>, <code>RagData</code>에 추적 가능 row를 남김</li>
+  <li>벡터스토어는 <code>chunk_size=1000, chunk_overlap=200</code> 기본 (부록 B에서 추후 150 권장)</li>
+  <li>provider 추상화로 Gemini ↔ Qwen 환경변수 전환</li>
+  <li>금지어 필터가 LLM 호출 <b>전·후</b> 모두 적용</li>
+</ul>
+
+<h3>2.2 Solution / 핵심 코드</h3>
+<ul>
+  <li>모델: <code>chat.Chat</code>, <code>chat.SearchLog</code>, <code>chat.RagData</code>, <code>chat.User</code>(Role 추가)</li>
+  <li>파이프라인: <code>chat/pipeline/modules.py</code> — Retrieve → Reasoning → Generation (LangChain)</li>
+  <li>세션 정합성: <code>refresh_user_session()</code> — Redis TTL ↔ DB <code>expired_datetime</code> 단일 윈도우</li>
+  <li>헬스체크: <code>/api/v1/triple/health/</code>, <code>/health/ready/</code></li>
+</ul>
+
+<h3>2.3 Metrics</h3>
+<ul>
+  <li>SearchLog row가 Chat row 수와 ≥ 95% 일치 (검증된 trace 비율)</li>
+  <li>Provider별 평균 응답 시간 메트릭 (Stage 2)</li>
+</ul>
+
+<h3>2.4 Risks</h3>
+<ul>
+  <li>chunk 정책이 데이터 갱신 후 노후화 → 부록 B의 A/B harness를 정기 실행 (CI 1회/주)</li>
+  <li>Gemini API 장애 시 fallback 없음 → 향후 provider fallback chain</li>
+</ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="part-knowledge">
+<h2>3 · Part 2 · knowledge — 지식베이스 <span class="badge">app: knowledge</span></h2>
+
+<table class="prd">
+  <tr><th>Problem</th><td>“이 제품 담당이 누구야”·“어느 부서가 이 솔루션 다뤄?” 문의가 매일 반복. LLM이 부정확하게 답하는 영역이라 결정적 조회가 더 안전.</td></tr>
+  <tr><th>Users</th><td><span class="pill user">USER</span> 영업/CS 직원 (조회) · <span class="pill mgr">MANAGER</span> 부서장 (편집) · <span class="pill admin">ADMIN</span> IT (CRUD)</td></tr>
+  <tr><th>Goal</th><td>LLM 우회 검색 API + Django Admin에서 CRUD</td></tr>
+  <tr><th>Non-goal</th><td>외부 ERP 연동 (Stage 2), 권한 세분화</td></tr>
+</table>
+
+<h3>3.1 Requirements</h3>
+<ul>
+  <li>모델: <code>Department</code> (계층 가능), <code>Contact</code> (담당자), <code>Product</code> (제품/서비스/솔루션, JSON specs)</li>
+  <li>검색 API 3개:
+    <ul>
+      <li>GET <code>/api/v1/knowledge/products/?q=&category=</code></li>
+      <li>GET <code>/api/v1/knowledge/contacts/?q=&department=</code></li>
+      <li>GET <code>/api/v1/knowledge/departments/</code></li>
+    </ul>
+  </li>
+  <li>응답 ≤ 50건 페이지(현재 단순 slice, 향후 cursor)</li>
+  <li>Django Admin에 등록 — autocomplete + search</li>
+</ul>
+
+<h3>3.2 Solution</h3>
+<ul>
+  <li>파일: <code>backend/knowledge/{models,admin,views,urls}.py</code></li>
+  <li>Product 검색은 <code>name__icontains</code>, <code>description__icontains</code> OR</li>
+  <li>응답 JSON에 primary_contact를 inline 포함 → 한 번의 호출로 “제품 + 담당자”까지</li>
+</ul>
+
+<h3>3.3 Metrics</h3>
+<ul>
+  <li>검색 API p95 ≤ 300ms (DB 인덱스 + 50건 cap)</li>
+  <li>영업팀의 “담당자 누구야” 챗봇 질문 비율 → 1주 후 감소 확인</li>
+</ul>
+
+<h3>3.4 Risks</h3>
+<ul>
+  <li>Department 계층(parent self-FK) 깊어질 때 자식 조회 N+1 — Stage 2에서 prefetch</li>
+  <li>specs JSONField 스키마 비통일 → 부서별 템플릿화는 Phase 2</li>
+</ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="part-moderation">
+<h2>4 · Part 3 · moderation — 금지어 검수 <span class="badge">app: moderation</span></h2>
+
+<table class="prd">
+  <tr><th>Problem</th><td>대외비/PII/경쟁사 언급이 그대로 외부 LLM으로 송신되는 위험. 관리자가 단어를 정책으로 운영·검수할 수 있어야 함.</td></tr>
+  <tr><th>Users</th><td><span class="pill admin">ADMIN</span> (정책 설정·검수) · 시스템 내부 (필터 적용)</td></tr>
+  <tr><th>Goal</th><td>BLOCK / MASK / WARN 다단계 정책을 INBOUND·OUTBOUND 양방향에 적용, 모든 탐지를 검수 가능한 로그로 남김</td></tr>
+  <tr><th>Non-goal</th><td>정규식 룰(현재 substring), 다국어 형태소 분석, ML 기반 탐지</td></tr>
+</table>
+
+<h3>4.1 Requirements</h3>
+<ul>
+  <li>모델
+    <ul>
+      <li><code>ForbiddenWord</code>: word, category, severity ∈ {MASK, WARNING, BLOCK}, direction ∈ {INBOUND, OUTBOUND, BOTH}, mask_replacement</li>
+      <li><code>ModerationLog</code>: action ∈ {BLOCKED, WARNED, MASKED}, source ∈ {INBOUND, OUTBOUND}, original/sanitized excerpt, reviewed 플래그</li>
+    </ul>
+  </li>
+  <li>정책
+    <ul>
+      <li><b>BLOCK</b>: LLM 호출 0회. 403 응답. 사용자에겐 차단 메시지만.</li>
+      <li><b>MASK</b>: <code>[REDACTED]</code> 등으로 치환 후 LLM에 전달, ModerationLog.MASKED 기록.</li>
+      <li><b>WARNING</b>: 통과시키되 ModerationLog.WARNED 기록.</li>
+    </ul>
+  </li>
+  <li>검수 페이지: Django Admin <code>/admin/moderation/</code>
+    <ul>
+      <li>ForbiddenWord 인라인 편집 (severity/direction/is_active)</li>
+      <li>ModerationLog에 <code>reviewed</code> 체크박스 + <code>reviewer_note</code></li>
+    </ul>
+  </li>
+</ul>
+
+<h3>4.2 Pipeline 연결 위치</h3>
+<div class="ascii">
+question
+  │
+  ▼
+[Chat 저장]
+  │
+  ▼
+[INBOUND moderate]  ───► BLOCK → 403 + ModerationLog
+  │ (sanitized)
+  ▼
+RAG retrieve → reasoning → generation
+  │
+  ▼
+[OUTBOUND moderate]  ───► BLOCK → "응답 표시 불가"
+  │ (sanitized)
+  ▼
+Chat.response_text 저장 + 응답</div>
+
+<h3>4.3 Solution / 핵심 코드</h3>
+<ul>
+  <li><code>backend/moderation/filter.py</code> · <code>apply(text, source, user, chat) → ModerationResult</code></li>
+  <li>BLOCK은 <code>BlockedByModerationError</code> 예외로 short-circuit</li>
+  <li>치환은 right-to-left index walk로 한 패스 처리</li>
+  <li>chat.views.ChatAPIView에서 inbound/outbound 모두 호출</li>
+</ul>
+
+<h3>4.4 Metrics</h3>
+<ul>
+  <li>주간 ModerationLog 건수 · 액션별 비율 · 미검수 잔여 건수</li>
+  <li>BLOCK 발동률 (분모: 총 chat 호출) — 정책 강도 모니터링</li>
+</ul>
+
+<h3>4.5 Risks</h3>
+<ul>
+  <li>substring 매칭의 false positive (예: 단어 일부) — 단어 경계 정규식으로 강화 예정</li>
+  <li>OUTBOUND BLOCK 시 사용자 경험 (응답 차단) — Stage 2에 대체 응답 템플릿 분기</li>
+</ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="part-audit">
+<h2>5 · Part 4 · audit — 감사 로그 <span class="badge">app: audit</span></h2>
+
+<table class="prd">
+  <tr><th>Problem</th><td>누가 무엇을 호출했고 응답 코드가 무엇이었는지 추적 불가. 보안 사고 발생 시 incident replay 불가능.</td></tr>
+  <tr><th>Users</th><td><span class="pill admin">ADMIN</span> 보안/감사 담당</td></tr>
+  <tr><th>Goal</th><td>모든 mutating API 호출의 100%를 비차단(non-blocking) 미들웨어로 기록</td></tr>
+  <tr><th>Non-goal</th><td>요청 본문 자체 저장 (PII 누출 위험), 외부 SIEM 송출 (Stage 3)</td></tr>
+</table>
+
+<h3>5.1 Requirements</h3>
+<ul>
+  <li>모델 <code>AuditLog</code>: user, action, resource, resource_id, method, path, status_code, detail(JSON), ip_address, user_agent, created_at</li>
+  <li>인덱스: created_at desc, (action, created_at desc)</li>
+  <li>미들웨어가 request 종료 후 1 row insert; insert 실패해도 응답에 영향 없음</li>
+  <li>healthcheck / static / 관리자 i18n 경로는 제외 (잡음 차단)</li>
+  <li>Django Admin은 read-only (변조 방지)</li>
+</ul>
+
+<h3>5.2 Solution</h3>
+<ul>
+  <li><code>backend/audit/middleware.py</code> · <code>AuditLogMiddleware</code></li>
+  <li><code>backend/audit/admin.py</code> · <code>has_add_permission=False</code>, <code>has_change_permission=False</code></li>
+  <li>user 식별: 현재는 <code>request.data.user_id</code> 기반 (JWT 전환 시 토큰 subject로 교체)</li>
+</ul>
+
+<h3>5.3 Metrics</h3>
+<ul>
+  <li>커버리지: chat 호출 수 ≈ AuditLog (http.post) 수 (drift ≤ 1%)</li>
+  <li>저장 latency 95th ≤ 30ms — 미들웨어가 응답 latency를 가리지 않도록</li>
+</ul>
+
+<h3>5.4 Risks</h3>
+<ul>
+  <li>장기 보관 시 row 폭증 → Stage 2에서 30일 retention + cold storage</li>
+  <li>익명 사용자 호출(미들웨어가 user=None) — Phase 1 JWT 적용 후 정리</li>
+</ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="appendix-security">
+<h2>6 · 부록 A · 보안 / 대외비 대응 <span class="badge">cross-cutting</span></h2>
+
+<table class="prd">
+  <tr><th>위협</th><td>외부 LLM 데이터 송출 · 무인증 API · 평문 로그 · 하드코딩 SECRET_KEY · CORS 부재</td></tr>
+  <tr><th>이번 단계 처치</th><td>
+    1) DEBUG=0 + 기본 SECRET_KEY 부팅 거부<br>
+    2) CORS allowlist env-driven (<code>CORS_ALLOWED_ORIGINS</code>)<br>
+    3) INBOUND/OUTBOUND 금지어 필터 + MASK<br>
+    4) 모든 API 호출 AuditLog 기록<br>
+    5) 헬스체크 endpoint (incident detection)
+  </td></tr>
+  <tr><th>잔여 위험</th><td>JWT 미적용, HTTPS 미강제, Redis AUTH, DB 컬럼 암호화, 외부 LLM 의존</td></tr>
+  <tr><th>로컬 LLM 경로</th><td>provider 추상화 활용 — Ollama PoC(Stage 2) → vLLM(Stage 3). 자세한 절차는 <code>backend/docs/security.md §4</code></td></tr>
+</table>
+
+<h3>6.1 운영자 매뉴얼 (요약)</h3>
+<ol>
+  <li>Django Admin 슈퍼유저 생성 → <code>/admin/</code> 로그인</li>
+  <li><code>Moderation › Forbidden words</code>에 시드 입력:
+    <ul>
+      <li>MASK: 고객명, 사번 패턴 (예: <code>010-XXXX-XXXX</code>)</li>
+      <li>WARNING: 경쟁사명</li>
+      <li>BLOCK: 미공개 코드네임, M&A 키워드</li>
+    </ul>
+  </li>
+  <li><code>Moderation › Moderation logs</code>를 매일 검수 → <code>reviewed=True</code></li>
+  <li>대외비 등급 상향 시 — security.md §4의 Ollama 절차 따라 LLM 사내 전환</li>
+</ol>
+</section>
+
+<!-- ============================================================ -->
+<section id="appendix-validation">
+<h2>7 · 부록 B · 검증 (chunk A/B + CI) <span class="badge">quality</span></h2>
+
+<h3>7.1 Chunk Size A/B Harness</h3>
+<ul>
+  <li>평가셋: 영업팀 시나리오 12문항 (<code>backend/chat/tests/evals/dataset.jsonl</code>)</li>
+  <li>retriever: BM25 (Gemini API 의존 없음 — CI에서도 돌릴 수 있음)</li>
+  <li>지표: recall@k — expected_keywords 중 top-k chunk에 등장한 비율</li>
+</ul>
+<table class="prd">
+  <tr><th>chunk_size</th><th>recall@5</th></tr>
+  <tr><td>80</td><td>0.569 (overlap=0) → 0.653 (overlap=30)</td></tr>
+  <tr><td><b>150</b></td><td><b>0.833</b> ← sweet spot</td></tr>
+  <tr><td>250 이상</td><td>0.789 (한 행이 한 chunk)</td></tr>
+</table>
+<p style="margin-top:6px">결론: production의 <code>chunk_size=1000</code>은 안전하나, 본 데이터셋에선 150이 +4.4%p 개선. 운영 적용 전 controlled rollout 필요.</p>
+
+<h3>7.2 GitHub Actions CI</h3>
+<ul>
+  <li><b>lint</b>: flake8 (pragmatic ruleset)</li>
+  <li><b>django-tests</b>: Postgres + Redis 서비스 컨테이너, pytest</li>
+  <li><b>retrieval-eval</b>: chunk A/B harness, 결과를 워크플로 artifact + Job Summary로 노출</li>
+  <li><b>docker-build</b>: backend / frontend 이미지 빌드 검증</li>
+</ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="roadmap">
+<h2>8 · 로드맵 / 리스크 <span class="badge">future</span></h2>
+
+<table class="prd">
+  <tr><th>Stage 1 (현재)</th><td>
+    Streamlit + Django, RBAC 데이터모델, 금지어 검수 Admin, 감사 로그, Postgres, GitHub Actions, 외부 LLM(Gemini) — 영업팀 베타 가능 수준.
+  </td></tr>
+  <tr><th>Stage 2 (1~2개월)</th><td>
+    JWT endpoint protection, 응답 스트리밍(SSE), 사내 Ollama PoC, ModerationLog retention 정책, knowledge specs 템플릿화.
+  </td></tr>
+  <tr><th>Stage 3 (분기)</th><td>
+    vLLM 사내 전환 (외부 LLM fallback only), 멀티노드/HA, AuditLog SIEM 송출, knowledge ERP 연동.
+  </td></tr>
+</table>
+
+<h3>8.1 Open risks</h3>
+<ul>
+  <li>외부 LLM 의존 — Stage 2/3 전까지 정책적으로 “고급 대외비는 챗봇에 입력 금지” 사용자 가이드 필요</li>
+  <li>금지어 substring 매칭의 false positive — 단어 경계 정규식 강화</li>
+  <li>knowledge 데이터 시드의 정확성은 운영 단계 의존 — 부서별 owner를 명확히 지정</li>
+</ul>
+
+<hr>
+<p style="color:var(--muted); font-size:13px">
+  본 문서는 자동 생성된 PRD로, <code>README.md</code> · <code>backend/docs/security.md</code> · <code>backend/docs/chunk_experiment.md</code> · <code>ARCHITECTURE.md</code>를 단일 뷰로 통합합니다. 코드 사실 관계 우선 — 본 문서와 코드가 다르면 코드를 따릅니다.
+</p>
+</section>
+
+</main>
+</div>
+</body>
+</html>
