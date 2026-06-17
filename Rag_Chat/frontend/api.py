@@ -176,3 +176,20 @@ def set_provider_selection(user_id: str, reasoning: str, generation: str):
         logger.error(f"Failed to set provider selection: {e}")
         st.sidebar.error("Failed to update provider settings.")
         return None
+
+
+def set_provider_combo(user_id: str, combo_key: str):
+    """Apply a preset provider combo (e.g. 'gemini_only', 'ollama_only')."""
+    try:
+        response = requests.post(
+            f"{API_BASE_URL}/providers/",
+            json={"user_id": user_id, "provider_combo": combo_key},
+            headers={"Content-Type": "application/json"},
+            timeout=5,
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logger.error(f"Failed to set provider combo: {e}")
+        st.sidebar.error("Failed to update provider combo.")
+        return None

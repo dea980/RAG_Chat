@@ -292,16 +292,48 @@ if ! kill -0 "$frontend_pid" 2>/dev/null; then
     exit 1
 fi
 
-echo "==== All services started successfully! ===="
-echo "Django backend PID: $backend_pid (http://localhost:8000)"
-echo "Streamlit frontend PID: $frontend_pid (http://localhost:8501)"
-echo ""
-echo "Press Ctrl+C to stop all services"
+# echo "Starting Celery worker..."
+# (
+#     cd "$BACKEND_DIR"
+#     PYTHONUNBUFFERED=1 "$BACKEND_PYTHON" -m celery -A triple_chat_pjt worker --loglevel=info
+# ) &
+# worker_pid=$!
+
+# sleep 2
+# if ! kill -0 "$worker_pid" 2>/dev/null; then
+#     echo "Celery worker failed to start"
+# else
+#     echo "Celery worker PID: $worker_pid"
+# fi
+
+# echo "Starting Celery beat..."
+# (
+#     cd "$BACKEND_DIR"
+#     PYTHONUNBUFFERED=1 "$BACKEND_PYTHON" -m celery -A triple_chat_pjt beat --loglevel=info
+# ) &
+# beat_pid=$!
+
+# sleep 2
+# if ! kill -0 "$beat_pid" 2>/dev/null; then
+#     echo "Celery beat failed to start"
+# else
+#     echo "Celery beat PID: $beat_pid"
+# fi
+
+# echo "==== All services started successfully! ===="
+# echo "Django backend PID: $backend_pid (http://localhost:8000)"
+# echo "Streamlit frontend PID: $frontend_pid (http://localhost:8501)"
+# echo "Celery worker PID: $worker_pid"
+# echo "Celery beat PID: $beat_pid"
+# echo ""
+# echo "Press Ctrl+C to stop all services"
 
 cleanup() {
     echo "Cleaning up processes..."
     [ -n "$backend_pid" ] && kill "$backend_pid" 2>/dev/null
     [ -n "$frontend_pid" ] && kill "$frontend_pid" 2>/dev/null
+    [ -n "$worker_pid" ] && kill "$worker_pid" 2>/dev/null
+    # [ -n "$beat_pid" ] && kill "$beat_pid" 2>/dev/null
     exit 0
 }
 
@@ -319,6 +351,6 @@ wait_for_exit() {
     done
 }
 
-wait_for_exit "$backend_pid" "$frontend_pid"
+wait_for_exit "$backend_pid" "$frontend_pid" "$worker_pid" "$beat_pid"
 
 cleanup
